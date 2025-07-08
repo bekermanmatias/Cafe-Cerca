@@ -91,9 +91,52 @@ export default function VisitDetailsScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-        <Text style={styles.description}>{visit.description}</Text>
+      <View style={styles.mainReviewContainer}>
+        <View style={styles.authorSection}>
+          <Image source={visit.participants[0]} style={styles.authorPhoto} />
+          <View style={styles.authorInfo}>
+            <Text style={styles.authorName}>Sofia R.</Text>
+            <View style={styles.starsContainer}>
+              {[...Array(5)].map((_, i) => (
+                <Ionicons
+                  key={i}
+                  name={i < visit.rating ? "star" : "star-outline"}
+                  size={20}
+                  color="#FFD700"
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+        <Text style={styles.mainReviewText}>{visit.description}</Text>
+      </View>
 
+      <View style={styles.friendReviewContainer}>
+        <View style={styles.friendReviewHeader}>
+          <Image source={visit.participants[1]} style={styles.friendPhoto} />
+          <View style={styles.friendInfo}>
+            <Text style={styles.friendName}>Lucas.M</Text>
+            <View style={styles.friendStarsContainer}>
+              {[...Array(5)].map((_, i) => (
+                <Ionicons
+                  key={i}
+                  name={i < 4 ? "star" : "star-outline"}
+                  size={20}
+                  color="#FFD700"
+                />
+              ))}
+            </View>
+          </View>
+          <TouchableOpacity style={styles.moreButton}>
+            <Ionicons name="ellipsis-vertical" size={20} color="#666" />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.friendReviewText}>
+          Lorem ipsum dolor sit dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+        </Text>
+      </View>
+
+      <View style={styles.content}>
         <View style={styles.reviewsSection}>
           {visit.reviews.map((review, index) => (
             <View key={index} style={styles.reviewItem}>
@@ -253,8 +296,35 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
   },
+  mainReviewContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  authorSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  mainReviewText: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  authorPhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  authorInfo: {
+    flex: 1,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   content: {
     padding: 16,
+    paddingTop: 0,
   },
   description: {
     fontSize: 16,
@@ -285,9 +355,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 4,
-  },
-  starsContainer: {
-    flexDirection: 'row',
   },
   moreButton: {
     padding: 8,
@@ -365,5 +432,41 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  friendReviewContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  friendReviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  friendPhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  friendInfo: {
+    flex: 1,
+  },
+  friendName: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  friendStarsContainer: {
+    flexDirection: 'row',
+  },
+  friendReviewText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#333',
+  },
+  authorName: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
   },
 }); 
