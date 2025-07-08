@@ -1,11 +1,19 @@
-import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ExploreIcon from '../../assets/icons/explore.svg';
-import MapIcon from '../../assets/icons/map.svg';
+import { Tabs } from 'expo-router';
 import DiaryIcon from '../../assets/icons/diary.svg';
+import ExploreIcon from '../../assets/icons/explore.svg';
 import FriendsIcon from '../../assets/icons/friends.svg';
+import MapIcon from '../../assets/icons/map.svg';
+
+//Agrego librerias para poder presionar y manajer la navegación.
+import { useRouter } from 'expo-router';
+import { Pressable } from 'react-native';
 
 export default function TabLayout() {
+
+  //Obtenemos las funcionalidades de hook.
+  const router=useRouter();
+
   return (
     <Tabs
       screenOptions={{
@@ -23,7 +31,19 @@ export default function TabLayout() {
           backgroundColor: '#ffffff',
         },
         headerTintColor: '#8B4513',
-      }}>
+        
+        // Soy lucio, aca agrego el icono de perfil.
+        headerRight: () => (
+          <Pressable
+            onPress={() => router.push('/profile')}
+            style={{marginRight: 15}}
+          >
+            <Ionicons name="person-circle-outline" size={28} color="#8B4513"/>
+          </Pressable>
+        )
+
+      }}
+      >
       <Tabs.Screen
         name="explore"
         options={{
@@ -52,6 +72,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <FriendsIcon width={35} height={35} fill={color} />,
         }}
       />
+
     </Tabs>
   );
 }
