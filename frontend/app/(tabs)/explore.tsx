@@ -34,7 +34,14 @@ return (
       
       {filteredCafes.map((cafe, index) => (
         <View key={index} style={styles.card}>
-          <Image source={cafe.image} style={styles.image} />
+          <View style={styles.imageWrapper}>
+            <Image source={cafe.image} style={styles.image} />
+            <TagChip
+              label={cafe.horario}
+              style={styles.horarioChip}
+              textStyle={{ fontWeight: '500' }}
+            />
+          </View>
           <View style={styles.textContainer}>
             <View style={styles.row}>
               <Text style={styles.name}>{cafe.name}</Text>
@@ -100,5 +107,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginTop: 8,
     gap: 8, // si tu versión lo soporta, si no, usá marginRight/marginBottom en el tag
+  },
+  
+  imageWrapper: {
+    position: 'relative',
+  },
+
+  horarioChip: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    // Opcional si queremos forzar colores
+    backgroundColor: '#DBEDC2', 
+    borderColor: '#DBEDC2',
   },
 })
