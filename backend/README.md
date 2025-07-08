@@ -13,7 +13,7 @@ Permite gestionar la base de datos del proyecto y exponer endpoints REST para el
 - [Base de datos](#base-de-datos)
 - [Probar conexión](#probar-conexión)
 - [Correr el servidor](#correr-el-servidor)
-- [Api-tester](#Api-Tester)
+- [Api-tester](#api-tester)
 
 ---
 
@@ -30,7 +30,7 @@ Permite gestionar la base de datos del proyecto y exponer endpoints REST para el
 Clonar el repositorio y entrar al directorio del backend:
 
 ```bash
-git clone <https://github.com/bekermanmatias/Cafe-Cerca.git>
+git clone https://github.com/bekermanmatias/Cafe-Cerca.git
 cd Cafe-Cerca/backend
 ```
 
@@ -143,6 +143,6 @@ El servidor correrá en `http://localhost:3000` por defecto.
 
 ---
 
-### Api-Tester de conexión servidor-db
+## 🧪 Api-tester
 
-Abrir con tu navegador predeterminado el archivo **api-tester.html** para probar las conexiones.
+Abrir con tu navegador predeterminado el archivo **api-tester.html** para probar las conexiones servidor-db.
