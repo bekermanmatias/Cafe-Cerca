@@ -47,7 +47,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
+          title: 'Café Cerca',
           tabBarIcon: ({ color }) => <ExploreIcon width={28} height={28} fill={color} />,
         }}
       />
