@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import FilterChips from '../../components/FilterChips';
 import SearchBar from '../../components/SearchBar';
+import TagChip from '../../components/TagChip';
 import { cafes } from '../../constants/Cafes';
+import { filters } from '../../constants/Filters';
 
 export default function ExploreScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+
     // Simulación de cafeterías (sin backend)
   const filteredCafes = cafes.filter(cafe =>
-    cafe.name.toLowerCase().includes(searchQuery.toLowerCase())
+    cafe.name.toLowerCase().includes(searchQuery.toLowerCase())&&
+    selectedFilters.every(tag => cafe.tags.includes(tag))
   );
 
 
@@ -20,7 +26,12 @@ return (
         onChangeText={setSearchQuery}
         placeholder="¿Qué te apetece hoy?"
       />
-
+      <FilterChips
+        items={filters}
+        selected={selectedFilters}
+        onSelect={setSelectedFilters}
+      />
+      
       {filteredCafes.map((cafe, index) => (
         <View key={index} style={styles.card}>
           <Image source={cafe.image} style={styles.image} />
@@ -30,6 +41,11 @@ return (
               <Text style={styles.puntaje}>{cafe.puntaje}</Text>
             </View>
             <Text style={styles.location}>{cafe.location}</Text>
+              <View style={styles.tagsContainer}>
+                {cafe.tags.map((tag, idx) => (
+                  <TagChip key={idx} label={tag} />
+                ))}
+              </View>
           </View>
         </View>
       ))}
@@ -79,4 +95,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-});
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    gap: 8, // si tu versión lo soporta, si no, usá marginRight/marginBottom en el tag
+  },
+})
