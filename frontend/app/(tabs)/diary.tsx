@@ -43,15 +43,12 @@ export default function DiaryScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  const renderImage = ({ item: image, index }: RenderImageProps) => (
+  const renderImage = ({ item: image }: RenderImageProps) => (
     <View style={styles.imageWrapper}>
       <Image
         source={image}
         style={styles.image}
       />
-      <View style={styles.ratingBubble}>
-        <Text style={styles.rating}>{mockVisit.rating} ★</Text>
-      </View>
     </View>
   );
 
@@ -88,7 +85,10 @@ export default function DiaryScreen() {
             </View>
           </View>
         </View>
-        <View style={styles.imageContainer}>
+        <View style={styles.imageSection}>
+          <View style={styles.ratingBubble}>
+            <Text style={styles.rating}>{mockVisit.rating} ★</Text>
+          </View>
           <FlatList
             ref={flatListRef}
             data={mockVisit.images}
@@ -102,6 +102,7 @@ export default function DiaryScreen() {
             decelerationRate="fast"
             snapToAlignment="center"
             keyExtractor={(_, index) => index.toString()}
+            style={styles.imageList}
           />
           <View style={styles.paginationDots}>
             {mockVisit.images.map((_, index) => (
@@ -116,7 +117,6 @@ export default function DiaryScreen() {
           </View>
         </View>
         <View style={styles.footer}>
-          <Text style={styles.description}>{mockVisit.description}</Text>
           <View style={styles.actions}>
             <View style={styles.leftActions}>
               <TouchableOpacity style={styles.actionButton}>
@@ -130,6 +130,7 @@ export default function DiaryScreen() {
               <Ionicons name="book-outline" size={24} color="#666" />
             </TouchableOpacity>
           </View>
+          <Text style={styles.description}>{mockVisit.description}</Text>
         </View>
       </View>
     </ScrollView>
@@ -137,6 +138,10 @@ export default function DiaryScreen() {
 }
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
@@ -182,10 +187,15 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     borderColor: 'white',
   },
-  imageContainer: {
+  cardContent: {
     position: 'relative',
+  },
+  imageSection: {
     height: 400,
-    width: '100%',
+    position: 'relative',
+  },
+  imageList: {
+    flex: 1,
   },
   imageWrapper: {
     width: windowWidth - 32,
@@ -195,6 +205,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  ratingBubbleContainer: {
+    position: 'absolute',
+    top: 200,
+    right: 32,
+    zIndex: 999,
+    pointerEvents: 'none',
   },
   ratingBubble: {
     position: 'absolute',
@@ -206,6 +223,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     flexDirection: 'row',
     alignItems: 'center',
+    zIndex: 10,
   },
   rating: {
     fontSize: 16,
@@ -239,23 +257,26 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 16,
-    backgroundColor: 'white',
+    paddingTop: 8,
+    gap: 6,
   },
   description: {
     fontSize: 16,
     color: '#333',
-    marginBottom: 16,
+    lineHeight: 22,
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingLeft: 0,
+    paddingRight: 8,
   },
   leftActions: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 8,
   },
   actionButton: {
-    padding: 8,
+    padding: 6,
   },
 }); 
