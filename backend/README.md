@@ -7,13 +7,13 @@ Permite gestionar la base de datos del proyecto y exponer endpoints REST para el
 
 ## 📋 Tabla de contenidos
 
-- [Requisitos previos](#requisitos-previos)
-- [Instalación](#instalación)
-- [Configuración](#configuración)
-- [Base de datos](#base-de-datos)
-- [Probar conexión](#probar-conexión)
-- [Correr el servidor](#correr-el-servidor)
-- [Api-tester](#api-tester)
+- [Requisitos previos](#-requisitos-previos)
+- [Instalación](#-instalación)
+- [Configuración](#-configuración)
+- [Base de datos](#-base-de-datos)
+- [Probar conexión](#-probar-conexión)
+- [Correr el servidor](#-correr-el-servidor)
+- [Api-tester](#-api-tester)
 
 ---
 
