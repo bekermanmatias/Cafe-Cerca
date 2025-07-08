@@ -1,6 +1,7 @@
+import React from 'react';
 import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Dimensions, ImageSourcePropType, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 
 const windowWidth = Dimensions.get('window').width;
@@ -45,155 +46,187 @@ export default function VisitDetailsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>{visit.place}</Text>
-          <Text style={styles.headerDate}>{visit.date}</Text>
-        </View>
-        <View style={styles.participantsContainer}>
-          {visit.participants.map((photo, index) => (
-            <Image
-              key={index}
-              source={photo}
-              style={[
-                styles.participantPhoto,
-                { marginLeft: index > 0 ? -12 : 0 }
-              ]}
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.mainImageContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.imageScrollContainer}
-        >
-          {visit.images.map((image, index) => (
-            <View key={index} style={styles.imageWrapper}>
-              <Image source={image} style={styles.mainImage} />
-            </View>
-          ))}
-        </ScrollView>
-        <View style={styles.ratingBadge}>
-          <Text style={styles.ratingText}>{visit.rating} ★</Text>
-        </View>
-      </View>
-
-      <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="heart-outline" size={28} color="#000" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="share-social-outline" size={28} color="#000" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.mainReviewContainer}>
-        <View style={styles.authorSection}>
-          <Image source={visit.participants[0]} style={styles.authorPhoto} />
-          <View style={styles.authorInfo}>
-            <Text style={styles.authorName}>Sofia R.</Text>
-            <View style={styles.starsContainer}>
-              {[...Array(5)].map((_, i) => (
-                <Ionicons
-                  key={i}
-                  name={i < visit.rating ? "star" : "star-outline"}
-                  size={20}
-                  color="#FFD700"
-                />
-              ))}
-            </View>
+    <>
+      <Stack.Screen 
+        options={{
+          headerShown: true,
+          title: ''
+        }}
+      />
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>{visit.place}</Text>
+            <Text style={styles.headerDate}>{visit.date}</Text>
+          </View>
+          <View style={styles.participantsContainer}>
+            {visit.participants.map((photo, index) => (
+              <Image
+                key={index}
+                source={photo}
+                style={[
+                  styles.participantPhoto,
+                  { marginLeft: index > 0 ? -12 : 0 }
+                ]}
+              />
+            ))}
           </View>
         </View>
-        <Text style={styles.mainReviewText}>{visit.description}</Text>
-      </View>
 
-      <View style={styles.friendReviewContainer}>
-        <View style={styles.friendReviewHeader}>
-          <Image source={visit.participants[1]} style={styles.friendPhoto} />
-          <View style={styles.friendInfo}>
-            <Text style={styles.friendName}>Lucas.M</Text>
-            <View style={styles.friendStarsContainer}>
-              {[...Array(5)].map((_, i) => (
-                <Ionicons
-                  key={i}
-                  name={i < 4 ? "star" : "star-outline"}
-                  size={20}
-                  color="#FFD700"
-                />
-              ))}
-            </View>
+        <View style={styles.mainImageContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.imageScrollContainer}
+          >
+            {visit.images.map((image, index) => (
+              <View key={index} style={styles.imageWrapper}>
+                <Image source={image} style={styles.mainImage} />
+              </View>
+            ))}
+          </ScrollView>
+          <View style={styles.ratingBadge}>
+            <Text style={styles.ratingText}>{visit.rating} ★</Text>
           </View>
-          <TouchableOpacity style={styles.moreButton}>
-            <Ionicons name="ellipsis-vertical" size={20} color="#666" />
+        </View>
+
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="heart-outline" size={28} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="share-social-outline" size={28} color="#000" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.friendReviewText}>
-          Lorem ipsum dolor sit dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-        </Text>
-      </View>
 
-      <View style={styles.content}>
-        <View style={styles.reviewsSection}>
-          {visit.reviews.map((review, index) => (
-            <View key={index} style={styles.reviewItem}>
-              <View style={styles.reviewHeader}>
-                <Image source={review.userPhoto} style={styles.reviewerPhoto} />
-                <View style={styles.reviewerInfo}>
-                  <Text style={styles.reviewerName}>{review.user}</Text>
-                  <View style={styles.starsContainer}>
-                    {[...Array(5)].map((_, i) => (
-                      <Ionicons
-                        key={i}
-                        name={i < review.rating ? "star" : "star-outline"}
-                        size={16}
-                        color="#FFD700"
-                      />
-                    ))}
-                  </View>
-                </View>
-                <TouchableOpacity style={styles.moreButton}>
-                  <Ionicons name="ellipsis-vertical" size={20} color="#666" />
-                </TouchableOpacity>
+        <View style={styles.mainReviewContainer}>
+          <View style={styles.authorSection}>
+            <Image source={visit.participants[0]} style={styles.authorPhoto} />
+            <View style={styles.authorInfo}>
+              <Text style={styles.authorName}>Sofia R.</Text>
+              <View style={styles.starsContainer}>
+                {[...Array(5)].map((_, i) => (
+                  <Ionicons
+                    key={i}
+                    name={i < visit.rating ? "star" : "star-outline"}
+                    size={20}
+                    color="#FFD700"
+                  />
+                ))}
               </View>
-              <Text style={styles.reviewText}>{review.text}</Text>
             </View>
-          ))}
+          </View>
+          <Text style={styles.mainReviewText}>{visit.description}</Text>
         </View>
 
-        <View style={styles.commentsSection}>
-          <Text style={styles.sectionTitle}>Comentarios</Text>
-          {visit.comments.map((comment, index) => (
-            <View key={index} style={styles.commentItem}>
-              <Image source={comment.userPhoto} style={styles.commentorPhoto} />
+        <View style={styles.friendReviewContainer}>
+          <View style={styles.friendReviewHeader}>
+            <Image source={visit.participants[1]} style={styles.friendPhoto} />
+            <View style={styles.friendInfo}>
+              <Text style={styles.friendName}>Lucas.M</Text>
+              <View style={styles.friendStarsContainer}>
+                {[...Array(5)].map((_, i) => (
+                  <Ionicons
+                    key={i}
+                    name={i < 4 ? "star" : "star-outline"}
+                    size={20}
+                    color="#FFD700"
+                  />
+                ))}
+              </View>
+            </View>
+            <TouchableOpacity style={styles.moreButton}>
+              <Ionicons name="ellipsis-vertical" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.friendReviewText}>
+            Lorem ipsum dolor sit dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+          </Text>
+        </View>
+
+        <View style={styles.content}>
+          <View style={styles.reviewsSection}>
+            {visit.reviews.map((review, index) => (
+              <View key={index} style={styles.reviewItem}>
+                <View style={styles.reviewHeader}>
+                  <Image source={review.userPhoto} style={styles.reviewerPhoto} />
+                  <View style={styles.reviewerInfo}>
+                    <Text style={styles.reviewerName}>{review.user}</Text>
+                    <View style={styles.starsContainer}>
+                      {[...Array(5)].map((_, i) => (
+                        <Ionicons
+                          key={i}
+                          name={i < review.rating ? "star" : "star-outline"}
+                          size={16}
+                          color="#FFD700"
+                        />
+                      ))}
+                    </View>
+                  </View>
+                  <TouchableOpacity style={styles.moreButton}>
+                    <Ionicons name="ellipsis-vertical" size={20} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.reviewText}>{review.text}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.commentsSection}>
+            <Text style={styles.sectionTitle}>Comentarios</Text>
+            {visit.comments.map((comment, index) => (
+              <View key={index} style={styles.commentItem}>
+                <Image source={comment.userPhoto} style={styles.commentorPhoto} />
+                <View style={styles.commentContent}>
+                  <View style={styles.commentHeader}>
+                    <Text style={styles.commentorName}>{comment.user}</Text>
+                    <Text style={styles.timeAgo}>{comment.timeAgo}</Text>
+                  </View>
+                  <Text style={styles.commentText}>{comment.text}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.commentsContainer}>
+            <View style={styles.commentItem}>
+              <Image source={visit.participants[1]} style={styles.commentAvatar} />
               <View style={styles.commentContent}>
                 <View style={styles.commentHeader}>
-                  <Text style={styles.commentorName}>{comment.user}</Text>
-                  <Text style={styles.timeAgo}>{comment.timeAgo}</Text>
+                  <Text style={styles.commentAuthor}>Lucas.M</Text>
+                  <Text style={styles.commentTime}>Hace 2 días</Text>
                 </View>
-                <Text style={styles.commentText}>{comment.text}</Text>
+                <Text style={styles.commentText}>¡Excelente lugar! La próxima vez tenemos que probar el matcha 🍵</Text>
               </View>
             </View>
-          ))}
-        </View>
 
-        <View style={styles.commentInputContainer}>
-          <TextInput
-            style={styles.commentInput}
-            placeholder="Escribe tu comentario..."
-            multiline
-            maxLength={500}
-          />
-          <Text style={styles.charCount}>0/500</Text>
-          <TouchableOpacity style={styles.publishButton}>
-            <Text style={styles.publishButtonText}>Publicar</Text>
-          </TouchableOpacity>
+            <View style={styles.commentItem}>
+              <Image source={visit.participants[0]} style={styles.commentAvatar} />
+              <View style={styles.commentContent}>
+                <View style={styles.commentHeader}>
+                  <Text style={styles.commentAuthor}>Sofia R.</Text>
+                  <Text style={styles.commentTime}>Hace 1 día</Text>
+                </View>
+                <Text style={styles.commentText}>¡Sí! El matcha se veía increíble 😊</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.commentInputContainer}>
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Escribe tu comentario..."
+              multiline
+              maxLength={500}
+            />
+            <Text style={styles.charCount}>0/500</Text>
+            <TouchableOpacity style={styles.publishButton}>
+              <Text style={styles.publishButtonText}>Publicar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }
 
@@ -207,8 +240,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 12,
+    height: 70,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -369,7 +401,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
     marginBottom: 16,
   },
   commentItem: {
@@ -468,5 +500,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  commentsContainer: {
+    marginBottom: 20,
+  },
+  commentAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 12,
+  },
+  commentAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  commentTime: {
+    fontSize: 12,
+    color: '#666',
   },
 }); 
