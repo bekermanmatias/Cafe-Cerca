@@ -1,5 +1,6 @@
-import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Dimensions, FlatList, ViewToken } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useState, useRef } from 'react';
 
 interface VisitCard {
   date: string;
@@ -10,15 +11,25 @@ interface VisitCard {
   participants: any[];
 }
 
+interface RenderImageProps {
+  item: any;
+  index: number;
+}
+
+interface ViewableItemsChanged {
+  viewableItems: ViewToken[];
+  changed: ViewToken[];
+}
+
 const mockVisit: VisitCard = {
   date: '24-06-2025',
   place: 'Flora',
   description: 'Cortado riki y ambiente tranki para laburar ☕️',
   rating: 4.5,
   images: [
-    require('../../assets/mock-images/cafe-moa.png'),
-    require('../../assets/mock-images/cafe-moa.png'),
-    require('../../assets/mock-images/cafe-moa.png'),
+    require('../../assets/mock-images/cafe1.png'),
+    require('../../assets/mock-images/cafe2.png'),
+    require('../../assets/mock-images/cafe3.png'),
   ],
   participants: [
     require('../../assets/mock-images/foto1.png'),
@@ -29,8 +40,33 @@ const mockVisit: VisitCard = {
 const windowWidth = Dimensions.get('window').width;
 
 export default function DiaryScreen() {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
+
+  const renderImage = ({ item: image, index }: RenderImageProps) => (
+    <View style={styles.imageWrapper}>
+      <Image
+        source={image}
+        style={styles.image}
+      />
+      <View style={styles.ratingBubble}>
+        <Text style={styles.rating}>{mockVisit.rating} ★</Text>
+      </View>
+    </View>
+  );
+
+  const handleViewableItemsChanged = useRef(({ viewableItems }: ViewableItemsChanged) => {
+    if (viewableItems.length > 0 && viewableItems[0].index !== null) {
+      setCurrentImageIndex(viewableItems[0].index);
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50
+  }).current;
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} nestedScrollEnabled={true}>
       <View style={styles.card}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -53,30 +89,27 @@ export default function DiaryScreen() {
           </View>
         </View>
         <View style={styles.imageContainer}>
-          <ScrollView
+          <FlatList
+            ref={flatListRef}
+            data={mockVisit.images}
+            renderItem={renderImage}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-          >
-            {mockVisit.images.map((image, index) => (
-              <View key={index} style={styles.imageWrapper}>
-                <Image
-                  source={image}
-                  style={styles.image}
-                />
-                <View style={styles.ratingBubble}>
-                  <Text style={styles.rating}>{mockVisit.rating} ★</Text>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+            onViewableItemsChanged={handleViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+            snapToInterval={windowWidth - 32}
+            decelerationRate="fast"
+            snapToAlignment="center"
+            keyExtractor={(_, index) => index.toString()}
+          />
           <View style={styles.paginationDots}>
             {mockVisit.images.map((_, index) => (
               <View
                 key={index}
                 style={[
                   styles.dot,
-                  { backgroundColor: index === 0 ? '#fff' : 'rgba(255, 255, 255, 0.5)' }
+                  { backgroundColor: index === currentImageIndex ? '#fff' : 'rgba(255, 255, 255, 0.5)' }
                 ]}
               />
             ))}
@@ -151,14 +184,16 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'relative',
+    height: 400,
+    width: '100%',
   },
   imageWrapper: {
     width: windowWidth - 32,
-    position: 'relative',
+    height: 400,
   },
   image: {
     width: '100%',
-    height: 400,
+    height: '100%',
     resizeMode: 'cover',
   },
   ratingBubble: {
