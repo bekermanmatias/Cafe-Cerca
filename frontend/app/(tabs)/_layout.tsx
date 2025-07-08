@@ -1,5 +1,9 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import ExploreIcon from '../../assets/icons/explore.svg';
+import MapIcon from '../../assets/icons/map.svg';
+import DiaryIcon from '../../assets/icons/diary.svg';
+import FriendsIcon from '../../assets/icons/friends.svg';
 
 export default function TabLayout() {
   return (
@@ -9,6 +13,11 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#A0522D',
         tabBarStyle: {
           backgroundColor: '#ffffff',
+          height: 65,
+          paddingBottom: 8,
+        },
+        tabBarIconStyle: {
+          marginTop: 5, // Ajustamos la posición vertical de los iconos
         },
         headerStyle: {
           backgroundColor: '#ffffff',
@@ -19,37 +28,30 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: 'Explore',
-          tabBarIcon: ({ color }) => <TabBarIcon name="search" color={color} />,
+          tabBarIcon: ({ color }) => <ExploreIcon width={28} height={28} fill={color} />,
         }}
       />
       <Tabs.Screen
         name="map"
         options={{
           title: 'Map',
-          tabBarIcon: ({ color }) => <TabBarIcon name="location" color={color} />,
+          tabBarIcon: ({ color }) => <MapIcon width={28} height={28} fill={color} />,
         }}
       />
       <Tabs.Screen
         name="diary"
         options={{
           title: 'Diary',
-          tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,
+          tabBarIcon: ({ color }) => <DiaryIcon width={28} height={28} stroke={color} fill="none" />,
         }}
       />
       <Tabs.Screen
         name="friends"
         options={{
           title: 'Friends',
-          tabBarIcon: ({ color }) => <TabBarIcon name="people" color={color} />,
+          tabBarIcon: ({ color }) => <FriendsIcon width={35} height={35} fill={color} />,
         }}
       />
     </Tabs>
   );
-}
-
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof Ionicons>['name'];
-  color: string;
-}) {
-  return <Ionicons size={28} style={{ marginBottom: -3 }} {...props} />;
 }
