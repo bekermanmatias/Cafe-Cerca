@@ -1,21 +1,29 @@
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Text, View } from 'react-native';
+import SearchBar from '../../components/SearchBar';
 
 export default function ExploreScreen() {
+
+  const [searchQuery, setSearchQuery] = useState('');
+    // Simulación de cafeterías (sin backend)
+  const cafes = ['Café Martínez', 'Starbucks', 'Havanna', 'Café Tortoni'];
+  const filteredCafes = cafes.filter(cafe =>
+    cafe.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Explore</Text>
+    <View style={{ padding: 16 }}>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="¿Que te apetece hoy?"
+      />
+
+      {filteredCafes.map((cafe, index) => (
+        <Text key={index} style={{ marginVertical: 8, fontSize: 18 }}>
+          {cafe}
+        </Text>
+      ))}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-});
