@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tester Backend API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            border: 2px solid #e8e8e8;
+            border-radius: 15px;
+            background: #f9f9f9;
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 6px 20px rgba(244, 67, 54, 0.3);
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .response.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .response.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .response.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Backend API Tester</h1>
+            <p>Prueba tu conexión a la base de datos y endpoints</p>
+        </div>
+
+        <div class="content">
+            <!-- Configuración -->
+            <div class="section">
+                <h2>⚙️ Configuración</h2>
+                <div class="input-group">
+                    <label for="baseUrl">URL Base de tu API:</label>
+                    <input type="text" id="baseUrl" value="http://localhost:4000" placeholder="http://localhost:4000">
+                </div>
+                <button class="btn" onclick="testConnection()">
+                    <span id="connectionSpinner" class="spinner" style="display: none;"></span>
+                    Probar Conexión
+                </button>
+                <div id="connectionResult"></div>
+            </div>
+
+            <!-- Test GET -->
+            <div class="section">
+                <h2>📋 Test GET - Obtener todos los registros</h2>
+                <button class="btn" onclick="testGetAll()">
+                    <span id="getSpinner" class="spinner" style="display: none;"></span>
+                    GET /api/example
+                </button>
+                <div id="getResult"></div>
+            </div>
+
+            <!-- Test POST -->
+            <div class="section">
+                <h2>➕ Test POST - Crear nuevo registro</h2>
+                <div class="input-group">
+                    <label for="newName">Nombre para el nuevo registro:</label>
+                    <input type="text" id="newName" placeholder="Ingresa un nombre de ejemplo">
+                </div>
+                <button class="btn" onclick="testCreate()">
+                    <span id="postSpinner" class="spinner" style="display: none;"></span>
+                    POST /api/example
+                </button>
+                <div id="postResult"></div>
+            </div>
+
+            <!-- Test completo -->
+            <div class="section">
+                <h2>🔄 Test Completo</h2>
+                <p style="margin-bottom: 20px; color: #666;">
+                    Ejecuta una prueba completa: conexión → GET → POST → GET final
+                </p>
+                <button class="btn" onclick="runFullTest()">
+                    <span id="fullTestSpinner" class="spinner" style="display: none;"></span>
+                    Ejecutar Test Completo
+                </button>
+                <div id="fullTestResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getBaseUrl() {
+            return document.getElementById('baseUrl').value.trim();
+        }
+
+        function showSpinner(spinnerId) {
+            document.getElementById(spinnerId).style.display = 'inline-block';
+        }
+
+        function hideSpinner(spinnerId) {
+            document.getElementById(spinnerId).style.display = 'none';
+        }
+
+        function showResult(elementId, content, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="response ${type}">${content}</div>`;
+        }
+
+        async function testConnection() {
+            showSpinner('connectionSpinner');
+            const baseUrl = getBaseUrl();
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/example`);
+                hideSpinner('connectionSpinner');
+                
+                if (response.ok) {
+                    showResult('connectionResult', 
+                        `✅ CONEXIÓN EXITOSA\n` +
+                        `Status: ${response.status}\n` +
+                        `URL: ${baseUrl}/api/example\n` +
+                        `Servidor respondiendo correctamente`, 
+                        'success'
+                    );
+                } else {
+                    showResult('connectionResult', 
+                        `⚠️ CONEXIÓN CON PROBLEMAS\n` +
+                        `Status: ${response.status}\n` +
+                        `Error: ${response.statusText}\n` +
+                        `El servidor responde pero hay un error`, 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                hideSpinner('connectionSpinner');
+                showResult('connectionResult', 
+                    `❌ ERROR DE CONEXIÓN\n` +
+                    `Error: ${error.message}\n` +
+                    `Verifica que tu servidor esté ejecutándose en ${baseUrl}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testGetAll() {
+            showSpinner('getSpinner');
+            const baseUrl = getBaseUrl();
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/example`);
+                const data = await response.json();
+                hideSpinner('getSpinner');
+                
+                if (response.ok) {
+                    showResult('getResult', 
+                        `✅ GET EXITOSO\n` +
+                        `Status: ${response.status}\n` +
+                        `Registros encontrados: ${data.length}\n` +
+                        `Datos: ${JSON.stringify(data, null, 2)}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('getResult', 
+                        `❌ ERROR EN GET\n` +
+                        `Status: ${response.status}\n` +
+                        `Error: ${JSON.stringify(data, null, 2)}`, 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                hideSpinner('getSpinner');
+                showResult('getResult', 
+                    `❌ ERROR DE CONEXIÓN\n` +
+                    `Error: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testCreate() {
+            showSpinner('postSpinner');
+            const baseUrl = getBaseUrl();
+            const name = document.getElementById('newName').value.trim();
+            
+            if (!name) {
+                hideSpinner('postSpinner');
+                showResult('postResult', '⚠️ Por favor ingresa un nombre', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${baseUrl}/api/example`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name })
+                });
+                
+                const data = await response.json();
+                hideSpinner('postSpinner');
+                
+                if (response.ok) {
+                    showResult('postResult', 
+                        `✅ POST EXITOSO\n` +
+                        `Status: ${response.status}\n` +
+                        `Registro creado: ${JSON.stringify(data, null, 2)}`, 
+                        'success'
+                    );
+                    document.getElementById('newName').value = '';
+                } else {
+                    showResult('postResult', 
+                        `❌ ERROR EN POST\n` +
+                        `Status: ${response.status}\n` +
+                        `Error: ${JSON.stringify(data, null, 2)}`, 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                hideSpinner('postSpinner');
+                showResult('postResult', 
+                    `❌ ERROR DE CONEXIÓN\n` +
+                    `Error: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function runFullTest() {
+            showSpinner('fullTestSpinner');
+            const baseUrl = getBaseUrl();
+            let testResults = [];
+            
+            // Test 1: Conexión
+            try {
+                const response = await fetch(`${baseUrl}/api/example`);
+                if (response.ok) {
+                    testResults.push('✅ Conexión al servidor: OK');
+                } else {
+                    testResults.push(`⚠️ Conexión al servidor: ${response.status}`);
+                }
+            } catch (error) {
+                testResults.push(`❌ Conexión al servidor: ERROR - ${error.message}`);
+                hideSpinner('fullTestSpinner');
+                showResult('fullTestResult', testResults.join('\n'), 'error');
+                return;
+            }
+
+            // Test 2: GET inicial
+            try {
+                const response = await fetch(`${baseUrl}/api/example`);
+                const data = await response.json();
+                if (response.ok) {
+                    testResults.push(`✅ GET inicial: OK (${data.length} registros)`);
+                } else {
+                    testResults.push(`❌ GET inicial: ERROR - ${response.status}`);
+                }
+            } catch (error) {
+                testResults.push(`❌ GET inicial: ERROR - ${error.message}`);
+            }
+
+            // Test 3: POST
+            const testName = `Test_${Date.now()}`;
+            try {
+                const response = await fetch(`${baseUrl}/api/example`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name: testName })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    testResults.push(`✅ POST: OK (ID: ${data.id})`);
+                } else {
+                    testResults.push(`❌ POST: ERROR - ${response.status}`);
+                }
+            } catch (error) {
+                testResults.push(`❌ POST: ERROR - ${error.message}`);
+            }
+
+            // Test 4: GET final
+            try {
+                const response = await fetch(`${baseUrl}/api/example`);
+                const data = await response.json();
+                if (response.ok) {
+                    testResults.push(`✅ GET final: OK (${data.length} registros)`);
+                    
+                    // Verificar si el registro creado está presente
+                    const createdRecord = data.find(record => record.name === testName);
+                    if (createdRecord) {
+                        testResults.push(`✅ Verificación: Registro creado encontrado`);
+                    } else {
+                        testResults.push(`⚠️ Verificación: Registro creado no encontrado`);
+                    }
+                } else {
+                    testResults.push(`❌ GET final: ERROR - ${response.status}`);
+                }
+            } catch (error) {
+                testResults.push(`❌ GET final: ERROR - ${error.message}`);
+            }
+
+            hideSpinner('fullTestSpinner');
+            
+            const hasErrors = testResults.some(result => result.includes('❌'));
+            const resultType = hasErrors ? 'error' : 'success';
+            
+            testResults.unshift('🔄 TEST COMPLETO FINALIZADO\n' + '='.repeat(40));
+            testResults.push('='.repeat(40));
+            
+            if (!hasErrors) {
+                testResults.push('🎉 ¡TODOS LOS TESTS PASARON! Tu backend está funcionando correctamente.');
+            } else {
+                testResults.push('⚠️ Algunos tests fallaron. Revisa la configuración de tu servidor y base de datos.');
+            }
+            
+            showResult('fullTestResult', testResults.join('\n'), resultType);
+        }
+    </script>
+</body>
+</html>
