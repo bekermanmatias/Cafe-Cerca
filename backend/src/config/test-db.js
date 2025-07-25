@@ -1,3 +1,7 @@
 import { testConnection } from './database.js';
 
-testConnection();
+const runTest = async () => {
+  await testConnection();
+};
+
+runTest();
