@@ -1,14 +1,21 @@
-import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { TouchableOpacity, View, Text } from 'react-native';
-import ExploreIcon from '../../assets/icons/explore.svg';
-import MapIcon from '../../assets/icons/map.svg';
+import { Tabs } from 'expo-router';
+import { TouchableOpacity } from 'react-native';
 import DiaryIcon from '../../assets/icons/diary.svg';
+import ExploreIcon from '../../assets/icons/explore.svg';
 import FriendsIcon from '../../assets/icons/friends.svg';
+import MapIcon from '../../assets/icons/map.svg';
+
+//Agrego librerias para poder presionar y manajer la navegación.
+import { useRouter } from 'expo-router';
 
 function HeaderRight() {
+  const router = useRouter();
   return (
-    <TouchableOpacity style={{ marginRight: 16 }}>
+    <TouchableOpacity 
+      style={{ marginRight: 16 }}
+      onPress={() => router.push('/(tabs)/profile' as any)}
+    >
       <Ionicons name="person-circle-outline" size={40} color="#8B4513" />
     </TouchableOpacity>
   );
@@ -43,7 +50,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
+          title: 'Café Cerca',
           tabBarIcon: ({ color }) => <ExploreIcon width={28} height={28} fill={color} />,
         }}
       />
