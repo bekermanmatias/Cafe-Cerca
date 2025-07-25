@@ -89,12 +89,7 @@ export default function DiaryScreen() {
     router.push({
       pathname: '/visit-details',
       params: {
-        place: `Cafetería ${visit.cafeteriaId}`,
-        description: visit.comentario.replace(/"/g, ''),
-        rating: visit.calificacion,
-        date: new Date(visit.fecha).toLocaleDateString(),
-        images: JSON.stringify(visit.imagenes.map(img => img.imageUrl)),
-        participants: JSON.stringify([])
+        visitId: visit.id.toString()
       }
     });
   };

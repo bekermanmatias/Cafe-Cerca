@@ -2,6 +2,19 @@ import Visita from '../models/Visita.js';
 import VisitaImagen from '../models/VisitaImagen.js';
 import sequelize from '../config/database.js';
 
+// Función helper para incluir las imágenes en las consultas
+const includeImagenes = {
+  model: VisitaImagen,
+  as: 'imagenes',
+  attributes: ['imageUrl', 'orden']
+};
+
+// Función helper para ordenar las imágenes
+const orderOptions = [
+  ['fecha', 'DESC'],
+  [{ model: VisitaImagen, as: 'imagenes' }, 'orden', 'ASC']
+];
+
 export const crearVisita = async (req, res) => {
   const t = await sequelize.transaction();
 
@@ -39,11 +52,8 @@ export const crearVisita = async (req, res) => {
 
     // Obtener la visita con sus imágenes
     const visitaConImagenes = await Visita.findByPk(nuevaVisita.id, {
-      include: [{
-        model: VisitaImagen,
-        as: 'imagenes',
-        attributes: ['imageUrl', 'orden']
-      }]
+      include: [includeImagenes],
+      order: orderOptions
     });
 
     res.status(201).json({
@@ -64,17 +74,15 @@ export const crearVisita = async (req, res) => {
 export const obtenerVisitas = async (req, res) => {
   try {
     const visitas = await Visita.findAll({
-      include: [{
-        model: VisitaImagen,
-        as: 'imagenes',
-        attributes: ['imageUrl', 'orden']
-      }],
-      order: [
-        ['fecha', 'DESC'],
-        [{ model: VisitaImagen, as: 'imagenes' }, 'orden', 'ASC']
-      ]
+      include: [includeImagenes],
+      order: orderOptions
     });
-    res.json(visitas);
+
+    res.json({
+      mensaje: 'Visitas recuperadas exitosamente',
+      totalVisitas: visitas.length,
+      visitas
+    });
   } catch (error) {
     console.error('Error al obtener visitas:', error);
     res.status(500).json({
@@ -87,13 +95,19 @@ export const obtenerVisitas = async (req, res) => {
 export const obtenerVisitaPorId = async (req, res) => {
   try {
     const { id } = req.params;
-    const visita = await Visita.findByPk(id);
+    const visita = await Visita.findByPk(id, {
+      include: [includeImagenes],
+      order: orderOptions
+    });
     
     if (!visita) {
       return res.status(404).json({ mensaje: 'Visita no encontrada' });
     }
     
-    res.json(visita);
+    res.json({
+      mensaje: 'Visita recuperada exitosamente',
+      visita
+    });
   } catch (error) {
     console.error('Error al obtener la visita:', error);
     res.status(500).json({ 
@@ -112,7 +126,10 @@ export const actualizarVisita = async (req, res) => {
     const imagenes = req.files;
 
     // Verificar si la visita existe
-    const visita = await Visita.findByPk(id);
+    const visita = await Visita.findByPk(id, {
+      include: [includeImagenes]
+    });
+
     if (!visita) {
       return res.status(404).json({ mensaje: 'Visita no encontrada' });
     }
@@ -153,11 +170,8 @@ export const actualizarVisita = async (req, res) => {
 
     // Obtener la visita actualizada con sus imágenes
     const visitaActualizada = await Visita.findByPk(id, {
-      include: [{
-        model: VisitaImagen,
-        as: 'imagenes',
-        attributes: ['imageUrl', 'orden']
-      }]
+      include: [includeImagenes],
+      order: orderOptions
     });
 
     res.json({
@@ -181,11 +195,17 @@ export const eliminarVisita = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Verificar si la visita existe
-    const visita = await Visita.findByPk(id);
+    // Verificar si la visita existe y obtener sus imágenes
+    const visita = await Visita.findByPk(id, {
+      include: [includeImagenes]
+    });
+
     if (!visita) {
       return res.status(404).json({ mensaje: 'Visita no encontrada' });
     }
+
+    // Guardar información de la visita antes de eliminarla
+    const visitaEliminada = { ...visita.toJSON() };
 
     // Eliminar primero las imágenes asociadas
     await VisitaImagen.destroy({
@@ -200,7 +220,7 @@ export const eliminarVisita = async (req, res) => {
 
     res.json({
       mensaje: 'Visita eliminada exitosamente',
-      id
+      visita: visitaEliminada
     });
 
   } catch (error) {
@@ -219,27 +239,12 @@ export const obtenerDiarioUsuario = async (req, res) => {
 
     const visitas = await Visita.findAll({
       where: { usuarioId },
-      include: [{
-        model: VisitaImagen,
-        as: 'imagenes',
-        attributes: ['imageUrl', 'orden']
-      }],
-      order: [
-        ['fecha', 'DESC'], // Ordenadas por fecha, más recientes primero
-        [{ model: VisitaImagen, as: 'imagenes' }, 'orden', 'ASC']
-      ]
+      include: [includeImagenes],
+      order: orderOptions
     });
 
-    // Si no hay visitas, devolver array vacío
-    if (!visitas.length) {
-      return res.json({
-        mensaje: 'El usuario no tiene visitas registradas',
-        visitas: []
-      });
-    }
-
     res.json({
-      mensaje: 'Diario recuperado exitosamente',
+      mensaje: visitas.length > 0 ? 'Diario recuperado exitosamente' : 'El usuario no tiene visitas registradas',
       totalVisitas: visitas.length,
       visitas
     });
