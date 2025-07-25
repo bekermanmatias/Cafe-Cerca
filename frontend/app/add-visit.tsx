@@ -1,39 +1,74 @@
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
 import { useState } from 'react';
-import { useRouter, Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { AntDesign } from '@expo/vector-icons';
+import ImageEditor from '../components/ImageEditor';
 
 const API_URL = __DEV__
   ? 'http://192.168.0.11:3000/api'
   : 'https://tu-servidor-produccion.com/api';
+
+const STANDARD_SIZE = 1080; // Tamaño estándar para las imágenes (1080x1080)
 
 export default function AddVisitScreen() {
   const router = useRouter();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [images, setImages] = useState<string[]>([]);
+  const [editingImage, setEditingImage] = useState<string | null>(null);
+
+  const processImage = async (uri: string) => {
+    try {
+      // Procesar la imagen para asegurar que sea cuadrada y del tamaño correcto
+      const result = await manipulateAsync(
+        uri,
+        [{ resize: { width: STANDARD_SIZE, height: STANDARD_SIZE } }],
+        { compress: 0.8, format: SaveFormat.JPEG }
+      );
+      return result.uri;
+    } catch (error) {
+      console.error('Error procesando imagen:', error);
+      return null;
+    }
+  };
 
   const handleSelectImages = async () => {
     try {
+      // Solicitar permisos primero
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Se necesitan permisos para acceder a la galería');
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: true,
-        quality: 0.8,
-        aspect: [4, 3],
+        allowsEditing: true, // Habilita el editor nativo
+        aspect: [1, 1], // Fuerza aspecto cuadrado
+        quality: 1,
       });
 
       if (!result.canceled) {
-        const selectedAssets = result.assets;
-        if (selectedAssets.length + images.length > 5) {
+        if (images.length >= 5) {
           Alert.alert('Error', 'Puedes seleccionar hasta 5 imágenes en total');
           return;
         }
-        setImages([...images, ...selectedAssets.map(asset => asset.uri)]);
+
+        const processedUri = await processImage(result.assets[0].uri);
+        if (processedUri) {
+          setImages([...images, processedUri]);
+        }
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudieron cargar las imágenes');
+      Alert.alert('Error', 'No se pudo procesar la imagen');
     }
+  };
+
+  const handleSaveEditedImage = (editedUri: string) => {
+    setImages([...images, editedUri]);
+    setEditingImage(null);
   };
 
   const handlePublish = async () => {
@@ -78,7 +113,6 @@ export default function AddVisitScreen() {
         { 
           text: 'OK', 
           onPress: () => {
-            // Regresar a la pantalla anterior y forzar una actualización
             router.back();
             router.setParams({ refresh: Date.now().toString() });
           }
@@ -171,6 +205,15 @@ export default function AddVisitScreen() {
       >
         <Text style={styles.publishButtonText}>Publicar</Text>
       </TouchableOpacity>
+
+      {editingImage && (
+        <ImageEditor
+          uri={editingImage}
+          visible={true}
+          onSave={handleSaveEditedImage}
+          onCancel={() => setEditingImage(null)}
+        />
+      )}
     </ScrollView>
   );
 }
