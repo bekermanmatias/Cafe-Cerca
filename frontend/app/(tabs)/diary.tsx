@@ -3,6 +3,7 @@ import { VisitCard } from '../../components/VisitCard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import Constants from 'expo-constants';
+import { shareVisit } from '../../constants/Sharing';
 
 interface Imagen {
   imageUrl: string;
@@ -81,8 +82,8 @@ export default function DiaryScreen() {
     console.log('Like pressed');
   };
 
-  const handleShare = () => {
-    console.log('Share pressed');
+  const handleShare = (visitId: number) => {
+    shareVisit(visitId);
   };
 
   const handleDetails = (visit: Visita) => {
@@ -123,7 +124,7 @@ export default function DiaryScreen() {
             images={visit.imagenes.map(img => ({ uri: img.imageUrl }))}
             participants={[]}
             onLike={handleLike}
-            onShare={handleShare}
+            onShare={() => handleShare(visit.id)}
             onDetails={() => handleDetails(visit)}
           />
         ))}

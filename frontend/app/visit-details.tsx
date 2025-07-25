@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Dimensions, ImageSourcePropType, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { shareVisit } from '../constants/Sharing';
 
 const windowWidth = Dimensions.get('window').width;
 
 const API_URL = __DEV__
   ? 'http://192.168.0.11:3000/api'
-  : 'https://tu-servidor-produccion.com/api';
+  : 'https://cafe-cerca.com/api';
 
 interface Imagen {
   imageUrl: string;
@@ -38,42 +39,79 @@ export default function VisitDetailsScreen() {
 
   useEffect(() => {
     fetchVisitDetails();
-  }, []);
+  }, [params.visitId]); // Agregamos params.visitId como dependencia
 
   const fetchVisitDetails = async () => {
     try {
-      const response = await fetch(`${API_URL}/visitas/${params.visitId}`);
-      if (!response.ok) {
-        throw new Error('Error al obtener los detalles de la visita');
+      setIsLoading(true);
+      setError(null); // Limpiar error anterior si existe
+
+      // Limpiar y validar el ID
+      const visitId = String(params.visitId).replace(/[^0-9]/g, '');
+      if (!visitId) {
+        throw new Error('ID de visita no válido');
       }
+
+      console.log('Fetching visit details for ID:', visitId);
+      const fullUrl = `${API_URL}/visitas/${visitId}`;
+      console.log('Full URL:', fullUrl);
+
+      const response = await fetch(fullUrl);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.mensaje || 'Error al obtener los detalles de la visita');
+      }
+
       const data: ApiResponse = await response.json();
+      console.log('Visit data received:', data);
       setVisitData(data.visita);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching visit details:', error);
       setError('No se pudo cargar la información de la visita');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Mostrar un indicador de carga mientras se obtienen los datos
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#8D6E63" />
+        <Text style={styles.loadingText}>Cargando detalles de la visita...</Text>
       </View>
     );
   }
 
+  // Mostrar mensaje de error si algo salió mal
   if (error || !visitData) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error || 'Error al cargar la visita'}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.errorButton}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity 
+          onPress={() => {
+            setError(null);
+            fetchVisitDetails(); // Intentar cargar de nuevo
+          }} 
+          style={styles.retryButton}
+        >
+          <Text style={styles.retryButtonText}>Intentar de nuevo</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          style={styles.errorButton}
+        >
           <Text style={styles.errorButtonText}>Volver</Text>
         </TouchableOpacity>
       </View>
     );
   }
+
+  const handleShare = () => {
+    if (visitData) {
+      shareVisit(visitData.id);
+    }
+  };
 
   return (
     <>
@@ -121,7 +159,7 @@ export default function VisitDetailsScreen() {
           <TouchableOpacity style={styles.actionButton}>
             <Ionicons name="heart-outline" size={28} color="#000" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
             <Ionicons name="share-social-outline" size={28} color="#000" />
           </TouchableOpacity>
         </View>
@@ -330,6 +368,23 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   publishButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+  retryButton: {
+    backgroundColor: '#8D6E63',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  retryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
