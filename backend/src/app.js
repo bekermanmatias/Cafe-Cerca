@@ -14,9 +14,12 @@ const app = express();
 // Middlewares de seguridad y utilidades
 app.use(helmet()); // Seguridad básica
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*', // Permitir origen del frontend
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: '*', // Permitir cualquier origen
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  credentials: true,
+  maxAge: 86400 // Cache preflight por 24 horas
 }));
 app.use(morgan('dev')); // Logging de solicitudes HTTP
 app.use(express.json()); // Parser para JSON
