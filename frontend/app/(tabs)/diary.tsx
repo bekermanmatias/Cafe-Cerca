@@ -1,83 +1,73 @@
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, Alert } from 'react-native';
 import { VisitCard } from '../../components/VisitCard';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import Constants from 'expo-constants';
 
-const mockVisits = [
-  {
-    date: '26-06-2025',
-    place: 'Café Artesano',
-    description: 'Probando el mejor flat white de la ciudad ☕️ La espuma perfecta y el arte latte increíble 🎨',
-    rating: 4.8,
-    images: [
-      require('../../assets/mock-images/cafe1.png'),
-      require('../../assets/mock-images/cafe13.png'),
-    ],
-    participants: [
-      require('../../assets/mock-images/foto1.png'),
-      require('../../assets/mock-images/foto2.png'),
-    ],
-  },
-  {
-    date: '25-06-2025',
-    place: 'La Bicicleta',
-    description: '¡Desayuno de campeones! 🚴‍♂️ Café de Colombia recién tostado y pan de masa madre 🍞',
-    rating: 4.7,
-    images: [
-      require('../../assets/mock-images/cafe3.png'),
-      require('../../assets/mock-images/cafe4.png'),
-      require('../../assets/mock-images/cafe5.png'),
-    ],
-    participants: [
-      require('../../assets/mock-images/foto1.png'),
-      require('../../assets/mock-images/foto2.png'),
-    ],
-  },
-  {
-    date: '24-06-2025',
-    place: 'Rincón Verde',
-    description: 'Café orgánico y tarta de zanahoria casera 🥕 El lugar perfecto para trabajar rodeado de plantas 🌿',
-    rating: 4.9,
-    images: [
-      require('../../assets/mock-images/cafe6.png'),
-      require('../../assets/mock-images/cafe7.png'),
-    ],
-    participants: [
-      require('../../assets/mock-images/foto1.png'),
-    ],
-  },
-  {
-    date: '23-06-2025',
-    place: 'Café del Puerto',
-    description: 'Brunch con vista al mar 🌊 Cold brew perfecto para un día caluroso ❄️',
-    rating: 4.6,
-    images: [
-      require('../../assets/mock-images/cafe9.png'),
-      require('../../assets/mock-images/cafe10.png'),
-      require('../../assets/mock-images/cafe8.png'),
-    ],
-    participants: [
-      require('../../assets/mock-images/foto1.png'),
-      require('../../assets/mock-images/foto2.png'),
-    ],
-  },
-  {
-    date: '22-06-2025',
-    place: 'El Laboratorio',
-    description: 'Experimentando métodos alternativos: Chemex y Aeropress 🧪 ¡La ciencia del café llevada al siguiente nivel! 🔬',
-    rating: 5.0,
-    images: [
-      require('../../assets/mock-images/cafe11.png'),
-      require('../../assets/mock-images/cafe7.png'),
-    ],
-    participants: [
-      require('../../assets/mock-images/foto1.png'),
-      require('../../assets/mock-images/foto2.png'),
-    ],
-  },
-];
+interface Imagen {
+  imageUrl: string;
+  orden: number;
+}
+
+interface Visita {
+  id: number;
+  usuarioId: number;
+  cafeteriaId: number;
+  comentario: string;
+  calificacion: number;
+  fecha: string;
+  imagenes: Imagen[];
+}
+
+interface DiarioResponse {
+  mensaje: string;
+  totalVisitas: number;
+  visitas: Visita[];
+}
+
+// En desarrollo, usa la IP de tu máquina local. En producción, usa tu servidor real.
+const API_URL = __DEV__ 
+  ? 'http://192.168.0.11:3000/api' // Cambia esta IP por la de tu computadora
+  : 'https://tu-servidor-produccion.com/api';
 
 export default function DiaryScreen() {
   const router = useRouter();
+  const [visitas, setVisitas] = useState<Visita[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDiario();
+  }, []);
+
+  const fetchDiario = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Fetching from:', `${API_URL}/usuarios/1/diario`); // Debug log
+      const response = await fetch(`${API_URL}/usuarios/1/diario`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data: DiarioResponse = await response.json();
+      console.log('Response data:', data); // Debug log
+      setVisitas(data.visitas);
+    } catch (error) {
+      console.error('Error fetching diario:', error);
+      Alert.alert(
+        'Error',
+        'No se pudo cargar el diario. Por favor, verifica tu conexión a internet.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLike = () => {
     console.log('Like pressed');
@@ -87,23 +77,31 @@ export default function DiaryScreen() {
     console.log('Share pressed');
   };
 
-  const handleDetails = (visit: any) => {
+  const handleDetails = (visit: Visita) => {
     router.push({
       pathname: '/visit-details',
       params: {
-        ...visit,
-        images: JSON.stringify(visit.images),
-        participants: JSON.stringify(visit.participants),
-      },
+        place: `Cafetería ${visit.cafeteriaId}`,
+        description: visit.comentario.replace(/"/g, ''),
+        rating: visit.calificacion,
+        date: new Date(visit.fecha).toLocaleDateString(),
+        images: JSON.stringify(visit.imagenes.map(img => img.imageUrl)),
+        participants: JSON.stringify([])
+      }
     });
   };
 
   return (
     <ScrollView style={styles.container} nestedScrollEnabled={true}>
-      {mockVisits.map((visit, index) => (
+      {visitas.map((visit) => (
         <VisitCard
-          key={index}
-          {...visit}
+          key={visit.id}
+          place={`Cafetería ${visit.cafeteriaId}`}
+          description={visit.comentario.replace(/"/g, '')}
+          rating={visit.calificacion}
+          date={new Date(visit.fecha).toLocaleDateString()}
+          images={visit.imagenes.map(img => ({ uri: img.imageUrl }))}
+          participants={[]}
           onLike={handleLike}
           onShare={handleShare}
           onDetails={() => handleDetails(visit)}
