@@ -3,7 +3,8 @@ import { VisitCard } from '../../components/VisitCard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import Constants from 'expo-constants';
-import { shareVisit } from '../../constants/Sharing';
+import { shareVisit, shareDiary } from '../../constants/Sharing';
+import { AntDesign } from '@expo/vector-icons';
 
 interface Imagen {
   imageUrl: string;
@@ -101,16 +102,59 @@ export default function DiaryScreen() {
     });
   };
 
+  const handleShareDiary = async () => {
+    try {
+      // Por ahora hardcodeamos el userId a 1
+      await shareDiary(1);
+    } catch (error) {
+      console.error('Error sharing diary:', error);
+      Alert.alert(
+        'Error',
+        'No se pudo compartir el diario. Por favor, intenta de nuevo.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handleStats = () => {
+    // Por ahora solo un console.log, implementaremos la funcionalidad después
+    console.log('Stats pressed');
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Mi Diario</Text>
+          <TouchableOpacity style={styles.sortButton}>
+            <Text style={styles.sortButtonText}>Recientes</Text>
+            <AntDesign name="down" size={12} color="#8D6E63" style={styles.sortIcon} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            style={styles.headerButton} 
+            onPress={handleStats}
+          >
+            <AntDesign name="barschart" size={24} color="#8D6E63" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerButton} 
+            onPress={handleShareDiary}
+          >
+            <AntDesign name="sharealt" size={24} color="#8D6E63" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <ScrollView 
         nestedScrollEnabled={true}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#8D6E63']} // Color del spinner en Android
-            tintColor="#8D6E63"  // Color del spinner en iOS
+            colors={['#8D6E63']}
+            tintColor="#8D6E63"
           />
         }
       >
@@ -145,16 +189,61 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#000',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  headerButton: {
+    padding: 4,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+  sortButtonText: {
+    fontSize: 14,
+    color: '#8D6E63',
+    marginRight: 4,
+  },
+  sortIcon: {
+    marginTop: 2,
+  },
   fabButton: {
     position: 'absolute',
     bottom: 20,
     alignSelf: 'center',
-    backgroundColor: '#8D6E63', // Color café
+    backgroundColor: '#8D6E63',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 25,
-    elevation: 5, // Sombra en Android
-    shadowColor: '#000', // Sombra en iOS
+    elevation: 5,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,

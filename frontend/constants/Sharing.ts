@@ -61,4 +61,52 @@ export const shareVisit = async (visitId: number | string) => {
   } catch (error) {
     console.error('Error sharing:', error);
   }
+};
+
+export const shareDiary = async (userId: number | string = 1) => {
+  try {
+    // Asegurarnos de que el ID sea un string limpio sin caracteres especiales
+    const cleanId = String(userId).replace(/[^0-9]/g, '');
+    
+    // Crear la URL completa
+    const longUrl = `${BASE_URL}/diary?userId=${cleanId}`;
+    
+    // Obtener la URL corta
+    const shortUrl = await createShortUrl(longUrl);
+    
+    // Crear el mensaje con la URL corta
+    const messageLines = [
+      '¡Mira mi diario de café en Café Cerca! ☕️📖',
+      '',
+      '¡Descubre todas las cafeterías que he visitado y mis experiencias!',
+      '',
+      shortUrl,
+      '',
+      '¡Toca el enlace para ver mi diario completo!'
+    ];
+
+    const message = messageLines.join('\n');
+
+    const result = await Share.share({
+      message,
+      url: shortUrl,
+      title: '¡Comparte tu diario de café!'
+    }, {
+      dialogTitle: '¡Comparte tu diario!',
+      tintColor: '#8D6E63',
+      subject: '¡Mira mi diario de café en Café Cerca!'
+    });
+
+    if (result.action === Share.sharedAction) {
+      if (result.activityType) {
+        console.log('Shared diary with activity type:', result.activityType);
+      } else {
+        console.log('Shared diary');
+      }
+    } else if (result.action === Share.dismissedAction) {
+      console.log('Share diary dismissed');
+    }
+  } catch (error) {
+    console.error('Error sharing diary:', error);
+  }
 }; 
