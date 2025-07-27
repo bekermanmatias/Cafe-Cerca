@@ -17,9 +17,10 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
       console.log(`📋 Rutas disponibles:`);
-      console.log(`   GET  http://localhost:${PORT}/`);
-      console.log(`   GET  http://localhost:${PORT}/api/example`);
-      console.log(`   POST http://localhost:${PORT}/api/example`);
+      console.log(`   GET  http://localhost:${PORT}/health`);
+      console.log(`   GET  http://localhost:${PORT}/api/visitas`);
+      console.log(`   GET  http://localhost:${PORT}/api/cafes`);
+      console.log(`   POST http://localhost:${PORT}/api/cafes`);
     });
   } catch (error) {
     console.error('❌ Error iniciando servidor:', error.message);
