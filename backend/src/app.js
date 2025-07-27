@@ -33,7 +33,7 @@ app.get('/health', (req, res) => {
 });
 
 // Rutas de la API
-app.use('/api/visitas', visitaRoutes);
+app.use('/api', visitaRoutes);
 app.use('/api/cafes', cafesRoutes); // cambié a /api/cafes para que coincida con los logs
 
 // Mostrar rutas disponibles por consola para que las veas

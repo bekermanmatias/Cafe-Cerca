@@ -18,7 +18,7 @@ router.get('/visitas/:id', obtenerVisitaPorId);
 router.put('/visitas/:id', upload.array('imagenes', 5), actualizarVisita);
 router.delete('/visitas/:id', eliminarVisita);
 
-// Nueva ruta para el diario de un usuario
+// Ruta para el diario de un usuario
 router.get('/usuarios/:usuarioId/diario', obtenerDiarioUsuario);
 
 export default router;
