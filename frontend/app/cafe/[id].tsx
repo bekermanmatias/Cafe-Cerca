@@ -16,6 +16,7 @@ import HorarioIcon from '../../assets/icons/horario.svg';
 import GuardarIcon from '../../assets/icons/guardar.svg';
 import IrDireccionIcon from '../../assets/icons/irdireccion.svg';
 import Lapiz from '../../assets/icons/lapiz.svg';
+import { API_URL } from '../../constants/Config';
 
 type Cafe = {
   id: number;
@@ -35,7 +36,10 @@ export default function CafeDetail() {
   useEffect(() => {
     const fetchCafe = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/api/cafes/${id}`);
+        const res = await fetch(`${API_URL}/cafes/${id}`);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
         const data = await res.json();
         setCafe(data);
       } catch (error) {

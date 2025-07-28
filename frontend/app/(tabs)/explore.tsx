@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
-import FilterChips from '../../components/FilterChips';
+import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Link, useRouter } from 'expo-router';
 import SearchBar from '../../components/SearchBar';
+import FilterChips from '../../components/FilterChips';
 import TagChip from '../../components/TagChip';
 import { filters } from '../../constants/Filters';
 import { API_URL } from '../../constants/Config';

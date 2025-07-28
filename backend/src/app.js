@@ -15,37 +15,19 @@ dotenv.config();
 
 const app = express();
 
-// Definir los orígenes permitidos
+// Configuración de CORS
 const isDevelopment = process.env.NODE_ENV !== 'production';
-const allowedOrigins = isDevelopment
-  ? ['http://localhost:3000', 'http://localhost:19006', 'exp://*'] // En desarrollo, permitir Expo
-  : [
-      'https://miapp-produccion.com',
-      // Aquí agregar las URLs de producción
-    ];
 
-// Middlewares de seguridad y utilidades
-app.use(helmet());
-app.use(cors({
-  origin: function(origin, callback) {
-    // En desarrollo, permitir todas las conexiones
-    if (isDevelopment) {
-      return callback(null, true);
-    }
-
-    // En producción, verificar orígenes permitidos
-    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-      callback(null, true);
-    } else {
-      callback(new Error('No permitido por CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+const corsOptions = {
+  origin: isDevelopment
+    ? ['http://localhost:3000', 'http://localhost:19006', 'exp://*', 'http://*', 'https://*'] // En desarrollo, permitir conexiones locales y Expo
+    : ['https://tu-dominio-produccion.com'], // En producción, restringe a tu dominio
   credentials: true,
-  maxAge: 86400
-}));
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
