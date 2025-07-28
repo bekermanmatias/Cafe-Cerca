@@ -13,6 +13,11 @@ export default (sequelize, DataTypes) => {
     name: {
       type: DataTypes.STRING,
       allowNull: false
+    },
+    profileImage: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null // URL de la imagen en Cloudinary
     }
   });
 
