@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Pressable,
+  TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import TagChip from '../../components/TagChip';
@@ -17,6 +18,7 @@ import GuardarIcon from '../../assets/icons/guardar.svg';
 import IrDireccionIcon from '../../assets/icons/irdireccion.svg';
 import Lapiz from '../../assets/icons/lapiz.svg';
 import { API_URL } from '../../constants/Config';
+import { VisitCard } from '../../components/VisitCard';
 
 type Cafe = {
   id: number;
@@ -28,30 +30,77 @@ type Cafe = {
   openingHours: string;
 };
 
+type Reseña = {
+  id: number;
+  usuarioId: number;
+  comentario: string;
+  calificacion: number;
+  fecha: string;
+  visitaImagenes: Array<{
+    imageUrl: string;
+    orden: number;
+  }>;
+};
+
+type CafeResponse = {
+  cafe: Cafe;
+  reseñas: {
+    items: Reseña[];
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    hasMore: boolean;
+  };
+};
+
 export default function CafeDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [cafe, setCafe] = useState<Cafe | null>(null);
+  const [reseñas, setReseñas] = useState<Reseña[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const fetchCafe = async (page = 1) => {
+    try {
+      const isFirstLoad = page === 1;
+      if (isFirstLoad) setLoading(true);
+      else setLoadingMore(true);
+
+      const res = await fetch(`${API_URL}/cafes/${id}?page=${page}&limit=3`);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      const data: CafeResponse = await res.json();
+      
+      if (isFirstLoad) {
+        setCafe(data.cafe);
+        setReseñas(data.reseñas.items);
+      } else {
+        setReseñas(prev => [...prev, ...data.reseñas.items]);
+      }
+      
+      setHasMore(data.reseñas.hasMore);
+      setCurrentPage(data.reseñas.currentPage);
+    } catch (error) {
+      console.error('Error al traer la cafetería:', error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCafe = async () => {
-      try {
-        const res = await fetch(`${API_URL}/cafes/${id}`);
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        const data = await res.json();
-        setCafe(data);
-      } catch (error) {
-        console.error('Error al traer la cafetería:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCafe();
   }, [id]);
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchCafe(currentPage + 1);
+    }
+  };
 
   if (loading) {
     return (
@@ -90,9 +139,26 @@ export default function CafeDetail() {
     });
   };
 
+  const handleLike = () => {
+    console.log('Like pressed');
+  };
+
+  const handleShare = (visitId: number) => {
+    console.log('Share pressed', visitId);
+  };
+
+  const handleDetails = (visit: any) => {
+    router.push({
+      pathname: '/visit-details',
+      params: {
+        visitId: visit.id.toString()
+      }
+    });
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Image source={{ uri: cafe.imageUrl }} style={styles.image} />
+      <Image source={{ uri: cafe?.imageUrl }} style={styles.image} />
 
       <View style={styles.infoContainer}>
         <View style={styles.titleRow}>
@@ -136,7 +202,7 @@ export default function CafeDetail() {
           <Text style={styles.infoText}>{cafe.openingHours}</Text>
         </View>
 
-        {/* Reseñas */}
+        {/* Reseñas header */}
         <View style={styles.reviewsHeader}>
           <View style={styles.ratingContainer}>
             <Text style={styles.reviewsTitle}>
@@ -148,6 +214,38 @@ export default function CafeDetail() {
             <Text style={styles.visitarText}>Visitar</Text>
             <Lapiz width={20} height={20} style={styles.visitarIcon} />
           </Pressable>
+        </View>
+
+        {/* Lista de reseñas */}
+        <View style={styles.reviewsList}>
+          {reseñas.map((visita) => (
+            <VisitCard
+              key={visita.id}
+              visit={{
+                ...visita,
+                cafeteria: cafe,
+                imagenes: visita.visitaImagenes
+              }}
+              onLike={handleLike}
+              onShare={() => handleShare(visita.id)}
+              onDetails={() => handleDetails(visita)}
+            />
+          ))}
+
+          {/* Botón Ver más */}
+          {hasMore && (
+            <TouchableOpacity
+              style={styles.loadMoreButton}
+              onPress={handleLoadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.loadMoreText}>Ver más reseñas</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </ScrollView>
@@ -258,4 +356,22 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
   },
+  reviewsList: {
+    width: '100%',
+    marginTop: 16,
+    gap: 16,
+  },
+  loadMoreButton: {
+    backgroundColor: '#8D6E63',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  loadMoreText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  }
 });
