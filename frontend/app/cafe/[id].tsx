@@ -9,7 +9,7 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import TagChip from '../../components/TagChip';
 import DireccionIcon from '../../assets/icons/direccion.svg';
 import HorarioIcon from '../../assets/icons/horario.svg';
@@ -30,6 +30,7 @@ type Cafe = {
 
 export default function CafeDetail() {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
   const [cafe, setCafe] = useState<Cafe | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -77,6 +78,16 @@ export default function CafeDetail() {
 
   const onIrDireccionIconPress = () => {
     console.log('Icono Ir Dirección pressed');
+  };
+
+  const handleVisitar = () => {
+    router.push({
+      pathname: '/add-visit',
+      params: {
+        preselectedCafeId: cafe?.id,
+        preselectedCafeName: cafe?.name
+      }
+    });
   };
 
   return (
@@ -133,7 +144,7 @@ export default function CafeDetail() {
             </Text>
             <Text style={styles.starIcon}>⭐️</Text>
           </View>
-          <Pressable style={styles.visitarButton} onPress={() => console.log('Visitar pressed')} hitSlop={8}>
+          <Pressable style={styles.visitarButton} onPress={handleVisitar} hitSlop={8}>
             <Text style={styles.visitarText}>Visitar</Text>
             <Lapiz width={20} height={20} style={styles.visitarIcon} />
           </Pressable>
