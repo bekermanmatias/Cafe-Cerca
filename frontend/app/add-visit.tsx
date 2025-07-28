@@ -39,8 +39,9 @@ export default function AddVisitScreen() {
       const cafeId = typeof preselectedCafeId === 'string' ? parseInt(preselectedCafeId) : preselectedCafeId;
       fetch(`${API_URL}/cafes/${cafeId}`)
         .then(res => res.json())
-        .then(cafe => {
-          setSelectedCafe(cafe);
+        .then(data => {
+          // Ahora la cafetería viene en data.cafe
+          setSelectedCafe(data.cafe);
         })
         .catch(error => {
           console.error('Error al cargar la cafetería preseleccionada:', error);
