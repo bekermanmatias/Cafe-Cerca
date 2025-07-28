@@ -27,6 +27,15 @@ const Cafe = sequelize.define('Cafe', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  lat: {
+  type: DataTypes.FLOAT,
+  allowNull: false,
+  },
+  lng: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+  },
+
 }, {
   tableName: 'cafes',     // 👈 esto fuerza a Sequelize a usar la tabla correcta
   timestamps: true        // 👈 asegura que maneje createdAt y updatedAt
