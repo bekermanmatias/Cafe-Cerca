@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Constants from 'expo-constants';
 import { shareVisit, shareDiary } from '../../constants/Sharing';
 import { AntDesign } from '@expo/vector-icons';
+import { API_URL } from '../../constants/Config';
 
 interface Imagen {
   imageUrl: string;
@@ -37,11 +38,6 @@ interface DiarioResponse {
   totalVisitas: number;
   visitas: Visita[];
 }
-
-// En desarrollo, usa la IP de tu máquina local. En producción, usa tu servidor real.
-const API_URL = __DEV__ 
-  ? 'http://192.168.0.11:3000/api' // Cambia esta IP por la de tu computadora
-  : 'https://tu-servidor-produccion.com/api';
 
 export default function DiaryScreen() {
   const router = useRouter();

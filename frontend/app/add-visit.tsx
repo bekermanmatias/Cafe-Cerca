@@ -5,10 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { AntDesign } from '@expo/vector-icons';
 import ImageEditor from '../components/ImageEditor';
-
-const API_URL = __DEV__
-  ? 'http://192.168.0.11:3000/api'
-  : 'https://tu-servidor-produccion.com/api';
+import { API_URL } from '../constants/Config';
 
 const STANDARD_SIZE = 1080; // Tamaño estándar para las imágenes (1080x1080)
 

@@ -4,10 +4,7 @@ import FilterChips from '../../components/FilterChips';
 import SearchBar from '../../components/SearchBar';
 import TagChip from '../../components/TagChip';
 import { filters } from '../../constants/Filters';
-
-const API_URL = __DEV__
-  ? 'http://192.168.0.11:3000/api'
-  : 'https://tu-servidor-produccion.com/api';
+import { API_URL } from '../../constants/Config';
 
 interface Cafe {
   id: number;
