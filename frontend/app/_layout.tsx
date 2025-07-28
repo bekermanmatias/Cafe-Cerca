@@ -43,6 +43,13 @@ export default function RootLayout() {
             animation: 'slide_from_right'
           }} 
         />
+        <Stack.Screen 
+          name="cafe/[id]" 
+          options={{ 
+            headerShown: false,
+            animation: 'slide_from_right'
+          }} 
+        />
       </Stack>
     </ThemeProvider>
   );
