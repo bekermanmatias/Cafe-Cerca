@@ -3,12 +3,9 @@ import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Dimensions
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { shareVisit } from '../constants/Sharing';
+import { API_URL } from '../constants/Config';
 
 const windowWidth = Dimensions.get('window').width;
-
-const API_URL = __DEV__
-  ? 'http://192.168.0.11:3000/api'
-  : 'https://cafe-cerca.com/api';
 
 interface Imagen {
   imageUrl: string;
