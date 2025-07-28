@@ -19,7 +19,7 @@ export interface VisitCardProps {
       address: string;
       imageUrl: string | null;
       rating: number;
-    };
+    } | null;
   };
   onLike?: () => void;
   onShare?: () => void;
@@ -64,11 +64,14 @@ export const VisitCard = ({
     itemVisiblePercentThreshold: 50
   }).current;
 
+  // Obtener el nombre de la cafetería de forma segura
+  const cafeteriaName = visit.cafeteria?.name || 'Cafetería no disponible';
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.place}>{visit.cafeteria.name}</Text>
+          <Text style={styles.place}>{cafeteriaName}</Text>
           <Text style={styles.date}>{new Date(visit.fecha).toLocaleDateString()}</Text>
         </View>
         <View style={styles.headerRight}>
