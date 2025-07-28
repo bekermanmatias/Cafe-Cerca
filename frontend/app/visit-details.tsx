@@ -15,6 +15,16 @@ interface Imagen {
   orden: number;
 }
 
+interface Cafeteria {
+  id: number;
+  name: string;
+  address: string;
+  imageUrl: string | null;
+  rating: number;
+  tags: string[];
+  openingHours: string;
+}
+
 interface VisitaDetalle {
   id: number;
   usuarioId: number;
@@ -23,6 +33,7 @@ interface VisitaDetalle {
   calificacion: number;
   fecha: string;
   imagenes: Imagen[];
+  cafeteria: Cafeteria;
 }
 
 interface ApiResponse {
@@ -164,7 +175,7 @@ export default function VisitDetailsScreen() {
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>{`Cafetería ${visitData.cafeteriaId}`}</Text>
+            <Text style={styles.headerTitle}>{visitData.cafeteria.name}</Text>
             <Text style={styles.headerDate}>
               {new Date(visitData.fecha).toLocaleDateString()}
             </Text>
