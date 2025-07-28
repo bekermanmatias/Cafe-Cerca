@@ -20,13 +20,16 @@ const Cafe = sequelize.define('Cafe', {
     allowNull: true
   },
   tags: {
-    type: DataTypes.JSON, // array de strings como ["wifi", "dog-friendly"]
+    type: DataTypes.JSON,
     allowNull: true
   },
   openingHours: {
-    type: DataTypes.STRING, // "08:00-20:00" o algo así
+    type: DataTypes.STRING,
     allowNull: true
-  }
+  },
+}, {
+  tableName: 'cafes',     // 👈 esto fuerza a Sequelize a usar la tabla correcta
+  timestamps: true        // 👈 asegura que maneje createdAt y updatedAt
 });
 
 export default Cafe;
