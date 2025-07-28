@@ -1,9 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Dimensions, ImageSourcePropType, TextInput, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  Image, 
+  ScrollView, 
+  TouchableOpacity, 
+  Dimensions, 
+  ActivityIndicator,
+  Platform,
+  Alert,
+  type MeasureOnSuccessCallback
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { shareVisit } from '../constants/Sharing';
 import { API_URL } from '../constants/Config';
+import ComentariosList from '../components/ComentariosList';
 
 const windowWidth = Dimensions.get('window').width;
 
@@ -45,6 +58,8 @@ export default function VisitDetailsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [visitData, setVisitData] = useState<VisitaDetalle | null>(null);
   const [showOptions, setShowOptions] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const optionsButtonRef = useRef<View>(null);
 
   useEffect(() => {
     console.log('Actualizando detalles de visita...', { visitId: params.visitId, refresh: params.refresh });
@@ -81,40 +96,6 @@ export default function VisitDetailsScreen() {
       setIsLoading(false);
     }
   };
-
-  // Mostrar un indicador de carga mientras se obtienen los datos
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8D6E63" />
-        <Text style={styles.loadingText}>Cargando detalles de la visita...</Text>
-      </View>
-    );
-  }
-
-  // Mostrar mensaje de error si algo salió mal
-  if (error || !visitData) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity 
-          onPress={() => {
-            setError(null);
-            fetchVisitDetails(); // Intentar cargar de nuevo
-          }} 
-          style={styles.retryButton}
-        >
-          <Text style={styles.retryButtonText}>Intentar de nuevo</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={() => router.back()} 
-          style={styles.errorButton}
-        >
-          <Text style={styles.errorButtonText}>Volver</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   const handleShare = () => {
     if (visitData) {
@@ -161,136 +142,179 @@ export default function VisitDetailsScreen() {
     });
   };
 
-  return (
+  const handleShowOptions = () => {
+    if (!optionsButtonRef.current) return;
+
+    const measureCallback: MeasureOnSuccessCallback = (x, y, width, height, pageX, pageY) => {
+      const screenWidth = Dimensions.get('window').width;
+      // Ajustamos la posición para que esté más cerca del botón
+      const menuX = screenWidth - 170; // 140px del menú + 30px de margen
+      const menuY = pageY - 35; // Subimos el menú para que esté más cerca del botón
+      setMenuPosition({ x: menuX, y: menuY });
+      setShowOptions(!showOptions);
+    };
+
+    optionsButtonRef.current.measure(measureCallback);
+  };
+
+  const renderHeader = () => (
     <>
+      <View style={styles.header}>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>{visitData.cafeteria.name}</Text>
+          <Text style={styles.headerDate}>
+            {new Date(visitData.fecha).toLocaleDateString()}
+          </Text>
+        </View>
+        <View style={styles.participantsContainer}>
+          <View style={styles.participantPhoto} />
+        </View>
+      </View>
+
+      <View style={styles.mainImageContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.imageScrollContainer}
+        >
+          {visitData.imagenes.map((imagen, index) => (
+            <View key={index} style={styles.imageWrapper}>
+              <Image 
+                source={{ uri: imagen.imageUrl }} 
+                style={styles.mainImage}
+              />
+            </View>
+          ))}
+        </ScrollView>
+        <View style={styles.ratingBadge}>
+          <Text style={styles.ratingText}>{visitData.calificacion} ★</Text>
+        </View>
+      </View>
+
+      <View style={styles.actionButtons}>
+        <View style={styles.leftActions}>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="heart-outline" size={28} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+            <Ionicons name="share-social-outline" size={28} color="#000" />
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.rightActions}>
+          <TouchableOpacity 
+            ref={optionsButtonRef}
+            style={styles.actionButton}
+            onPress={handleShowOptions}
+          >
+            <Ionicons name="ellipsis-vertical" size={28} color="#000" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.mainReviewContainer}>
+        <View style={styles.authorSection}>
+          <View style={styles.authorPhoto} />
+          <View style={styles.authorInfo}>
+            <Text style={styles.authorName}>Usuario {visitData.usuarioId}</Text>
+            <View style={styles.starsContainer}>
+              {[...Array(5)].map((_, i) => (
+                <Ionicons
+                  key={i}
+                  name={i < visitData.calificacion ? "star" : "star-outline"}
+                  size={20}
+                  color="#FFD700"
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+        <Text style={styles.mainReviewText}>{visitData.comentario}</Text>
+      </View>
+    </>
+  );
+
+  // Mostrar un indicador de carga mientras se obtienen los datos
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#8D6E63" />
+        <Text style={styles.loadingText}>Cargando detalles de la visita...</Text>
+      </View>
+    );
+  }
+
+  // Mostrar mensaje de error si algo salió mal
+  if (error || !visitData) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity 
+          onPress={() => {
+            setError(null);
+            fetchVisitDetails(); // Intentar cargar de nuevo
+          }} 
+          style={styles.retryButton}
+        >
+          <Text style={styles.retryButtonText}>Intentar de nuevo</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          style={styles.errorButton}
+        >
+          <Text style={styles.errorButtonText}>Volver</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
       <Stack.Screen 
         options={{
           headerShown: true,
           title: ''
         }}
       />
-      <ScrollView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>{visitData.cafeteria.name}</Text>
-            <Text style={styles.headerDate}>
-              {new Date(visitData.fecha).toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.participantsContainer}>
-            {/* Mantener el diseño de participantes hardcodeado por ahora */}
-            <View style={styles.participantPhoto} />
-          </View>
-        </View>
 
-        <View style={styles.mainImageContainer}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.imageScrollContainer}
-          >
-            {visitData.imagenes.map((imagen, index) => (
-              <View key={index} style={styles.imageWrapper}>
-                <Image 
-                  source={{ uri: imagen.imageUrl }} 
-                  style={styles.mainImage}
-                />
-              </View>
-            ))}
-          </ScrollView>
-          <View style={styles.ratingBadge}>
-            <Text style={styles.ratingText}>{visitData.calificacion} ★</Text>
-          </View>
-        </View>
+      <ComentariosList 
+        visitaId={visitData.id}
+        ListHeaderComponent={renderHeader}
+      />
 
-        <View style={styles.actionButtons}>
-          <View style={styles.leftActions}>
-            <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="heart-outline" size={28} color="#000" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-              <Ionicons name="share-social-outline" size={28} color="#000" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.rightActions}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => setShowOptions(!showOptions)}
-            >
-              <Ionicons name="ellipsis-vertical" size={28} color="#000" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {showOptions && (
-          <>
-            <TouchableOpacity 
-              style={styles.overlay} 
-              activeOpacity={0} 
-              onPress={() => setShowOptions(false)} 
-            />
-            <View style={styles.optionsMenu}>
-              <TouchableOpacity 
-                style={styles.optionItem}
-                onPress={() => {
-                  setShowOptions(false);
-                  handleEdit();
-                }}
-              >
-                <Ionicons name="create-outline" size={24} color="#000" />
-                <Text style={styles.optionText}>Modificar visita</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.optionItem, styles.deleteOption]}
-                onPress={() => {
-                  setShowOptions(false);
-                  handleDelete();
-                }}
-              >
-                <Ionicons name="trash-outline" size={24} color="#FF4444" />
-                <Text style={styles.deleteOptionText}>Eliminar visita</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        <View style={styles.mainReviewContainer}>
-          <View style={styles.authorSection}>
-            <View style={styles.authorPhoto} />
-            <View style={styles.authorInfo}>
-              <Text style={styles.authorName}>Usuario {visitData.usuarioId}</Text>
-              <View style={styles.starsContainer}>
-                {[...Array(5)].map((_, i) => (
-                  <Ionicons
-                    key={i}
-                    name={i < visitData.calificacion ? "star" : "star-outline"}
-                    size={20}
-                    color="#FFD700"
-                  />
-                ))}
-              </View>
-            </View>
-          </View>
-          <Text style={styles.mainReviewText}>{visitData.comentario}</Text>
-        </View>
-
-        {/* Mantener el resto de la UI hardcodeada por ahora */}
-        <View style={styles.commentInputContainer}>
-          <TextInput
-            style={styles.commentInput}
-            placeholder="Escribe tu comentario..."
-            multiline
-            maxLength={500}
+      {showOptions && (
+        <>
+          <TouchableOpacity 
+            style={styles.overlay} 
+            activeOpacity={0} 
+            onPress={() => setShowOptions(false)} 
           />
-          <Text style={styles.charCount}>0/500</Text>
-          <TouchableOpacity style={styles.publishButton}>
-            <Text style={styles.publishButtonText}>Publicar</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </>
+          <View style={[styles.optionsMenu, { top: menuPosition.y, left: menuPosition.x }]}>
+            <TouchableOpacity 
+              style={styles.optionItem}
+              onPress={() => {
+                setShowOptions(false);
+                handleEdit();
+              }}
+            >
+              <Ionicons name="create-outline" size={24} color="#000" />
+              <Text style={styles.optionText}>Modificar visita</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.optionItem, styles.deleteOption]}
+              onPress={() => {
+                setShowOptions(false);
+                handleDelete();
+              }}
+            >
+              <Ionicons name="trash-outline" size={24} color="#FF4444" />
+              <Text style={styles.deleteOptionText}>Eliminar visita</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+    </View>
   );
 }
 
@@ -325,6 +349,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  mainContent: {
+    backgroundColor: '#fff',
+  },
+  comentariosListContainer: {
     flex: 1,
     backgroundColor: '#fff',
   },
@@ -406,42 +441,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   actionButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 20,
   },
   optionsMenu: {
     position: 'absolute',
-    right: 16,
-    top: 520, // Ajustar según necesidad
-    backgroundColor: 'white',
-    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 8,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 1000,
+    minWidth: 140,
+    zIndex: 9999,
+    ...Platform.select({
+      android: {
+        elevation: 8,
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+    }),
   },
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    gap: 12,
+    gap: 8,
+    borderRadius: 8,
   },
   optionText: {
-    fontSize: 16,
-    color: '#000',
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
   },
   deleteOption: {
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#f0f0f0',
+    marginTop: 4,
   },
   deleteOptionText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#FF4444',
+    fontWeight: '500',
   },
   mainReviewContainer: {
     paddingHorizontal: 16,
@@ -531,5 +573,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'transparent',
     zIndex: 999,
+  },
+  comentariosContainer: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  comentariosTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  flatList: {
+    flex: 1,
   },
 }); 
