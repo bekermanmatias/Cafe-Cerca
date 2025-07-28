@@ -1,15 +1,16 @@
+// constants/Colors.ts
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Sistema de colores combinado
  */
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = '#8B4513';  // Cambiar al color café
+const tintColorDark = '#D2691E';
 
+// Sistema original de tu compañero (actualizado con colores café)
 export const Colors = {
   light: {
     text: '#11181C',
-    background: '#fff',
+    background: '#F5F5F5',
     tint: tintColorLight,
     icon: '#687076',
     tabIconDefault: '#687076',
@@ -23,4 +24,34 @@ export const Colors = {
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
   },
+  
+  // Sistema nuevo para Cafe Cerca
+  primary: '#8B4513',
+  secondary: '#D2691E',
+  background: '#F5F5F5',
+  white: '#FFFFFF',
+  black: '#000000',
+  
+  gray: {
+    100: '#F5F5F5',
+    200: '#E0E0E0',
+    300: '#BDBDBD',
+    400: '#9E9E9E',
+    500: '#757575',
+    600: '#616161',
+    700: '#424242',
+    800: '#212121',
+    900: '#000000',
+  },
+  
+  text: {
+    primary: '#333333',
+    secondary: '#666666',
+    light: '#999999',
+  },
+  
+  error: '#F44336',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  info: '#2196F3',
 };
