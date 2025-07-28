@@ -11,14 +11,14 @@ import { upload } from '../config/cloudinary.js';
 
 const router = express.Router();
 
-// Rutas
-router.post('/visitas', upload.array('imagenes', 5), crearVisita);
-router.get('/visitas', obtenerVisitas);
-router.get('/visitas/:id', obtenerVisitaPorId);
-router.put('/visitas/:id', upload.array('imagenes', 5), actualizarVisita);
-router.delete('/visitas/:id', eliminarVisita);
+// Rutas básicas de visitas
+router.post('/', upload.array('imagenes', 5), crearVisita);
+router.get('/', obtenerVisitas);
+router.get('/:id', obtenerVisitaPorId);
+router.put('/:id', upload.array('imagenes', 5), actualizarVisita);
+router.delete('/:id', eliminarVisita);
 
 // Ruta para el diario de un usuario
-router.get('/usuarios/:usuarioId/diario', obtenerDiarioUsuario);
+router.get('/usuario/:usuarioId', obtenerDiarioUsuario);
 
 export default router;

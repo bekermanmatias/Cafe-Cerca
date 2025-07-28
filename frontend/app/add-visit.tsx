@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Alert, Modal, FlatList, ActivityIndicator, BackHandler, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { AntDesign } from '@expo/vector-icons';
@@ -21,6 +21,7 @@ interface Cafe {
 
 export default function AddVisitScreen() {
   const router = useRouter();
+  const { preselectedCafeId, preselectedCafeName } = useLocalSearchParams();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -32,6 +33,20 @@ export default function AddVisitScreen() {
 
   useEffect(() => {
     fetchCafes();
+
+    // Si hay una cafetería preseleccionada, la buscamos y seleccionamos
+    if (preselectedCafeId) {
+      const cafeId = typeof preselectedCafeId === 'string' ? parseInt(preselectedCafeId) : preselectedCafeId;
+      fetch(`${API_URL}/cafes/${cafeId}`)
+        .then(res => res.json())
+        .then(data => {
+          // Ahora la cafetería viene en data.cafe
+          setSelectedCafe(data.cafe);
+        })
+        .catch(error => {
+          console.error('Error al cargar la cafetería preseleccionada:', error);
+        });
+    }
 
     if (Platform.OS !== 'web') {
       // Manejar el botón físico de retroceso en móviles
@@ -61,7 +76,7 @@ export default function AddVisitScreen() {
         window.removeEventListener('popstate', handlePopState);
       };
     }
-  }, [showCafeSelector]);
+  }, [preselectedCafeId, showCafeSelector]);
 
   const fetchCafes = async () => {
     try {

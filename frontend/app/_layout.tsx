@@ -44,6 +44,13 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
+          name="stats" 
+          options={{ 
+            headerShown: false,
+            animation: 'slide_from_bottom'
+          }} 
+        />
+        <Stack.Screen 
           name="cafe/[id]" 
           options={{ 
             headerShown: false,

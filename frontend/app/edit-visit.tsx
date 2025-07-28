@@ -48,10 +48,17 @@ export default function EditVisitScreen() {
   const [showCafeSelector, setShowCafeSelector] = useState(false);
   const [isLoadingCafes, setIsLoadingCafes] = useState(false);
 
+  // Primero cargamos las cafeterías
   useEffect(() => {
-    fetchVisitDetails();
     fetchCafes();
-  }, [params.visitId]);
+  }, []);
+
+  // Después de cargar las cafeterías, cargamos los detalles de la visita
+  useEffect(() => {
+    if (cafes.length > 0) {
+      fetchVisitDetails();
+    }
+  }, [cafes, params.visitId]);
 
   const fetchCafes = async () => {
     try {
@@ -94,8 +101,11 @@ export default function EditVisitScreen() {
       const cafe = cafes.find(c => c.id === cafeteriaId);
       if (cafe) {
         setSelectedCafe(cafe);
+      } else {
+        console.error('No se encontró la cafetería con ID:', cafeteriaId);
       }
     } catch (error) {
+      console.error('Error al cargar la visita:', error);
       Alert.alert('Error', 'No se pudieron cargar los datos de la visita');
       router.back();
     } finally {
