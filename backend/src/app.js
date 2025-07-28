@@ -23,14 +23,25 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 
 const corsOptions = {
   origin: isDevelopment
-    ? ['http://localhost:3000', 'http://localhost:19006', 'exp://*', 'http://*', 'https://*'] // En desarrollo, permitir conexiones locales y Expo
+    ? true // En desarrollo, permitir todas las conexiones
     : ['https://tu-dominio-produccion.com'], // En producción, restringe a tu dominio
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
 
+// Habilitar CORS antes que cualquier otra ruta
 app.use(cors(corsOptions));
-app.use(helmet());
+
+// Configuración de Helmet para desarrollo
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  // Deshabilitar contentSecurityPolicy en desarrollo
+  contentSecurityPolicy: false
+}));
+
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -65,7 +76,6 @@ app.use((err, req, res, next) => {
 
 app.use('/api/example', exampleRoutes);
 app.use('/api/auth', authRoutes);
-main
 
 // Manejo de rutas no encontradas
 app.use((req, res) => {

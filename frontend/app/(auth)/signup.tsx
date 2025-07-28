@@ -11,39 +11,29 @@ import {
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiService } from '../../services/api';
 
 export default function SignUpScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
-    if (!name || !email || !password || !mobile) {
-      alert('Please fill in all fields');
+    if (!name || !email || !password) {
+      alert('Por favor completa todos los campos');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:4000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, mobile }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('Account created!');
-        router.push('./signin');
-      } else {
-        alert(data.error || 'Something went wrong');
-      }
+      await apiService.register({ name, email, password });
+      alert('¡Cuenta creada exitosamente!');
+      router.push('./signin');
     } catch (error) {
-      alert('Network error');
+      console.error('Error de registro:', error);
+      alert(error instanceof Error ? error.message : 'Error al crear la cuenta');
     } finally {
       setLoading(false);
     }
@@ -55,14 +45,14 @@ export default function SignUpScreen() {
         <MaterialIcons name="arrow-back" size={24} color="#A76F4D" />
       </TouchableOpacity>
 
-      <Text style={styles.title}>Sign up</Text>
-      <Text style={styles.subtitle}>Create an account here</Text>
+      <Text style={styles.title}>Registro</Text>
+      <Text style={styles.subtitle}>Crea tu cuenta aquí</Text>
 
       <View style={styles.form}>
         <View style={styles.inputContainer}>
           <MaterialIcons name="person" size={20} color="#A76F4D" style={styles.icon} />
           <TextInput
-            placeholder="Create an account here"
+            placeholder="Nombre completo"
             style={styles.input}
             value={name}
             onChangeText={setName}
@@ -70,20 +60,9 @@ export default function SignUpScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <MaterialIcons name="phone" size={20} color="#A76F4D" style={styles.icon} />
-          <TextInput
-            placeholder="Mobile number"
-            style={styles.input}
-            value={mobile}
-            onChangeText={setMobile}
-            keyboardType="phone-pad"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
           <MaterialIcons name="email" size={20} color="#A76F4D" style={styles.icon} />
           <TextInput
-            placeholder="Email address"
+            placeholder="Correo electrónico"
             style={styles.input}
             value={email}
             onChangeText={setEmail}
@@ -95,7 +74,7 @@ export default function SignUpScreen() {
         <View style={styles.inputContainer}>
           <MaterialIcons name="lock" size={20} color="#A76F4D" style={styles.icon} />
           <TextInput
-            placeholder="Password"
+            placeholder="Contraseña"
             style={styles.input}
             value={password}
             onChangeText={setPassword}
@@ -104,8 +83,8 @@ export default function SignUpScreen() {
         </View>
 
         <Text style={styles.terms}>
-          By signing up you agree with our{' '}
-          <Text style={styles.link}>Terms of Use</Text>
+          Al registrarte aceptas nuestros{' '}
+          <Text style={styles.link}>Términos de Uso</Text>
         </Text>
 
         <TouchableOpacity
@@ -122,9 +101,9 @@ export default function SignUpScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Already a member?</Text>
+        <Text style={styles.footerText}>¿Ya tienes cuenta?</Text>
         <TouchableOpacity onPress={() => router.push('./signin')}>
-          <Text style={styles.footerLink}> Sign in</Text>
+          <Text style={styles.footerLink}> Inicia sesión</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

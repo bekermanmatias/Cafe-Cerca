@@ -11,6 +11,8 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { apiService } from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -20,28 +22,22 @@ export default function SignInScreen() {
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      alert('Please fill in all fields');
+      alert('Por favor completa todos los campos');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('http://192.168.0.124:4000/api/(auth)/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('Welcome back!');
-        router.replace('./(tabs)');
-      } else {
-        alert(data.error || 'Something went wrong');
-      }
+      const response = await apiService.login({ email, password });
+      
+      // Guardar el token y la información del usuario
+      await AsyncStorage.setItem('userToken', response.token);
+      await AsyncStorage.setItem('userData', JSON.stringify(response.user));
+      
+      // Redirigir al usuario
+      router.replace('/(tabs)');
     } catch (error) {
-      alert('Network error. Please try again.');
+      alert(error instanceof Error ? error.message : 'Error al iniciar sesión');
     } finally {
       setLoading(false);
     }

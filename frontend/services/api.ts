@@ -1,5 +1,5 @@
 // services/api.ts - Servicio para llamadas a la API
-const API_BASE_URL = 'http://localhost:4000/api';
+import { API_CONFIG } from '../constants/Config';
 
 interface LoginRequest {
   email: string;
@@ -29,7 +29,9 @@ interface RegisterResponse {
 
 class ApiService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    console.log('Intentando login con URL:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH.LOGIN}`);
+    
+    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH.LOGIN}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -40,32 +42,44 @@ class ApiService {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Login failed');
+      throw new Error(data.error || 'Error en el inicio de sesión');
     }
 
     return data;
   }
 
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(userData),
-    });
+    console.log('Intentando registro con URL:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH.REGISTER}`);
+    console.log('Datos de registro:', JSON.stringify(userData, null, 2));
+    
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH.REGISTER}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
 
-    const data = await response.json();
+      console.log('Respuesta del servidor:', response.status);
+      
+      const data = await response.json();
+      console.log('Datos de respuesta:', data);
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Registration failed');
+      if (!response.ok) {
+        throw new Error(data.error || 'Error en el registro');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error detallado:', error);
+      throw error;
     }
-
-    return data;
   }
 
   async makeAuthenticatedRequest(endpoint: string, token: string, options: RequestInit = {}) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
