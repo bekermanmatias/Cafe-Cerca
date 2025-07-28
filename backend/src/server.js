@@ -1,42 +1,44 @@
 import app from './app.js';
-import { testConnection } from './config/database.js';
 import sequelize from './config/database.js';
+import { Cafe, Visita, VisitaImagen, Comentario } from './models/index.js';
 
-const DEFAULT_PORT = 4000;
-let PORT = process.env.PORT || DEFAULT_PORT;
+const PORT = process.env.PORT || 3000;
 
-const startServer = async () => {
+// Función para sincronizar los modelos en orden
+const syncModels = async () => {
   try {
-    console.log('🔍 Probando conexión a la base de datos...');
-    await testConnection();
-    
-    // Sincronizar modelos con la base de datos
-    // CUIDADO: force: true borra y recrea las tablas
-    await sequelize.sync({ force: false });
-    console.log('✅ Modelos sincronizados con la base de datos');
-    
-    const server = app.listen(PORT, () => {
-      console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-      console.log(`📋 Rutas disponibles:`);
-      console.log(`   GET  http://localhost:${PORT}/health`);
-      console.log(`   GET  http://localhost:${PORT}/api/visitas`);
-      console.log(`   GET  http://localhost:${PORT}/api/cafes`);
-      console.log(`   POST http://localhost:${PORT}/api/cafes`);
-    }).on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.log(`⚠️ Puerto ${PORT} en uso, intentando con puerto ${PORT + 1}`);
-        PORT += 1;
-        server.close();
-        startServer(); // Intentar con el siguiente puerto
-      } else {
-        console.error('❌ Error iniciando servidor:', err.message);
-        process.exit(1);
-      }
-    });
+    // Primero sincronizamos Cafe
+    await Cafe.sync({ alter: true });
+    console.log('✅ Tabla Cafe sincronizada');
+
+    // Luego Visita que depende de Cafe
+    await Visita.sync({ alter: true });
+    console.log('✅ Tabla Visita sincronizada');
+
+    // Luego VisitaImagen que depende de Visita
+    await VisitaImagen.sync({ alter: true });
+    console.log('✅ Tabla VisitaImagen sincronizada');
+
+    // Finalmente Comentario que depende de Visita
+    await Comentario.sync({ alter: true });
+    console.log('✅ Tabla Comentario sincronizada');
+
+    return true;
   } catch (error) {
-    console.error('❌ Error iniciando servidor:', error.message);
-    process.exit(1);
+    console.error('❌ Error sincronizando las tablas:', error);
+    return false;
   }
 };
 
-startServer();
+// Iniciar el servidor
+syncModels()
+  .then(success => {
+    if (success) {
+      app.listen(PORT, () => {
+        console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+      });
+    } else {
+      console.error('❌ No se pudo iniciar el servidor debido a errores en la sincronización');
+      process.exit(1);
+    }
+  });

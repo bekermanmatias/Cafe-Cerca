@@ -7,6 +7,7 @@ import { testConnection } from './config/database.js';
 import dotenv from 'dotenv';
 import cafesRoutes from './routes/cafes.js';
 import estadisticasRoutes from './routes/estadisticas.routes.js';
+import comentariosRoutes from './routes/comentarios.routes.js';
 
 // Importar modelos y sus relaciones
 import './models/index.js';
@@ -42,6 +43,7 @@ app.get('/health', (req, res) => {
 app.use('/api/cafes', cafesRoutes);
 app.use('/api/visitas', visitaRoutes);
 app.use('/api/estadisticas', estadisticasRoutes);
+app.use('/api', comentariosRoutes); // Agregamos las rutas de comentarios
 
 // Mostrar rutas disponibles por consola para que las veas
 console.log('📋 Rutas disponibles:');
@@ -50,6 +52,8 @@ console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/vis
 console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visitas/usuario/1');
 console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/cafes');
 console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/cafes');
+console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visita/:visitaId/comentarios');
+console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/visita/:visitaId/comentarios');
 
 // Manejo de errores global
 app.use((err, req, res, next) => {
@@ -60,7 +64,6 @@ app.use((err, req, res, next) => {
     stack: err.stack // para más detalle en desarrollo
   });
 });
-
 
 // Manejo de rutas no encontradas
 app.use((req, res) => {
