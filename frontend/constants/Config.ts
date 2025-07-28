@@ -35,4 +35,16 @@ export const API_CONFIG = {
   }
 };
 
+export const API_ENDPOINTS = {
+  CAFES: `${API_URL}/cafes`,
+  VISITAS: `${API_URL}/visitas`,
+  ESTADISTICAS: `${API_URL}/estadisticas`,
+  COMENTARIOS: {
+    GET_BY_VISITA: (visitaId: number) => `${API_URL}/visita/${visitaId}/comentarios`,
+    CREATE: (visitaId: number) => `${API_URL}/visita/${visitaId}/comentarios`,
+    UPDATE: (comentarioId: number) => `${API_URL}/comentarios/${comentarioId}`,
+    DELETE: (comentarioId: number) => `${API_URL}/comentarios/${comentarioId}`,
+  }
+};
+
 // Otras configuraciones globales pueden ir aquí 
