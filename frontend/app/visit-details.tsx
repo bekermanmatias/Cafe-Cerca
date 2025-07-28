@@ -39,23 +39,23 @@ export default function VisitDetailsScreen() {
   const [showOptions, setShowOptions] = useState(false);
 
   useEffect(() => {
+    console.log('Actualizando detalles de visita...', { visitId: params.visitId, refresh: params.refresh });
     fetchVisitDetails();
-  }, [params.visitId]); // Agregamos params.visitId como dependencia
+  }, [params.visitId, params.refresh]);
 
   const fetchVisitDetails = async () => {
     try {
       setIsLoading(true);
-      setError(null); // Limpiar error anterior si existe
+      setError(null);
 
-      // Limpiar y validar el ID
       const visitId = String(params.visitId).replace(/[^0-9]/g, '');
       if (!visitId) {
         throw new Error('ID de visita no válido');
       }
 
-      console.log('Fetching visit details for ID:', visitId);
+      console.log('Obteniendo detalles de visita:', visitId);
       const fullUrl = `${API_URL}/visitas/${visitId}`;
-      console.log('Full URL:', fullUrl);
+      console.log('URL completa:', fullUrl);
 
       const response = await fetch(fullUrl);
       if (!response.ok) {
@@ -63,11 +63,11 @@ export default function VisitDetailsScreen() {
         throw new Error(errorData.mensaje || 'Error al obtener los detalles de la visita');
       }
 
-      const data: ApiResponse = await response.json();
-      console.log('Visit data received:', data);
+      const data = await response.json();
+      console.log('Datos de visita recibidos:', data);
       setVisitData(data.visita);
     } catch (error) {
-      console.error('Error fetching visit details:', error);
+      console.error('Error obteniendo detalles:', error);
       setError('No se pudo cargar la información de la visita');
     } finally {
       setIsLoading(false);

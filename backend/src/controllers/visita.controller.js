@@ -1,6 +1,7 @@
 import Visita from '../models/Visita.js';
 import VisitaImagen from '../models/VisitaImagen.js';
 import sequelize from '../config/database.js';
+import { Op } from 'sequelize';
 
 // Función helper para incluir las imágenes en las consultas
 const includeImagenes = {
@@ -122,8 +123,18 @@ export const actualizarVisita = async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { usuarioId, cafeteriaId, comentario, calificacion } = req.body;
+    const { usuarioId, cafeteriaId, comentario, calificacion, imagenesExistentes } = req.body;
     const imagenes = req.files;
+
+    console.log('Datos recibidos:', {
+      id,
+      usuarioId,
+      cafeteriaId,
+      comentario,
+      calificacion,
+      imagenesExistentes,
+      'Número de imágenes nuevas': imagenes?.length || 0
+    });
 
     // Verificar si la visita existe
     const visita = await Visita.findByPk(id, {
@@ -142,27 +153,46 @@ export const actualizarVisita = async (req, res) => {
       calificacion
     }, { transaction: t });
 
-    // Si hay nuevas imágenes
-    if (imagenes && imagenes.length > 0) {
-      if (imagenes.length > 5) {
-        return res.status(400).json({
-          mensaje: 'No se pueden subir más de 5 imágenes por visita'
-        });
-      }
+    // Procesar las imágenes existentes
+    let imagenesExistentesArray = [];
+    try {
+      imagenesExistentesArray = imagenesExistentes ? JSON.parse(imagenesExistentes) : [];
+      console.log('Imágenes existentes parseadas:', imagenesExistentesArray);
+    } catch (error) {
+      console.error('Error al parsear imagenesExistentes:', error);
+      imagenesExistentesArray = [];
+    }
 
-      // Eliminar imágenes anteriores
+    // Si hay imágenes existentes, eliminar las que no están en la lista
+    if (imagenesExistentesArray.length > 0) {
+      console.log('Eliminando imágenes no incluidas en:', imagenesExistentesArray);
+      await VisitaImagen.destroy({
+        where: {
+          visitaId: id,
+          imageUrl: {
+            [Op.notIn]: imagenesExistentesArray
+          }
+        },
+        transaction: t
+      });
+    } else {
+      console.log('No hay imágenes existentes, eliminando todas las imágenes anteriores');
+      // Si no hay imágenes existentes, eliminar todas las imágenes anteriores
       await VisitaImagen.destroy({
         where: { visitaId: id },
         transaction: t
       });
+    }
 
-      // Guardar nuevas imágenes
+    // Si hay nuevas imágenes, agregarlas
+    if (imagenes && imagenes.length > 0) {
       const imagenesParaGuardar = imagenes.map((imagen, index) => ({
         visitaId: id,
         imageUrl: imagen.path,
-        orden: index + 1
+        orden: imagenesExistentesArray.length + index + 1
       }));
 
+      console.log('Guardando nuevas imágenes:', imagenesParaGuardar);
       await VisitaImagen.bulkCreate(imagenesParaGuardar, { transaction: t });
     }
 
@@ -174,6 +204,7 @@ export const actualizarVisita = async (req, res) => {
       order: orderOptions
     });
 
+    console.log('Visita actualizada exitosamente');
     res.json({
       mensaje: 'Visita actualizada exitosamente',
       visita: visitaActualizada
