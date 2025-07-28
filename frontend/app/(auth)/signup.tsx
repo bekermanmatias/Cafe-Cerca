@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiService } from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -28,9 +29,19 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
+      // Registrar al usuario
       await apiService.register({ name, email, password });
+      
+      // Hacer login automático
+      const loginResponse = await apiService.login({ email, password });
+      
+      // Guardar el token y la información del usuario
+      await AsyncStorage.setItem('userToken', loginResponse.token);
+      await AsyncStorage.setItem('userData', JSON.stringify(loginResponse.user));
+      
       alert('¡Cuenta creada exitosamente!');
-      router.push('./signin');
+      // Redirigir al usuario a la pestaña explore
+      router.replace('/(tabs)/explore');
     } catch (error) {
       console.error('Error de registro:', error);
       alert(error instanceof Error ? error.message : 'Error al crear la cuenta');

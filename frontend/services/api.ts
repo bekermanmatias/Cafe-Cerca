@@ -1,5 +1,5 @@
 // services/api.ts - Servicio para llamadas a la API
-import { API_CONFIG } from '../constants/Config';
+import { API_URL, API_ENDPOINTS } from '../constants/Config';
 
 interface LoginRequest {
   email: string;
@@ -29,9 +29,9 @@ interface RegisterResponse {
 
 class ApiService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    console.log('Intentando login con URL:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH.LOGIN}`);
+    console.log('Intentando login con URL:', API_ENDPOINTS.AUTH.LOGIN);
     
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH.LOGIN}`, {
+    const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -49,11 +49,11 @@ class ApiService {
   }
 
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
-    console.log('Intentando registro con URL:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH.REGISTER}`);
+    console.log('Intentando registro con URL:', API_ENDPOINTS.AUTH.REGISTER);
     console.log('Datos de registro:', JSON.stringify(userData, null, 2));
     
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH.REGISTER}`, {
+      const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +79,7 @@ class ApiService {
   }
 
   async makeAuthenticatedRequest(endpoint: string, token: string, options: RequestInit = {}) {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+    const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',

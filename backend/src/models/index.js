@@ -42,8 +42,6 @@ Visita.belongsTo(User, {
   as: 'usuario'
 });
 
-export { Visita, Cafe, VisitaImagen, User }; 
-
 // Relación entre Visita y Comentario
 Visita.hasMany(Comentario, {
   foreignKey: 'visitaId',
@@ -56,4 +54,11 @@ Comentario.belongsTo(Visita, {
   as: 'visita'
 });
 
-export { Visita, Cafe, VisitaImagen, Comentario }; 
+// Exportar todos los modelos en una sola declaración
+export { 
+  Visita, 
+  Cafe, 
+  VisitaImagen, 
+  User, 
+  Comentario 
+}; 

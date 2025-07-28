@@ -34,8 +34,8 @@ export default function SignInScreen() {
       await AsyncStorage.setItem('userToken', response.token);
       await AsyncStorage.setItem('userData', JSON.stringify(response.user));
       
-      // Redirigir al usuario
-      router.replace('/(tabs)');
+      // Redirigir al usuario a la pestaña explore
+      router.replace('/(tabs)/explore');
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Error al iniciar sesión');
     } finally {
