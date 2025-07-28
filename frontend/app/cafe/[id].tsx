@@ -158,7 +158,12 @@ export default function CafeDetail() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Image source={{ uri: cafe?.imageUrl }} style={styles.image} />
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: cafe.imageUrl }} style={styles.image} />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.infoContainer}>
         <View style={styles.titleRow}>
@@ -206,7 +211,7 @@ export default function CafeDetail() {
         <View style={styles.reviewsHeader}>
           <View style={styles.ratingContainer}>
             <Text style={styles.reviewsTitle}>
-              Reseñas <Text style={styles.ratingValue}>4.5/5</Text>
+              Reseñas <Text style={styles.ratingValue}>{cafe.rating}/5</Text>
             </Text>
             <Text style={styles.starIcon}>⭐️</Text>
           </View>
@@ -254,7 +259,7 @@ export default function CafeDetail() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    paddingBottom: 16,
     backgroundColor: '#FFF',
   },
   center: {
@@ -262,15 +267,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  imageContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
   image: {
     width: '100%',
     height: 220,
-    borderRadius: 12,
-    marginBottom: 16,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 16,
+    backgroundColor: '#8B4513',
+    padding: 8,
+    borderRadius: 10,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   infoContainer: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
+    paddingHorizontal: 16,
   },
   name: {
     fontSize: 24,
