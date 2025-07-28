@@ -15,6 +15,9 @@ export const Colors = {
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
+    border: '#E4E7EB',
+    textSecondary: '#687076',
+    card: '#F8F9FA'
   },
   dark: {
     text: '#ECEDEE',
@@ -23,6 +26,9 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
+    border: '#2D3235',
+    textSecondary: '#9BA1A6',
+    card: '#1E2021'
   },
   
   // Sistema nuevo para Cafe Cerca
