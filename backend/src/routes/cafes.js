@@ -37,6 +37,18 @@ router.post('/', upload.single('image'), async (req, res) => {
     res.status(400).json({ error: 'Error al crear la cafetería', details: err.message });
   }
 });
+// GET - Obtener una sola cafetería por ID
+router.get('/:id', async (req, res) => {
+  try {
+    const cafe = await Cafe.findByPk(req.params.id);
+    if (!cafe) {
+      return res.status(404).json({ error: 'Cafetería no encontrada' });
+    }
+    res.json(cafe);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener la cafetería' });
+  }
+});
 
 // DELETE - Borrar una cafetería (opcional)
 router.delete('/:id', async (req, res) => {

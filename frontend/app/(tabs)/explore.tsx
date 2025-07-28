@@ -27,6 +27,12 @@ export default function ExploreScreen() {
     fetchCafes();
   }, []);
 
+  // Dentro del componente
+const router = useRouter();
+
+const handleCafePress = (id: number) => {
+  router.push(`../cafe/${id}`);
+};
   const fetchCafes = async () => {
     try {
       setLoading(true);
@@ -82,47 +88,48 @@ export default function ExploreScreen() {
         onSelect={setSelectedFilters}
       />
 
-      {filteredCafes.length === 0 ? (
-        <View style={styles.noResultsContainer}>
-          <Text style={styles.noResultsText}>No se encontraron cafeterías</Text>
+        {filteredCafes.map((cafe, index) => (
+    <TouchableOpacity
+      key={cafe.id || index}
+      onPress={() => handleCafePress(cafe.id)}
+      activeOpacity={0.8} // opcional para efecto visual
+    >
+      <View style={styles.card}>
+        <View style={styles.imageWrapper}>
+          {cafe.imageUrl ? (
+            <Image 
+              source={{ uri: cafe.imageUrl }} 
+              style={styles.image}
+            />
+          ) : (
+            <View style={[styles.image, styles.placeholderImage]}>
+              <Text style={styles.placeholderText}>{cafe.name[0].toUpperCase()}</Text>
+            </View>
+          )}
+          {cafe.openingHours && (
+            <TagChip
+              label={cafe.openingHours}
+              style={styles.horarioChip}
+              textStyle={{ fontWeight: '500' }}
+            />
+          )}
         </View>
-      ) : (
-        filteredCafes.map((cafe, index) => (
-          <View key={cafe.id || index} style={styles.card}>
-            <View style={styles.imageWrapper}>
-              {cafe.imageUrl ? (
-                <Image 
-                  source={{ uri: cafe.imageUrl }} 
-                  style={styles.image}
-                />
-              ) : (
-                <View style={[styles.image, styles.placeholderImage]}>
-                  <Text style={styles.placeholderText}>{cafe.name[0].toUpperCase()}</Text>
-                </View>
-              )}
-              {cafe.openingHours && (
-                <TagChip
-                  label={cafe.openingHours}
-                  style={styles.horarioChip}
-                  textStyle={{ fontWeight: '500' }}
-                />
-              )}
-            </View>
-            <View style={styles.textContainer}>
-              <View style={styles.row}>
-                <Text style={styles.name}>{cafe.name}</Text>
-                <Text style={styles.puntaje}>{cafe.rating} ★</Text>
-              </View>
-              <Text style={styles.location}>{cafe.address}</Text>
-              <View style={styles.tagsContainer}>
-                {cafe.tags?.map((tag: string, idx: number) => (
-                  <TagChip key={idx} label={tag} />
-                ))}
-              </View>
-            </View>
+        <View style={styles.textContainer}>
+          <View style={styles.row}>
+            <Text style={styles.name}>{cafe.name}</Text>
+            <Text style={styles.puntaje}>{cafe.rating} ★</Text>
           </View>
-        ))
-      )}
+          <Text style={styles.location}>{cafe.address}</Text>
+          <View style={styles.tagsContainer}>
+            {cafe.tags?.map((tag: string, idx: number) => (
+              <TagChip key={idx} label={tag} />
+            ))}
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  ))}
+
     </ScrollView>
   );
 }
