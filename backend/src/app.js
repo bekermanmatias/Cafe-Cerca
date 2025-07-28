@@ -6,6 +6,7 @@ import visitaRoutes from './routes/visita.routes.js';
 import { testConnection } from './config/database.js';
 import dotenv from 'dotenv';
 import cafesRoutes from './routes/cafes.js';
+import estadisticasRoutes from './routes/estadisticas.routes.js';
 
 // Importar modelos y sus relaciones
 import './models/index.js';
@@ -38,13 +39,15 @@ app.get('/health', (req, res) => {
 });
 
 // Rutas de la API
-app.use('/api', visitaRoutes);
-app.use('/api/cafes', cafesRoutes); // cambié a /api/cafes para que coincida con los logs
+app.use('/api/cafes', cafesRoutes);
+app.use('/api/visitas', visitaRoutes);
+app.use('/api/estadisticas', estadisticasRoutes);
 
 // Mostrar rutas disponibles por consola para que las veas
 console.log('📋 Rutas disponibles:');
 console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/health');
 console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visitas');
+console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visitas/usuario/1');
 console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/cafes');
 console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/cafes');
 

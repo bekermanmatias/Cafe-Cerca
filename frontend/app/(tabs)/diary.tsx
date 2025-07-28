@@ -49,8 +49,8 @@ export default function DiaryScreen() {
   const fetchDiario = async () => {
     try {
       setIsLoading(true);
-      console.log('Fetching from:', `${API_URL}/usuarios/1/diario`); // Debug log
-      const response = await fetch(`${API_URL}/usuarios/1/diario`, {
+      console.log('Fetching from:', `${API_URL}/visitas/usuario/1`); // Debug log
+      const response = await fetch(`${API_URL}/visitas/usuario/1`, {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
@@ -124,8 +124,7 @@ export default function DiaryScreen() {
   };
 
   const handleStats = () => {
-    // Por ahora solo un console.log, implementaremos la funcionalidad después
-    console.log('Stats pressed');
+    router.push('/stats');
   };
 
   return (
