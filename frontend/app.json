@@ -1,22 +1,24 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Café Cerca",
+    "slug": "cafe-cerca",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "cafecerca",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cafecerca.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.cafecerca.app"
     },
     "web": {
       "bundler": "metro",

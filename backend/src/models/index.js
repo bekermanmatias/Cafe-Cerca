@@ -1,11 +1,27 @@
-import { Sequelize, DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
-import userModel from './user.model.js';
+import Visita from './Visita.js';
+import Cafe from './Cafe.js';
+import VisitaImagen from './VisitaImagen.js';
 
-const db = {};
-db.Sequelize = Sequelize;
-db.sequelize = sequelize;
+// Relación entre Visita y Cafe
+Visita.belongsTo(Cafe, {
+  foreignKey: 'cafeteriaId',
+  as: 'cafeteria'
+});
 
-db.User = userModel(sequelize, DataTypes);
+Cafe.hasMany(Visita, {
+  foreignKey: 'cafeteriaId',
+  as: 'visitas'
+});
 
-export default db;
+// Relación entre Visita y VisitaImagen
+Visita.hasMany(VisitaImagen, {
+  foreignKey: 'visitaId',
+  as: 'visitaImagenes' // Cambiamos el alias para evitar conflictos
+});
+
+VisitaImagen.belongsTo(Visita, {
+  foreignKey: 'visitaId',
+  as: 'visita'
+});
+
+export { Visita, Cafe, VisitaImagen }; 

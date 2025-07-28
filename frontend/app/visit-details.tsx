@@ -1,48 +1,164 @@
-import React from 'react';
-import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Dimensions, ImageSourcePropType, TextInput } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Dimensions, ImageSourcePropType, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Image as ExpoImage } from 'expo-image';
+import { shareVisit } from '../constants/Sharing';
+import { API_URL } from '../constants/Config';
 
 const windowWidth = Dimensions.get('window').width;
 
-interface Review {
-  user: string;
-  rating: number;
-  text: string;
-  userPhoto: ImageSourcePropType;
+interface Imagen {
+  imageUrl: string;
+  orden: number;
 }
 
-interface Comment {
-  user: string;
-  text: string;
-  timeAgo: string;
-  userPhoto: ImageSourcePropType;
+interface Cafeteria {
+  id: number;
+  name: string;
+  address: string;
+  imageUrl: string | null;
+  rating: number;
+  tags: string[];
+  openingHours: string;
 }
 
-interface VisitDetails {
-  date: string;
-  place: string;
-  description: string;
-  rating: number;
-  images: ImageSourcePropType[];
-  participants: ImageSourcePropType[];
-  reviews: Review[];
-  comments: Comment[];
+interface VisitaDetalle {
+  id: number;
+  usuarioId: number;
+  cafeteriaId: number;
+  comentario: string;
+  calificacion: number;
+  fecha: string;
+  imagenes: Imagen[];
+  cafeteria: Cafeteria;
+}
+
+interface ApiResponse {
+  mensaje: string;
+  visita: VisitaDetalle;
 }
 
 export default function VisitDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const visit: VisitDetails = {
-    date: params.date as string,
-    place: params.place as string,
-    description: params.description as string,
-    rating: Number(params.rating),
-    images: JSON.parse(params.images as string),
-    participants: JSON.parse(params.participants as string),
-    reviews: JSON.parse((params.reviews as string) || '[]'),
-    comments: JSON.parse((params.comments as string) || '[]'),
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [visitData, setVisitData] = useState<VisitaDetalle | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
+
+  useEffect(() => {
+    console.log('Actualizando detalles de visita...', { visitId: params.visitId, refresh: params.refresh });
+    fetchVisitDetails();
+  }, [params.visitId, params.refresh]);
+
+  const fetchVisitDetails = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const visitId = String(params.visitId).replace(/[^0-9]/g, '');
+      if (!visitId) {
+        throw new Error('ID de visita no válido');
+      }
+
+      console.log('Obteniendo detalles de visita:', visitId);
+      const fullUrl = `${API_URL}/visitas/${visitId}`;
+      console.log('URL completa:', fullUrl);
+
+      const response = await fetch(fullUrl);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.mensaje || 'Error al obtener los detalles de la visita');
+      }
+
+      const data = await response.json();
+      console.log('Datos de visita recibidos:', data);
+      setVisitData(data.visita);
+    } catch (error) {
+      console.error('Error obteniendo detalles:', error);
+      setError('No se pudo cargar la información de la visita');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Mostrar un indicador de carga mientras se obtienen los datos
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#8D6E63" />
+        <Text style={styles.loadingText}>Cargando detalles de la visita...</Text>
+      </View>
+    );
+  }
+
+  // Mostrar mensaje de error si algo salió mal
+  if (error || !visitData) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity 
+          onPress={() => {
+            setError(null);
+            fetchVisitDetails(); // Intentar cargar de nuevo
+          }} 
+          style={styles.retryButton}
+        >
+          <Text style={styles.retryButtonText}>Intentar de nuevo</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          style={styles.errorButton}
+        >
+          <Text style={styles.errorButtonText}>Volver</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const handleShare = () => {
+    if (visitData) {
+      shareVisit(visitData.id);
+    }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Eliminar visita",
+      "¿Estás seguro que deseas eliminar esta visita?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_URL}/visitas/${visitData?.id}`, {
+                method: 'DELETE',
+              });
+              if (response.ok) {
+                router.back();
+              } else {
+                Alert.alert("Error", "No se pudo eliminar la visita");
+              }
+            } catch (error) {
+              Alert.alert("Error", "Ocurrió un error al eliminar la visita");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEdit = () => {
+    // Implementar navegación a la pantalla de edición
+    router.push({
+      pathname: "/edit-visit" as any, // Temporal hasta que se cree la ruta
+      params: { visitId: visitData?.id }
+    });
   };
 
   return (
@@ -56,20 +172,14 @@ export default function VisitDetailsScreen() {
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>{visit.place}</Text>
-            <Text style={styles.headerDate}>{visit.date}</Text>
+            <Text style={styles.headerTitle}>{visitData.cafeteria.name}</Text>
+            <Text style={styles.headerDate}>
+              {new Date(visitData.fecha).toLocaleDateString()}
+            </Text>
           </View>
           <View style={styles.participantsContainer}>
-            {visit.participants.map((photo, index) => (
-              <Image
-                key={index}
-                source={photo}
-                style={[
-                  styles.participantPhoto,
-                  { marginLeft: index > 0 ? -12 : 0 }
-                ]}
-              />
-            ))}
+            {/* Mantener el diseño de participantes hardcodeado por ahora */}
+            <View style={styles.participantPhoto} />
           </View>
         </View>
 
@@ -79,36 +189,83 @@ export default function VisitDetailsScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.imageScrollContainer}
           >
-            {visit.images.map((image, index) => (
+            {visitData.imagenes.map((imagen, index) => (
               <View key={index} style={styles.imageWrapper}>
-                <Image source={image} style={styles.mainImage} />
+                <Image 
+                  source={{ uri: imagen.imageUrl }} 
+                  style={styles.mainImage}
+                />
               </View>
             ))}
           </ScrollView>
           <View style={styles.ratingBadge}>
-            <Text style={styles.ratingText}>{visit.rating} ★</Text>
+            <Text style={styles.ratingText}>{visitData.calificacion} ★</Text>
           </View>
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="heart-outline" size={28} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="share-social-outline" size={28} color="#000" />
-          </TouchableOpacity>
+          <View style={styles.leftActions}>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="heart-outline" size={28} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+              <Ionicons name="share-social-outline" size={28} color="#000" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.rightActions}>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => setShowOptions(!showOptions)}
+            >
+              <Ionicons name="ellipsis-vertical" size={28} color="#000" />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {showOptions && (
+          <>
+            <TouchableOpacity 
+              style={styles.overlay} 
+              activeOpacity={0} 
+              onPress={() => setShowOptions(false)} 
+            />
+            <View style={styles.optionsMenu}>
+              <TouchableOpacity 
+                style={styles.optionItem}
+                onPress={() => {
+                  setShowOptions(false);
+                  handleEdit();
+                }}
+              >
+                <Ionicons name="create-outline" size={24} color="#000" />
+                <Text style={styles.optionText}>Modificar visita</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.optionItem, styles.deleteOption]}
+                onPress={() => {
+                  setShowOptions(false);
+                  handleDelete();
+                }}
+              >
+                <Ionicons name="trash-outline" size={24} color="#FF4444" />
+                <Text style={styles.deleteOptionText}>Eliminar visita</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
 
         <View style={styles.mainReviewContainer}>
           <View style={styles.authorSection}>
-            <Image source={visit.participants[0]} style={styles.authorPhoto} />
+            <View style={styles.authorPhoto} />
             <View style={styles.authorInfo}>
-              <Text style={styles.authorName}>Sofia R.</Text>
+              <Text style={styles.authorName}>Usuario {visitData.usuarioId}</Text>
               <View style={styles.starsContainer}>
                 {[...Array(5)].map((_, i) => (
                   <Ionicons
                     key={i}
-                    name={i < visit.rating ? "star" : "star-outline"}
+                    name={i < visitData.calificacion ? "star" : "star-outline"}
                     size={20}
                     color="#FFD700"
                   />
@@ -116,114 +273,21 @@ export default function VisitDetailsScreen() {
               </View>
             </View>
           </View>
-          <Text style={styles.mainReviewText}>{visit.description}</Text>
+          <Text style={styles.mainReviewText}>{visitData.comentario}</Text>
         </View>
 
-        <View style={styles.friendReviewContainer}>
-          <View style={styles.friendReviewHeader}>
-            <Image source={visit.participants[1]} style={styles.friendPhoto} />
-            <View style={styles.friendInfo}>
-              <Text style={styles.friendName}>Lucas.M</Text>
-              <View style={styles.friendStarsContainer}>
-                {[...Array(5)].map((_, i) => (
-                  <Ionicons
-                    key={i}
-                    name={i < 4 ? "star" : "star-outline"}
-                    size={20}
-                    color="#FFD700"
-                  />
-                ))}
-              </View>
-            </View>
-            <TouchableOpacity style={styles.moreButton}>
-              <Ionicons name="ellipsis-vertical" size={20} color="#666" />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.friendReviewText}>
-            Lorem ipsum dolor sit dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-          </Text>
-        </View>
-
-        <View style={styles.content}>
-          <View style={styles.reviewsSection}>
-            {visit.reviews.map((review, index) => (
-              <View key={index} style={styles.reviewItem}>
-                <View style={styles.reviewHeader}>
-                  <Image source={review.userPhoto} style={styles.reviewerPhoto} />
-                  <View style={styles.reviewerInfo}>
-                    <Text style={styles.reviewerName}>{review.user}</Text>
-                    <View style={styles.starsContainer}>
-                      {[...Array(5)].map((_, i) => (
-                        <Ionicons
-                          key={i}
-                          name={i < review.rating ? "star" : "star-outline"}
-                          size={16}
-                          color="#FFD700"
-                        />
-                      ))}
-                    </View>
-                  </View>
-                  <TouchableOpacity style={styles.moreButton}>
-                    <Ionicons name="ellipsis-vertical" size={20} color="#666" />
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.reviewText}>{review.text}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.commentsSection}>
-            <Text style={styles.sectionTitle}>Comentarios</Text>
-            {visit.comments.map((comment, index) => (
-              <View key={index} style={styles.commentItem}>
-                <Image source={comment.userPhoto} style={styles.commentorPhoto} />
-                <View style={styles.commentContent}>
-                  <View style={styles.commentHeader}>
-                    <Text style={styles.commentorName}>{comment.user}</Text>
-                    <Text style={styles.timeAgo}>{comment.timeAgo}</Text>
-                  </View>
-                  <Text style={styles.commentText}>{comment.text}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.commentsContainer}>
-            <View style={styles.commentItem}>
-              <Image source={visit.participants[1]} style={styles.commentAvatar} />
-              <View style={styles.commentContent}>
-                <View style={styles.commentHeader}>
-                  <Text style={styles.commentAuthor}>Lucas.M</Text>
-                  <Text style={styles.commentTime}>Hace 2 días</Text>
-                </View>
-                <Text style={styles.commentText}>¡Excelente lugar! La próxima vez tenemos que probar el matcha 🍵</Text>
-              </View>
-            </View>
-
-            <View style={styles.commentItem}>
-              <Image source={visit.participants[0]} style={styles.commentAvatar} />
-              <View style={styles.commentContent}>
-                <View style={styles.commentHeader}>
-                  <Text style={styles.commentAuthor}>Sofia R.</Text>
-                  <Text style={styles.commentTime}>Hace 1 día</Text>
-                </View>
-                <Text style={styles.commentText}>¡Sí! El matcha se veía increíble 😊</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.commentInputContainer}>
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Escribe tu comentario..."
-              multiline
-              maxLength={500}
-            />
-            <Text style={styles.charCount}>0/500</Text>
-            <TouchableOpacity style={styles.publishButton}>
-              <Text style={styles.publishButtonText}>Publicar</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Mantener el resto de la UI hardcodeada por ahora */}
+        <View style={styles.commentInputContainer}>
+          <TextInput
+            style={styles.commentInput}
+            placeholder="Escribe tu comentario..."
+            multiline
+            maxLength={500}
+          />
+          <Text style={styles.charCount}>0/500</Text>
+          <TouchableOpacity style={styles.publishButton}>
+            <Text style={styles.publishButtonText}>Publicar</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </>
@@ -231,6 +295,35 @@ export default function VisitDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  errorButton: {
+    backgroundColor: '#8D6E63',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  errorButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -264,21 +357,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: '#E0E0E0',
     borderWidth: 2,
     borderColor: 'white',
-  },
-  titleSection: {
-    padding: 16,
-    paddingTop: 0,
-  },
-  date: {
-    fontSize: 14,
-    color: '#666',
-  },
-  place: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 4,
   },
   mainImageContainer: {
     width: '100%',
@@ -317,16 +398,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  leftButtons: {
+  leftActions: {
     flexDirection: 'row',
-    gap: 20,
+    gap: 16,
+  },
+  rightActions: {
+    flexDirection: 'row',
   },
   actionButton: {
     padding: 4,
   },
-  actionIcon: {
-    width: 24,
-    height: 24,
+  optionsMenu: {
+    position: 'absolute',
+    right: 16,
+    top: 520, // Ajustar según necesidad
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 1000,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 12,
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  deleteOption: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  deleteOptionText: {
+    fontSize: 16,
+    color: '#FF4444',
   },
   mainReviewContainer: {
     paddingHorizontal: 16,
@@ -337,107 +452,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  mainReviewText: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
   authorPhoto: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: '#E0E0E0',
     marginRight: 12,
   },
   authorInfo: {
     flex: 1,
   },
+  authorName: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
   starsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  content: {
-    padding: 16,
-    paddingTop: 0,
-  },
-  description: {
+  mainReviewText: {
     fontSize: 16,
     lineHeight: 24,
-    marginBottom: 24,
-  },
-  reviewsSection: {
-    marginBottom: 24,
-  },
-  reviewItem: {
-    marginBottom: 20,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  reviewerPhoto: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  reviewerInfo: {
-    flex: 1,
-  },
-  reviewerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  moreButton: {
-    padding: 8,
-  },
-  reviewText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#333',
-  },
-  commentsSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  commentItem: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  commentorPhoto: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 12,
-  },
-  commentContent: {
-    flex: 1,
-  },
-  commentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  commentorName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginRight: 8,
-  },
-  timeAgo: {
-    fontSize: 12,
-    color: '#666',
-  },
-  commentText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#333',
   },
   commentInputContainer: {
-    marginTop: 16,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
   commentInput: {
     borderWidth: 1,
@@ -454,7 +495,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   publishButton: {
-    backgroundColor: '#E8BEAC',
+    backgroundColor: '#8D6E63',
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
@@ -463,60 +504,32 @@ const styles = StyleSheet.create({
   publishButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  friendReviewContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
   },
-  friendReviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  retryButton: {
+    backgroundColor: '#8D6E63',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
     marginBottom: 12,
   },
-  friendPhoto: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  friendInfo: {
-    flex: 1,
-  },
-  friendName: {
-    fontSize: 14,
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 4,
   },
-  friendStarsContainer: {
-    flexDirection: 'row',
-  },
-  friendReviewText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#333',
-  },
-  authorName: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  commentsContainer: {
-    marginBottom: 20,
-  },
-  commentAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 12,
-  },
-  commentAuthor: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  commentTime: {
-    fontSize: 12,
-    color: '#666',
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 999,
   },
 }); 

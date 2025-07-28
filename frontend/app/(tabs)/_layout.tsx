@@ -51,7 +51,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Inicio',
           tabBarIcon: ({ color }) => (
             <Ionicons name="home" size={28} color={color} />
           ),
@@ -60,29 +60,37 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <ExploreIcon width={28} height={28} fill={color} />,
+          title: 'Explorar',
+          tabBarIcon: ({ color }) => (
+            <ExploreIcon width={28} height={28} fill={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="map"
         options={{
-          title: 'Map',
-          tabBarIcon: ({ color }) => <MapIcon width={28} height={28} fill={color} />,
+          title: 'Mapa',
+          tabBarIcon: ({ color }) => (
+            <MapIcon width={28} height={28} fill={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="diary"
         options={{
-          title: 'Diary',
-          tabBarIcon: ({ color }) => <DiaryIcon width={28} height={28} stroke={color} fill="none" />,
+          title: 'Diario',
+          tabBarIcon: ({ color }) => (
+            <DiaryIcon width={28} height={28} stroke={color} fill="none" />
+          ),
         }}
       />
       <Tabs.Screen
         name="friends"
         options={{
-          title: 'Friends',
-          tabBarIcon: ({ color }) => <FriendsIcon width={35} height={35} fill={color} />,
+          title: 'Amigos',
+          tabBarIcon: ({ color }) => (
+            <FriendsIcon width={35} height={35} fill={color} />
+          ),
         }}
       />
     </Tabs>

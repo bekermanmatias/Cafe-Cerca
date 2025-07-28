@@ -1,115 +1,187 @@
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, Alert, TouchableOpacity, Text, View, RefreshControl } from 'react-native';
 import { VisitCard } from '../../components/VisitCard';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState, useCallback } from 'react';
+import Constants from 'expo-constants';
+import { shareVisit, shareDiary } from '../../constants/Sharing';
+import { AntDesign } from '@expo/vector-icons';
+import { API_URL } from '../../constants/Config';
 
-const mockVisits = [
-  {
-    date: '26-06-2025',
-    place: 'Café Artesano',
-    description: 'Probando el mejor flat white de la ciudad ☕️ La espuma perfecta y el arte latte increíble 🎨',
-    rating: 4.8,
-    images: [
-      require('../../assets/mock-images/cafe1.png'),
-      require('../../assets/mock-images/cafe13.png'),
-    ],
-    participants: [
-      require('../../assets/mock-images/foto1.png'),
-      require('../../assets/mock-images/foto2.png'),
-    ],
-  },
-  {
-    date: '25-06-2025',
-    place: 'La Bicicleta',
-    description: '¡Desayuno de campeones! 🚴‍♂️ Café de Colombia recién tostado y pan de masa madre 🍞',
-    rating: 4.7,
-    images: [
-      require('../../assets/mock-images/cafe3.png'),
-      require('../../assets/mock-images/cafe4.png'),
-      require('../../assets/mock-images/cafe5.png'),
-    ],
-    participants: [
-      require('../../assets/mock-images/foto1.png'),
-      require('../../assets/mock-images/foto2.png'),
-    ],
-  },
-  {
-    date: '24-06-2025',
-    place: 'Rincón Verde',
-    description: 'Café orgánico y tarta de zanahoria casera 🥕 El lugar perfecto para trabajar rodeado de plantas 🌿',
-    rating: 4.9,
-    images: [
-      require('../../assets/mock-images/cafe6.png'),
-      require('../../assets/mock-images/cafe7.png'),
-    ],
-    participants: [
-      require('../../assets/mock-images/foto1.png'),
-    ],
-  },
-  {
-    date: '23-06-2025',
-    place: 'Café del Puerto',
-    description: 'Brunch con vista al mar 🌊 Cold brew perfecto para un día caluroso ❄️',
-    rating: 4.6,
-    images: [
-      require('../../assets/mock-images/cafe9.png'),
-      require('../../assets/mock-images/cafe10.png'),
-      require('../../assets/mock-images/cafe8.png'),
-    ],
-    participants: [
-      require('../../assets/mock-images/foto1.png'),
-      require('../../assets/mock-images/foto2.png'),
-    ],
-  },
-  {
-    date: '22-06-2025',
-    place: 'El Laboratorio',
-    description: 'Experimentando métodos alternativos: Chemex y Aeropress 🧪 ¡La ciencia del café llevada al siguiente nivel! 🔬',
-    rating: 5.0,
-    images: [
-      require('../../assets/mock-images/cafe11.png'),
-      require('../../assets/mock-images/cafe7.png'),
-    ],
-    participants: [
-      require('../../assets/mock-images/foto1.png'),
-      require('../../assets/mock-images/foto2.png'),
-    ],
-  },
-];
+interface Imagen {
+  imageUrl: string;
+  orden: number;
+}
+
+interface Cafeteria {
+  id: number;
+  name: string;
+  address: string;
+  imageUrl: string | null;
+  rating: number;
+  tags: string[];
+  openingHours: string;
+}
+
+interface Visita {
+  id: number;
+  usuarioId: number;
+  cafeteriaId: number;
+  comentario: string;
+  calificacion: number;
+  fecha: string;
+  imagenes: Imagen[];
+  cafeteria: Cafeteria;
+}
+
+interface DiarioResponse {
+  mensaje: string;
+  totalVisitas: number;
+  visitas: Visita[];
+}
 
 export default function DiaryScreen() {
   const router = useRouter();
+  const { refresh } = useLocalSearchParams();
+  const [visitas, setVisitas] = useState<Visita[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchDiario = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Fetching from:', `${API_URL}/visitas/usuario/1`); // Debug log
+      const response = await fetch(`${API_URL}/visitas/usuario/1`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data: DiarioResponse = await response.json();
+      console.log('Response data:', data); // Debug log
+      setVisitas(data.visitas);
+    } catch (error) {
+      console.error('Error fetching diario:', error);
+      Alert.alert(
+        'Error',
+        'No se pudo cargar el diario. Por favor, verifica tu conexión a internet.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDiario();
+  }, [refresh]); // Se actualizará cuando cambie el parámetro refresh
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchDiario();
+  }, []);
 
   const handleLike = () => {
     console.log('Like pressed');
   };
 
-  const handleShare = () => {
-    console.log('Share pressed');
+  const handleShare = (visitId: number) => {
+    shareVisit(visitId);
   };
 
-  const handleDetails = (visit: any) => {
+  const handleDetails = (visit: Visita) => {
     router.push({
       pathname: '/visit-details',
       params: {
-        ...visit,
-        images: JSON.stringify(visit.images),
-        participants: JSON.stringify(visit.participants),
-      },
+        visitId: visit.id.toString()
+      }
     });
   };
 
+  const handleAddVisit = () => {
+    router.push({
+      pathname: '/add-visit'
+    });
+  };
+
+  const handleShareDiary = async () => {
+    try {
+      // Por ahora hardcodeamos el userId a 1
+      await shareDiary(1);
+    } catch (error) {
+      console.error('Error sharing diary:', error);
+      Alert.alert(
+        'Error',
+        'No se pudo compartir el diario. Por favor, intenta de nuevo.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handleStats = () => {
+    router.push('/stats');
+  };
+
   return (
-    <ScrollView style={styles.container} nestedScrollEnabled={true}>
-      {mockVisits.map((visit, index) => (
-        <VisitCard
-          key={index}
-          {...visit}
-          onLike={handleLike}
-          onShare={handleShare}
-          onDetails={() => handleDetails(visit)}
-        />
-      ))}
-    </ScrollView>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Mi Diario</Text>
+          <TouchableOpacity style={styles.sortButton}>
+            <Text style={styles.sortButtonText}>Recientes</Text>
+            <AntDesign name="down" size={12} color="#8D6E63" style={styles.sortIcon} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            style={styles.headerButton} 
+            onPress={handleStats}
+          >
+            <AntDesign name="barschart" size={24} color="#8D6E63" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerButton} 
+            onPress={handleShareDiary}
+          >
+            <AntDesign name="sharealt" size={24} color="#8D6E63" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView 
+        nestedScrollEnabled={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#8D6E63']}
+            tintColor="#8D6E63"
+          />
+        }
+      >
+        {visitas.map((visit) => (
+          <VisitCard
+            key={visit.id}
+            visit={visit}
+            onLike={handleLike}
+            onShare={() => handleShare(visit.id)}
+            onDetails={() => handleDetails(visit)}
+          />
+        ))}
+      </ScrollView>
+      
+      <TouchableOpacity 
+        style={styles.fabButton}
+        onPress={handleAddVisit}
+      >
+        <Text style={styles.fabText}>Agregar visita</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -117,5 +189,72 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#000',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  headerButton: {
+    padding: 4,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+  sortButtonText: {
+    fontSize: 14,
+    color: '#8D6E63',
+    marginRight: 4,
+  },
+  sortIcon: {
+    marginTop: 2,
+  },
+  fabButton: {
+    position: 'absolute',
+    bottom: 20,
+    alignSelf: 'center',
+    backgroundColor: '#8D6E63',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  fabText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
