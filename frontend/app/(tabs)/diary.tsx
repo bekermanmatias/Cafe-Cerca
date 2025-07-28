@@ -5,10 +5,21 @@ import { useEffect, useState, useCallback } from 'react';
 import Constants from 'expo-constants';
 import { shareVisit, shareDiary } from '../../constants/Sharing';
 import { AntDesign } from '@expo/vector-icons';
+import { API_URL } from '../../constants/Config';
 
 interface Imagen {
   imageUrl: string;
   orden: number;
+}
+
+interface Cafeteria {
+  id: number;
+  name: string;
+  address: string;
+  imageUrl: string | null;
+  rating: number;
+  tags: string[];
+  openingHours: string;
 }
 
 interface Visita {
@@ -19,6 +30,7 @@ interface Visita {
   calificacion: number;
   fecha: string;
   imagenes: Imagen[];
+  cafeteria: Cafeteria;
 }
 
 interface DiarioResponse {
@@ -26,11 +38,6 @@ interface DiarioResponse {
   totalVisitas: number;
   visitas: Visita[];
 }
-
-// En desarrollo, usa la IP de tu máquina local. En producción, usa tu servidor real.
-const API_URL = __DEV__ 
-  ? 'http://192.168.0.11:3000/api' // Cambia esta IP por la de tu computadora
-  : 'https://tu-servidor-produccion.com/api';
 
 export default function DiaryScreen() {
   const router = useRouter();
@@ -161,12 +168,7 @@ export default function DiaryScreen() {
         {visitas.map((visit) => (
           <VisitCard
             key={visit.id}
-            place={`Cafetería ${visit.cafeteriaId}`}
-            description={visit.comentario.replace(/"/g, '')}
-            rating={visit.calificacion}
-            date={new Date(visit.fecha).toLocaleDateString()}
-            images={visit.imagenes.map(img => ({ uri: img.imageUrl }))}
-            participants={[]}
+            visit={visit}
             onLike={handleLike}
             onShare={() => handleShare(visit.id)}
             onDetails={() => handleDetails(visit)}

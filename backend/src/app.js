@@ -7,22 +7,27 @@ import { testConnection } from './config/database.js';
 import dotenv from 'dotenv';
 import cafesRoutes from './routes/cafes.js';
 
-import './models/Cafe.js'; // registrar modelo
+// Importar modelos y sus relaciones
+import './models/index.js';
+
 // Configuración de variables de entorno
 dotenv.config();
 
 const app = express();
 
-// Middlewares de seguridad y utilidades
-app.use(helmet());
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+// Configuración de CORS
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+const corsOptions = {
+  origin: isDevelopment
+    ? ['http://localhost:3000', 'http://localhost:19006', 'exp://*', 'http://*', 'https://*'] // En desarrollo, permitir conexiones locales y Expo
+    : ['https://tu-dominio-produccion.com'], // En producción, restringe a tu dominio
   credentials: true,
-  maxAge: 86400
-}));
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -33,7 +38,7 @@ app.get('/health', (req, res) => {
 });
 
 // Rutas de la API
-app.use('/api/visitas', visitaRoutes);
+app.use('/api', visitaRoutes);
 app.use('/api/cafes', cafesRoutes); // cambié a /api/cafes para que coincida con los logs
 
 // Mostrar rutas disponibles por consola para que las veas

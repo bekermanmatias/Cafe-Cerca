@@ -5,12 +5,22 @@ import { useState, useRef } from 'react';
 const windowWidth = Dimensions.get('window').width;
 
 export interface VisitCardProps {
-  date: string;
-  place: string;
-  description: string;
-  rating: number;
-  images: any[];
-  participants: any[];
+  visit: {
+    id: number;
+    comentario: string;
+    calificacion: number;
+    fecha: string;
+    imagenes: Array<{
+      imageUrl: string;
+      orden: number;
+    }>;
+    cafeteria: {
+      name: string;
+      address: string;
+      imageUrl: string | null;
+      rating: number;
+    };
+  };
   onLike?: () => void;
   onShare?: () => void;
   onDetails?: () => void;
@@ -27,12 +37,7 @@ interface ViewableItemsChanged {
 }
 
 export const VisitCard = ({
-  date,
-  place,
-  description,
-  rating,
-  images,
-  participants,
+  visit,
   onLike,
   onShare,
   onDetails,
@@ -40,10 +45,10 @@ export const VisitCard = ({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  const renderImage = ({ item: image }: RenderImageProps) => (
+  const renderImage = ({ item: imageUrl }: RenderImageProps) => (
     <View style={styles.imageWrapper}>
       <Image
-        source={image}
+        source={{ uri: imageUrl.imageUrl }}
         style={styles.image}
       />
     </View>
@@ -63,31 +68,22 @@ export const VisitCard = ({
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.place}>{place}</Text>
-          <Text style={styles.date}>{date}</Text>
+          <Text style={styles.place}>{visit.cafeteria.name}</Text>
+          <Text style={styles.date}>{new Date(visit.fecha).toLocaleDateString()}</Text>
         </View>
         <View style={styles.headerRight}>
           <View style={styles.participantsContainer}>
-            {participants.map((photo, index) => (
-              <Image
-                key={index}
-                source={photo}
-                style={[
-                  styles.participantPhoto,
-                  { marginLeft: index > 0 ? -18 : 0 }
-                ]}
-              />
-            ))}
+            <View style={styles.participantPhoto} />
           </View>
         </View>
       </View>
       <View style={styles.imageSection}>
         <View style={styles.ratingBubble}>
-          <Text style={styles.rating}>{rating} ★</Text>
+          <Text style={styles.rating}>{visit.calificacion} ★</Text>
         </View>
         <FlatList
           ref={flatListRef}
-          data={images}
+          data={visit.imagenes}
           renderItem={renderImage}
           horizontal
           pagingEnabled
@@ -101,7 +97,7 @@ export const VisitCard = ({
           style={styles.imageList}
         />
         <View style={styles.paginationDots}>
-          {images.map((_, index) => (
+          {visit.imagenes.map((_, index) => (
             <View
               key={index}
               style={[
@@ -126,7 +122,7 @@ export const VisitCard = ({
             <Ionicons name="book-outline" size={24} color="#666" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.description}>{description}</Text>
+        <Text style={styles.description}>{visit.comentario}</Text>
       </View>
     </View>
   );
@@ -183,6 +179,7 @@ const styles = StyleSheet.create({
     borderRadius: 22.5,
     borderWidth: 2.5,
     borderColor: 'white',
+    backgroundColor: '#E0E0E0',
   },
   imageSection: {
     height: 400,

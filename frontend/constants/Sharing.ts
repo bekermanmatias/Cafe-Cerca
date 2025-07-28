@@ -1,10 +1,9 @@
 import { Share, Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { API_URL } from './Config';
 
 // URL base para desarrollo y producción
-const BASE_URL = __DEV__
-  ? 'http://192.168.0.11:8081'
-  : 'https://cafe-cerca.com';
+const BASE_URL = API_URL;
 
 const createShortUrl = async (longUrl: string) => {
   try {
