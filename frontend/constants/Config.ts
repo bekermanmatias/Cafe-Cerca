@@ -1,28 +1,38 @@
 import Constants from 'expo-constants';
 
-// Obtiene la URL del servidor del manifest de Expo o usa un valor por defecto
+// Función para obtener la URL de la API dinámicamente
 const getApiUrl = () => {
   if (__DEV__) {
     // En desarrollo, obtener la IP dinámica del manifest de Expo
-    const hostUri = Constants.expoConfig?.hostUri || '';
-    // hostUri tiene el formato "192.168.x.x:19000"
-    const devServerIp = hostUri.split(':')[0];
-    
-    if (!devServerIp) {
-      console.warn('No se pudo obtener la IP del servidor de desarrollo. Usando localhost.');
-      return 'http://localhost:3000/api';
+    const hostUri = Constants.expoConfig?.hostUri;
+    if (hostUri) {
+      // hostUri tiene el formato "192.168.x.x:19000"
+      const devServerIp = hostUri.split(':')[0];
+      // Usar el puerto del backend (3000)
+      return `http://${devServerIp}:3000/api`;
     }
-
-    // Para debug
-    const apiUrl = `http://${devServerIp}:3000/api`;
-    console.log('API URL configurada:', apiUrl);
-    return apiUrl;
+    console.warn('No se pudo obtener la IP del servidor de desarrollo. Usando localhost.');
   }
   
-  // En producción, usa tu servidor real
-  return 'https://tu-servidor-produccion.com/api';
+  // Fallback a localhost o URL de producción
+  return process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
 };
 
-export const API_URL = getApiUrl();
+// Configuración de la API y endpoints
+export const API_CONFIG = {
+  // URL base de la API que se actualiza dinámicamente
+  BASE_URL: getApiUrl(),
+  
+  // Endpoints
+  ENDPOINTS: {
+    AUTH: {
+      LOGIN: '/auth/login',
+      REGISTER: '/auth/register',
+    },
+    VISITAS: '/visitas',
+    CAFES: '/cafes',
+    ESTADISTICAS: '/estadisticas',
+  }
+};
 
 // Otras configuraciones globales pueden ir aquí 
