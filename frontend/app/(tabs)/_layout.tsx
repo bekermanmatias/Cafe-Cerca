@@ -5,6 +5,7 @@ import DiaryIcon from '../../assets/icons/diary.svg';
 import ExploreIcon from '../../assets/icons/explore.svg';
 import FriendsIcon from '../../assets/icons/friends.svg';
 import MapIcon from '../../assets/icons/map.svg';
+import CafeDetailScreen from './CafeDetailScreen';
 
 //Agrego librerias para poder presionar y manajer la navegación.
 import { useRouter } from 'expo-router';
