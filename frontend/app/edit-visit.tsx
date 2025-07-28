@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Alert, Modal, FlatList, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,6 +11,16 @@ const API_URL = __DEV__
   : 'https://tu-servidor-produccion.com/api';
 
 const STANDARD_SIZE = 1080;
+
+interface Cafe {
+  id: number;
+  name: string;
+  address: string;
+  rating: number;
+  imageUrl: string | null;
+  tags: string[];
+  openingHours: string;
+}
 
 interface Imagen {
   imageUrl: string;
@@ -36,10 +46,35 @@ export default function EditVisitScreen() {
   const [images, setImages] = useState<string[]>([]);
   const [editingImage, setEditingImage] = useState<string | null>(null);
   const [originalVisit, setOriginalVisit] = useState<VisitaDetalle | null>(null);
+  const [cafes, setCafes] = useState<Cafe[]>([]);
+  const [selectedCafe, setSelectedCafe] = useState<Cafe | null>(null);
+  const [showCafeSelector, setShowCafeSelector] = useState(false);
+  const [isLoadingCafes, setIsLoadingCafes] = useState(false);
 
   useEffect(() => {
     fetchVisitDetails();
+    fetchCafes();
   }, [params.visitId]);
+
+  const fetchCafes = async () => {
+    try {
+      setIsLoadingCafes(true);
+      const response = await fetch(`${API_URL}/cafes`);
+      if (!response.ok) {
+        throw new Error('Error al obtener las cafeterías');
+      }
+      const data = await response.json();
+      // Ordenar cafeterías alfabéticamente por nombre
+      const sortedCafes = data.sort((a: Cafe, b: Cafe) => 
+        a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+      );
+      setCafes(sortedCafes);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudieron cargar las cafeterías');
+    } finally {
+      setIsLoadingCafes(false);
+    }
+  };
 
   const fetchVisitDetails = async () => {
     try {
@@ -56,6 +91,13 @@ export default function EditVisitScreen() {
       setRating(data.visita.calificacion);
       setComment(data.visita.comentario);
       setImages(data.visita.imagenes.map((img: Imagen) => img.imageUrl));
+
+      // Buscar y establecer la cafetería seleccionada
+      const cafeteriaId = data.visita.cafeteriaId;
+      const cafe = cafes.find(c => c.id === cafeteriaId);
+      if (cafe) {
+        setSelectedCafe(cafe);
+      }
     } catch (error) {
       Alert.alert('Error', 'No se pudieron cargar los datos de la visita');
       router.back();
@@ -63,6 +105,39 @@ export default function EditVisitScreen() {
       setIsLoading(false);
     }
   };
+
+  const renderCafeItem = ({ item }: { item: Cafe }) => (
+    <TouchableOpacity 
+      style={styles.cafeItem}
+      onPress={() => {
+        setSelectedCafe(item);
+        setShowCafeSelector(false);
+      }}
+    >
+      <View style={styles.cafeItemContent}>
+        <View style={styles.cafeInfo}>
+          <Text style={styles.cafeName}>{item.name}</Text>
+          <Text style={styles.cafeAddress}>{item.address}</Text>
+          <View style={styles.cafeRating}>
+            {[...Array(5)].map((_, i) => (
+              <AntDesign
+                key={i}
+                name={i < Math.round(item.rating) ? "star" : "staro"}
+                size={16}
+                color="#FFD700"
+              />
+            ))}
+          </View>
+        </View>
+        {item.imageUrl && (
+          <Image 
+            source={{ uri: item.imageUrl }} 
+            style={styles.cafeImage}
+          />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 
   const processImage = async (uri: string) => {
     try {
@@ -115,6 +190,11 @@ export default function EditVisitScreen() {
   };
 
   const handleUpdate = async () => {
+    if (!selectedCafe) {
+      Alert.alert('Error', 'Por favor selecciona una cafetería');
+      return;
+    }
+
     if (rating === 0) {
       Alert.alert('Error', 'Por favor selecciona una calificación');
       return;
@@ -126,22 +206,23 @@ export default function EditVisitScreen() {
     }
 
     try {
-      setIsLoading(true); // Agregar indicador de carga
-
       const formData = new FormData();
       
       formData.append('usuarioId', originalVisit?.usuarioId.toString() || '1');
-      formData.append('cafeteriaId', originalVisit?.cafeteriaId.toString() || '1');
+      formData.append('cafeteriaId', selectedCafe.id.toString());
       formData.append('comentario', comment);
       formData.append('calificacion', rating.toString());
 
+      // Agregar las URLs de las imágenes existentes
       const existingImages = images.filter(uri => uri.startsWith('http'));
       formData.append('imagenesExistentes', JSON.stringify(existingImages));
 
+      // Agregar las nuevas imágenes
       const newImages = images.filter(uri => !uri.startsWith('http'));
       for (let i = 0; i < newImages.length; i++) {
         const uri = newImages[i];
         const filename = uri.split('/').pop() || `image-${i}.jpg`;
+        
         formData.append('imagenes', {
           uri: uri,
           type: 'image/jpeg',
@@ -163,20 +244,23 @@ export default function EditVisitScreen() {
         throw new Error(responseData.mensaje || 'Error al actualizar la visita');
       }
 
-      // Navegación directa sin alerta
-      router.replace({
-        pathname: '/visit-details',
-        params: { 
-          visitId: originalVisit?.id,
-          refresh: Date.now().toString()
+      Alert.alert('Éxito', 'Visita actualizada correctamente', [
+        { 
+          text: 'OK', 
+          onPress: () => {
+            router.back();
+            router.setParams({ refresh: Date.now().toString() });
+          }
         }
-      });
-
+      ]);
     } catch (error) {
-      Alert.alert('Error', 'No se pudo actualizar la visita');
-    } finally {
-      setIsLoading(false);
+      console.error('Error al actualizar:', error);
+      Alert.alert('Error', 'No se pudo actualizar la visita. Por favor, intenta de nuevo.');
     }
+  };
+
+  const handleBack = () => {
+    router.back();
   };
 
   if (isLoading) {
@@ -197,97 +281,141 @@ export default function EditVisitScreen() {
         </View>
       )}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <AntDesign name="arrowleft" size={24} color="#8D6E63" />
+        <TouchableOpacity 
+          onPress={handleBack}
+          style={styles.backButton}
+        >
+          <AntDesign name="arrowleft" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Editar Visita</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Amigos</Text>
-        <TouchableOpacity style={styles.friendsButton}>
-          <Text style={styles.friendsButtonText}>Agregar amigo a la visita</Text>
-          <AntDesign name="right" size={20} color="#8D6E63" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tienda de café</Text>
-        <Text style={styles.cafeteriaText}>Cafetería {originalVisit?.cafeteriaId}</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Puntuación</Text>
-        <View style={styles.starsContainer}>
-          {[1, 2, 3, 4, 5].map((star) => (
-            <TouchableOpacity
-              key={star}
-              onPress={() => setRating(star)}
-            >
-              <AntDesign
-                name={star <= rating ? "star" : "staro"}
-                size={30}
-                color={star <= rating ? "#FFD700" : "#8D6E63"}
-              />
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <TextInput
-          style={styles.commentInput}
-          placeholder="Comenta tu experiencia..."
-          placeholderTextColor="#999"
-          multiline
-          maxLength={500}
-          value={comment}
-          onChangeText={setComment}
-        />
-      </View>
-
-      <View style={styles.imagesGrid}>
-        {images.map((uri, index) => (
-          <View key={index} style={styles.imageContainer}>
-            <Image source={{ uri }} style={styles.image} />
-            <TouchableOpacity
-              style={styles.removeImage}
-              onPress={() => setImages(images.filter((_, i) => i !== index))}
-            >
-              <AntDesign name="close" size={20} color="white" />
-            </TouchableOpacity>
-          </View>
-        ))}
-        {images.length < 5 && (
-          <TouchableOpacity
-            style={styles.addImageButton}
-            onPress={handleSelectImages}
-          >
-            <AntDesign name="plus" size={30} color="#8D6E63" />
-            <Text style={styles.addImageText}>Agregar imágenes</Text>
+      <View style={styles.content}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Amigos</Text>
+          <TouchableOpacity style={styles.friendsButton}>
+            <Text style={styles.friendsButtonText}>Agregar amigo a la visita</Text>
+            <AntDesign name="right" size={20} color="#8D6E63" />
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Cafetería</Text>
+          <TouchableOpacity 
+            style={styles.cafeSelector}
+            onPress={() => setShowCafeSelector(true)}
+          >
+            <Text style={styles.cafeSelectorText}>
+              {selectedCafe ? selectedCafe.name : 'Seleccionar cafetería'}
+            </Text>
+            <AntDesign name="down" size={20} color="#8D6E63" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Puntuación</Text>
+          <View style={styles.starsContainer}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <TouchableOpacity
+                key={star}
+                onPress={() => setRating(star)}
+              >
+                <AntDesign
+                  name={star <= rating ? "star" : "staro"}
+                  size={30}
+                  color={star <= rating ? "#FFD700" : "#8D6E63"}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <TextInput
+            style={styles.commentInput}
+            placeholder="Comenta tu experiencia..."
+            placeholderTextColor="#999"
+            multiline
+            maxLength={500}
+            value={comment}
+            onChangeText={setComment}
+          />
+        </View>
+
+        <View style={styles.imagesGrid}>
+          {images.map((uri, index) => (
+            <View key={index} style={styles.imageContainer}>
+              <Image source={{ uri }} style={styles.image} />
+              <TouchableOpacity
+                style={styles.removeImage}
+                onPress={() => setImages(images.filter((_, i) => i !== index))}
+              >
+                <AntDesign name="close" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          {images.length < 5 && (
+            <TouchableOpacity
+              style={styles.addImageButton}
+              onPress={handleSelectImages}
+            >
+              <AntDesign name="plus" size={30} color="#8D6E63" />
+              <Text style={styles.addImageText}>Agregar imágenes</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.publishButton, isLoading && styles.disabledButton]}
+          onPress={handleUpdate}
+          disabled={isLoading}
+        >
+          <Text style={styles.publishButtonText}>
+            {isLoading ? 'Guardando...' : 'Guardar Cambios'}
+          </Text>
+        </TouchableOpacity>
+
+        {editingImage && (
+          <ImageEditor
+            uri={editingImage}
+            visible={true}
+            onSave={handleSaveEditedImage}
+            onCancel={() => setEditingImage(null)}
+          />
         )}
       </View>
 
-      <TouchableOpacity
-        style={[styles.publishButton, isLoading && styles.disabledButton]}
-        onPress={handleUpdate}
-        disabled={isLoading}
+      <Modal
+        visible={showCafeSelector}
+        animationType="slide"
+        transparent={true}
       >
-        <Text style={styles.publishButtonText}>
-          {isLoading ? 'Guardando...' : 'Guardar Cambios'}
-        </Text>
-      </TouchableOpacity>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Cafetería</Text>
+              <TouchableOpacity 
+                onPress={() => setShowCafeSelector(false)}
+                style={styles.closeButton}
+              >
+                <AntDesign name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
 
-      {editingImage && (
-        <ImageEditor
-          uri={editingImage}
-          visible={true}
-          onSave={handleSaveEditedImage}
-          onCancel={() => setEditingImage(null)}
-        />
-      )}
+            {isLoadingCafes ? (
+              <ActivityIndicator size="large" color="#8D6E63" />
+            ) : (
+              <FlatList
+                data={cafes}
+                renderItem={renderCafeItem}
+                keyExtractor={item => item.id.toString()}
+                contentContainerStyle={styles.cafeList}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -327,10 +455,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
+  backButton: {
+    padding: 4,
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000',
+  },
+  content: {
+    padding: 16,
   },
   section: {
     padding: 16,
@@ -422,5 +556,83 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.7,
+  },
+  cafeSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  cafeSelectorText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  cafeList: {
+    padding: 16,
+  },
+  cafeItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingVertical: 12,
+  },
+  cafeItemContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cafeInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  cafeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  cafeAddress: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  cafeRating: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  cafeImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
   },
 }); 

@@ -1,19 +1,25 @@
-import Visita from '../models/Visita.js';
-import VisitaImagen from '../models/VisitaImagen.js';
+import { Visita, VisitaImagen, Cafe } from '../models/index.js';
 import sequelize from '../config/database.js';
 import { Op } from 'sequelize';
 
 // Función helper para incluir las imágenes en las consultas
 const includeImagenes = {
   model: VisitaImagen,
-  as: 'imagenes',
+  as: 'visitaImagenes',
   attributes: ['imageUrl', 'orden']
+};
+
+// Función helper para incluir la cafetería
+const includeCafeteria = {
+  model: Cafe,
+  as: 'cafeteria',
+  attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
 };
 
 // Función helper para ordenar las imágenes
 const orderOptions = [
   ['fecha', 'DESC'],
-  [{ model: VisitaImagen, as: 'imagenes' }, 'orden', 'ASC']
+  [{ model: VisitaImagen, as: 'visitaImagenes' }, 'orden', 'ASC']
 ];
 
 export const crearVisita = async (req, res) => {
@@ -75,14 +81,20 @@ export const crearVisita = async (req, res) => {
 export const obtenerVisitas = async (req, res) => {
   try {
     const visitas = await Visita.findAll({
-      include: [includeImagenes],
+      include: [includeImagenes, includeCafeteria],
       order: orderOptions
     });
+
+    // Transformar la respuesta para mantener compatibilidad con el frontend
+    const visitasTransformadas = visitas.map(visita => ({
+      ...visita.toJSON(),
+      imagenes: visita.visitaImagenes
+    }));
 
     res.json({
       mensaje: 'Visitas recuperadas exitosamente',
       totalVisitas: visitas.length,
-      visitas
+      visitas: visitasTransformadas
     });
   } catch (error) {
     console.error('Error al obtener visitas:', error);
@@ -97,17 +109,23 @@ export const obtenerVisitaPorId = async (req, res) => {
   try {
     const { id } = req.params;
     const visita = await Visita.findByPk(id, {
-      include: [includeImagenes],
+      include: [includeImagenes, includeCafeteria],
       order: orderOptions
     });
     
     if (!visita) {
       return res.status(404).json({ mensaje: 'Visita no encontrada' });
     }
+
+    // Transformar la respuesta para mantener compatibilidad con el frontend
+    const visitaTransformada = {
+      ...visita.toJSON(),
+      imagenes: visita.visitaImagenes
+    };
     
     res.json({
       mensaje: 'Visita recuperada exitosamente',
-      visita
+      visita: visitaTransformada
     });
   } catch (error) {
     console.error('Error al obtener la visita:', error);
@@ -270,14 +288,20 @@ export const obtenerDiarioUsuario = async (req, res) => {
 
     const visitas = await Visita.findAll({
       where: { usuarioId },
-      include: [includeImagenes],
+      include: [includeImagenes, includeCafeteria],
       order: orderOptions
     });
 
+    // Transformar la respuesta para mantener compatibilidad con el frontend
+    const visitasTransformadas = visitas.map(visita => ({
+      ...visita.toJSON(),
+      imagenes: visita.visitaImagenes
+    }));
+
     res.json({
-      mensaje: visitas.length > 0 ? 'Diario recuperado exitosamente' : 'El usuario no tiene visitas registradas',
+      mensaje: visitasTransformadas.length > 0 ? 'Diario recuperado exitosamente' : 'El usuario no tiene visitas registradas',
       totalVisitas: visitas.length,
-      visitas
+      visitas: visitasTransformadas
     });
 
   } catch (error) {
