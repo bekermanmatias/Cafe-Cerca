@@ -11,6 +11,16 @@ interface Imagen {
   orden: number;
 }
 
+interface Cafeteria {
+  id: number;
+  name: string;
+  address: string;
+  imageUrl: string | null;
+  rating: number;
+  tags: string[];
+  openingHours: string;
+}
+
 interface Visita {
   id: number;
   usuarioId: number;
@@ -19,6 +29,7 @@ interface Visita {
   calificacion: number;
   fecha: string;
   imagenes: Imagen[];
+  cafeteria: Cafeteria;
 }
 
 interface DiarioResponse {
@@ -161,12 +172,7 @@ export default function DiaryScreen() {
         {visitas.map((visit) => (
           <VisitCard
             key={visit.id}
-            place={`Cafetería ${visit.cafeteriaId}`}
-            description={visit.comentario.replace(/"/g, '')}
-            rating={visit.calificacion}
-            date={new Date(visit.fecha).toLocaleDateString()}
-            images={visit.imagenes.map(img => ({ uri: img.imageUrl }))}
-            participants={[]}
+            visit={visit}
             onLike={handleLike}
             onShare={() => handleShare(visit.id)}
             onDetails={() => handleDetails(visit)}

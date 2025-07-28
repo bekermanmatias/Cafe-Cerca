@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Dimensions, ImageSourcePropType, TextInput, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Dimensions, ImageSourcePropType, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { shareVisit } from '../constants/Sharing';
@@ -15,6 +15,16 @@ interface Imagen {
   orden: number;
 }
 
+interface Cafeteria {
+  id: number;
+  name: string;
+  address: string;
+  imageUrl: string | null;
+  rating: number;
+  tags: string[];
+  openingHours: string;
+}
+
 interface VisitaDetalle {
   id: number;
   usuarioId: number;
@@ -23,6 +33,7 @@ interface VisitaDetalle {
   calificacion: number;
   fecha: string;
   imagenes: Imagen[];
+  cafeteria: Cafeteria;
 }
 
 interface ApiResponse {
@@ -36,25 +47,26 @@ export default function VisitDetailsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [visitData, setVisitData] = useState<VisitaDetalle | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
 
   useEffect(() => {
+    console.log('Actualizando detalles de visita...', { visitId: params.visitId, refresh: params.refresh });
     fetchVisitDetails();
-  }, [params.visitId]); // Agregamos params.visitId como dependencia
+  }, [params.visitId, params.refresh]);
 
   const fetchVisitDetails = async () => {
     try {
       setIsLoading(true);
-      setError(null); // Limpiar error anterior si existe
+      setError(null);
 
-      // Limpiar y validar el ID
       const visitId = String(params.visitId).replace(/[^0-9]/g, '');
       if (!visitId) {
         throw new Error('ID de visita no válido');
       }
 
-      console.log('Fetching visit details for ID:', visitId);
+      console.log('Obteniendo detalles de visita:', visitId);
       const fullUrl = `${API_URL}/visitas/${visitId}`;
-      console.log('Full URL:', fullUrl);
+      console.log('URL completa:', fullUrl);
 
       const response = await fetch(fullUrl);
       if (!response.ok) {
@@ -62,11 +74,11 @@ export default function VisitDetailsScreen() {
         throw new Error(errorData.mensaje || 'Error al obtener los detalles de la visita');
       }
 
-      const data: ApiResponse = await response.json();
-      console.log('Visit data received:', data);
+      const data = await response.json();
+      console.log('Datos de visita recibidos:', data);
       setVisitData(data.visita);
     } catch (error) {
-      console.error('Error fetching visit details:', error);
+      console.error('Error obteniendo detalles:', error);
       setError('No se pudo cargar la información de la visita');
     } finally {
       setIsLoading(false);
@@ -113,6 +125,45 @@ export default function VisitDetailsScreen() {
     }
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      "Eliminar visita",
+      "¿Estás seguro que deseas eliminar esta visita?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_URL}/visitas/${visitData?.id}`, {
+                method: 'DELETE',
+              });
+              if (response.ok) {
+                router.back();
+              } else {
+                Alert.alert("Error", "No se pudo eliminar la visita");
+              }
+            } catch (error) {
+              Alert.alert("Error", "Ocurrió un error al eliminar la visita");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEdit = () => {
+    // Implementar navegación a la pantalla de edición
+    router.push({
+      pathname: "/edit-visit" as any, // Temporal hasta que se cree la ruta
+      params: { visitId: visitData?.id }
+    });
+  };
+
   return (
     <>
       <Stack.Screen 
@@ -124,7 +175,7 @@ export default function VisitDetailsScreen() {
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>{`Cafetería ${visitData.cafeteriaId}`}</Text>
+            <Text style={styles.headerTitle}>{visitData.cafeteria.name}</Text>
             <Text style={styles.headerDate}>
               {new Date(visitData.fecha).toLocaleDateString()}
             </Text>
@@ -156,13 +207,57 @@ export default function VisitDetailsScreen() {
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="heart-outline" size={28} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-            <Ionicons name="share-social-outline" size={28} color="#000" />
-          </TouchableOpacity>
+          <View style={styles.leftActions}>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="heart-outline" size={28} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+              <Ionicons name="share-social-outline" size={28} color="#000" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.rightActions}>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => setShowOptions(!showOptions)}
+            >
+              <Ionicons name="ellipsis-vertical" size={28} color="#000" />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {showOptions && (
+          <>
+            <TouchableOpacity 
+              style={styles.overlay} 
+              activeOpacity={0} 
+              onPress={() => setShowOptions(false)} 
+            />
+            <View style={styles.optionsMenu}>
+              <TouchableOpacity 
+                style={styles.optionItem}
+                onPress={() => {
+                  setShowOptions(false);
+                  handleEdit();
+                }}
+              >
+                <Ionicons name="create-outline" size={24} color="#000" />
+                <Text style={styles.optionText}>Modificar visita</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.optionItem, styles.deleteOption]}
+                onPress={() => {
+                  setShowOptions(false);
+                  handleDelete();
+                }}
+              >
+                <Ionicons name="trash-outline" size={24} color="#FF4444" />
+                <Text style={styles.deleteOptionText}>Eliminar visita</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
 
         <View style={styles.mainReviewContainer}>
           <View style={styles.authorSection}>
@@ -306,8 +401,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  leftActions: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  rightActions: {
+    flexDirection: 'row',
+  },
   actionButton: {
     padding: 4,
+  },
+  optionsMenu: {
+    position: 'absolute',
+    right: 16,
+    top: 520, // Ajustar según necesidad
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 1000,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 12,
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  deleteOption: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  deleteOptionText: {
+    fontSize: 16,
+    color: '#FF4444',
   },
   mainReviewContainer: {
     paddingHorizontal: 16,
@@ -388,5 +525,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 999,
   },
 }); 

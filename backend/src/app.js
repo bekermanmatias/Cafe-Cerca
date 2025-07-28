@@ -7,7 +7,9 @@ import { testConnection } from './config/database.js';
 import dotenv from 'dotenv';
 import cafesRoutes from './routes/cafes.js';
 
-import './models/Cafe.js'; // registrar modelo
+// Importar modelos y sus relaciones
+import './models/index.js';
+
 // Configuración de variables de entorno
 dotenv.config();
 
