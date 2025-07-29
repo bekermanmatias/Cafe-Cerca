@@ -32,6 +32,15 @@ interface ProfileImageResponse {
   profileImage: string;
 }
 
+interface LikeResponse {
+  liked: boolean;
+  message: string;
+}
+
+interface LikeStatusResponse {
+  liked: boolean;
+}
+
 class ApiService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     console.log('Intentando login con URL:', API_ENDPOINTS.AUTH.LOGIN);
@@ -109,6 +118,30 @@ class ApiService {
     }
 
     return data;
+  }
+
+  async toggleLike(visitaId: number, token: string): Promise<LikeResponse> {
+    return this.makeAuthenticatedRequest(
+      `/visitas/${visitaId}/like`,
+      token,
+      { method: 'POST' }
+    );
+  }
+
+  async getLikeStatus(visitaId: number, token: string): Promise<LikeStatusResponse> {
+    return this.makeAuthenticatedRequest(
+      `/visitas/${visitaId}/like`,
+      token,
+      { method: 'GET' }
+    );
+  }
+
+  async getLikedVisitas(token: string): Promise<any[]> {
+    return this.makeAuthenticatedRequest(
+      '/likes',
+      token,
+      { method: 'GET' }
+    );
   }
 
   async makeAuthenticatedRequest(endpoint: string, token: string, options: RequestInit = {}) {

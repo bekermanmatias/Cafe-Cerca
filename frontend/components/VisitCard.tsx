@@ -1,6 +1,8 @@
 import { StyleSheet, View, Text, Image, TouchableOpacity, Dimensions, FlatList, ViewToken } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { apiService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const windowWidth = Dimensions.get('window').width;
 
@@ -26,9 +28,9 @@ export interface VisitCardProps {
       profileImage: string | null;
     };
   };
-  onLike?: () => void;
   onShare?: () => void;
   onDetails?: () => void;
+  onLikeChange?: (liked: boolean) => void;
 }
 
 interface RenderImageProps {
@@ -43,12 +45,43 @@ interface ViewableItemsChanged {
 
 export const VisitCard = ({
   visit,
-  onLike,
   onShare,
   onDetails,
+  onLikeChange,
 }: VisitCardProps) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const { token } = useAuth();
+
+  useEffect(() => {
+    if (token) {
+      checkLikeStatus();
+    }
+  }, [visit.id, token]);
+
+  const checkLikeStatus = async () => {
+    if (!token) return;
+    try {
+      const response = await apiService.getLikeStatus(visit.id, token);
+      setIsLiked(response.liked);
+    } catch (error) {
+      console.error('Error al obtener el estado del like:', error);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!token) return;
+    try {
+      const response = await apiService.toggleLike(visit.id, token);
+      setIsLiked(response.liked);
+      if (onLikeChange) {
+        onLikeChange(response.liked);
+      }
+    } catch (error) {
+      console.error('Error al procesar el like:', error);
+    }
+  };
 
   const renderImage = ({ item: imageUrl }: RenderImageProps) => (
     <View style={styles.imageWrapper}>
@@ -127,8 +160,12 @@ export const VisitCard = ({
       <View style={styles.footer}>
         <View style={styles.actions}>
           <View style={styles.leftActions}>
-            <TouchableOpacity style={styles.actionButton} onPress={onLike}>
-              <Ionicons name="heart-outline" size={24} color="#666" />
+            <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+              <Ionicons 
+                name={isLiked ? "heart" : "heart-outline"} 
+                size={24} 
+                color={isLiked ? "#FF4B4B" : "#666"} 
+              />
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton} onPress={onShare}>
               <Ionicons name="share-social-outline" size={24} color="#666" />
