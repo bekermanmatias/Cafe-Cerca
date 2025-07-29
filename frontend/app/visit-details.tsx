@@ -17,6 +17,8 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { shareVisit } from '../constants/Sharing';
 import { API_URL } from '../constants/Config';
 import ComentariosList from '../components/ComentariosList';
+import { useAuth } from '../context/AuthContext';
+import { apiService } from '../services/api';
 
 const windowWidth = Dimensions.get('window').width;
 
@@ -66,12 +68,20 @@ export default function VisitDetailsScreen() {
   const [visitData, setVisitData] = useState<VisitaDetalle | null>(null);
   const [showOptions, setShowOptions] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [isLiked, setIsLiked] = useState(false);
   const optionsButtonRef = useRef<View>(null);
+  const { token } = useAuth();
 
   useEffect(() => {
     console.log('Actualizando detalles de visita...', { visitId: params.visitId, refresh: params.refresh });
     fetchVisitDetails();
   }, [params.visitId, params.refresh]);
+
+  useEffect(() => {
+    if (token && visitData?.id) {
+      checkLikeStatus();
+    }
+  }, [visitData?.id, token]);
 
   const fetchVisitDetails = async () => {
     try {
@@ -101,6 +111,26 @@ export default function VisitDetailsScreen() {
       setError('No se pudo cargar la información de la visita');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkLikeStatus = async () => {
+    if (!token || !visitData?.id) return;
+    try {
+      const response = await apiService.getLikeStatus(visitData.id, token);
+      setIsLiked(response.liked);
+    } catch (error) {
+      console.error('Error al obtener estado del like:', error);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!token || !visitData?.id) return;
+    try {
+      const response = await apiService.toggleLike(visitData.id, token);
+      setIsLiked(response.liked);
+    } catch (error) {
+      console.error('Error al procesar el like:', error);
     }
   };
 
@@ -211,8 +241,12 @@ export default function VisitDetailsScreen() {
 
         <View style={styles.actionButtons}>
           <View style={styles.leftActions}>
-            <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="heart-outline" size={28} color="#000" />
+            <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+              <Ionicons 
+                name={isLiked ? "heart" : "heart-outline"} 
+                size={28} 
+                color={isLiked ? "#FF4B4B" : "#000"} 
+              />
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
               <Ionicons name="share-social-outline" size={28} color="#000" />

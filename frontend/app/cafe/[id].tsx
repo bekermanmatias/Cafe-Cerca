@@ -19,6 +19,7 @@ import IrDireccionIcon from '../../assets/icons/irdireccion.svg';
 import Lapiz from '../../assets/icons/lapiz.svg';
 import { API_URL } from '../../constants/Config';
 import { VisitCard } from '../../components/VisitCard';
+import { useAuth } from '../../context/AuthContext';
 
 type Cafe = {
   id: number;
@@ -69,6 +70,7 @@ export default function CafeDetail() {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const { token } = useAuth();
 
   const fetchCafe = async (page = 1) => {
     try {
@@ -163,6 +165,17 @@ export default function CafeDetail() {
     });
   };
 
+  const handleLikeChange = (visitId: number, liked: boolean) => {
+    // Actualizar el estado local de las reseñas cuando cambia un like
+    setReseñas(prevReseñas => 
+      prevReseñas.map(reseña => 
+        reseña.id === visitId 
+          ? { ...reseña, isLiked: liked }
+          : reseña
+      )
+    );
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.imageContainer}>
@@ -242,7 +255,7 @@ export default function CafeDetail() {
                 imagenes: visita.visitaImagenes,
                 usuario: visita.usuario
               }}
-              onLike={handleLike}
+              onLikeChange={(liked) => handleLikeChange(visita.id, liked)}
               onShare={() => handleShare(visita.id)}
               onDetails={() => handleDetails(visita)}
             />
