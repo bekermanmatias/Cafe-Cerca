@@ -1,6 +1,50 @@
 import sequelize from './database.js';
 import { Visita, Cafe, VisitaImagen, User, Comentario } from '../models/index.js';
 import bcrypt from 'bcrypt';
+import { Sequelize } from 'sequelize';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const execPromise = promisify(exec);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const runMigrations = async () => {
+  try {
+    console.log('Verificando migraciones pendientes...');
+    
+    // Ejecutar las migraciones pendientes
+    const { stdout, stderr } = await execPromise('npx sequelize-cli db:migrate', {
+      cwd: path.join(__dirname, '../../') // Directorio raíz del backend
+    });
+
+    if (stdout) console.log('Salida de migraciones:', stdout);
+    if (stderr) console.error('Errores de migraciones:', stderr);
+
+    console.log('✅ Migraciones completadas exitosamente');
+  } catch (error) {
+    // Si el error es porque las migraciones ya están actualizadas, no es un problema
+    if (error.stdout && error.stdout.includes('No migrations were executed')) {
+      console.log('✅ Base de datos ya está actualizada');
+      return;
+    }
+
+    console.error('❌ Error ejecutando migraciones:', error);
+    throw error;
+  }
+};
+
+export const initializeDatabase = async () => {
+  try {
+    await runMigrations();
+    console.log('✅ Base de datos inicializada correctamente');
+  } catch (error) {
+    console.error('❌ Error inicializando base de datos:', error);
+    throw error;
+  }
+};
 
 // Función para verificar si una tabla existe
 async function checkTable(model) {

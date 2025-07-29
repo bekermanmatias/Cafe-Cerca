@@ -1,17 +1,22 @@
 import app from './app.js';
-import { initDatabase } from './config/initDatabase.js';
+import { initializeDatabase } from './config/initDatabase.js';
 
 const PORT = process.env.PORT || 3000;
 
-// Iniciar el servidor
-initDatabase()
-  .then(success => {
-    if (success) {
-      app.listen(PORT, () => {
-        console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-      });
-    } else {
-      console.error('❌ No se pudo iniciar el servidor debido a errores en la base de datos');
-      process.exit(1);
-    }
-  });
+// Inicializar la base de datos y el servidor
+const startServer = async () => {
+  try {
+    // Inicializar la base de datos y ejecutar migraciones pendientes
+    await initializeDatabase();
+
+    // Iniciar el servidor
+    app.listen(PORT, () => {
+      console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('❌ Error al iniciar el servidor:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
