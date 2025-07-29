@@ -1,17 +1,21 @@
 import app from './app.js';
 import sequelize from './config/database.js';
-import { Cafe, Visita, VisitaImagen, Comentario } from './models/index.js';
+import { Cafe, Visita, VisitaImagen, Comentario, User } from './models/index.js';
 
 const PORT = process.env.PORT || 3000;
 
 // Función para sincronizar los modelos en orden
 const syncModels = async () => {
   try {
-    // Primero sincronizamos Cafe
+    // Primero sincronizamos User
+    await User.sync({ alter: true });
+    console.log('✅ Tabla User sincronizada');
+
+    // Luego Cafe
     await Cafe.sync({ alter: true });
     console.log('✅ Tabla Cafe sincronizada');
 
-    // Luego Visita que depende de Cafe
+    // Luego Visita que depende de Cafe y User
     await Visita.sync({ alter: true });
     console.log('✅ Tabla Visita sincronizada');
 
@@ -19,7 +23,7 @@ const syncModels = async () => {
     await VisitaImagen.sync({ alter: true });
     console.log('✅ Tabla VisitaImagen sincronizada');
 
-    // Finalmente Comentario que depende de Visita
+    // Finalmente Comentario que depende de Visita y User
     await Comentario.sync({ alter: true });
     console.log('✅ Tabla Comentario sincronizada');
 

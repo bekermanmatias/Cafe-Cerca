@@ -12,17 +12,25 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Modal,
-  findNodeHandle
+  findNodeHandle,
+  Image
 } from 'react-native';
 import { API_ENDPOINTS } from '../constants/Config';
 import { ThemedText } from './ThemedText';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface Usuario {
+  id: number;
+  name: string;
+  profileImage: string | null;
+}
 
 interface Comentario {
   id: number;
-  nombreUsuario: string;
   texto: string;
   fechaHora: string;
+  usuario: Usuario;
 }
 
 interface ComentariosListProps {
@@ -43,6 +51,8 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const flatListRef = useRef<FlatList>(null);
   const menuButtonsRefs = useRef<{ [key: number]: View | null }>({});
+  const [userData, setUserData] = useState<any>(null);
+  const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
 
   useEffect(() => {
     const keyboardWillShow = () => {
@@ -71,6 +81,22 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
     };
   }, []);
 
+  useEffect(() => {
+    loadUserData();
+    cargarComentarios();
+  }, [cargarComentarios]);
+
+  const loadUserData = async () => {
+    try {
+      const userDataStr = await AsyncStorage.getItem('userData');
+      if (userDataStr) {
+        setUserData(JSON.parse(userDataStr));
+      }
+    } catch (error) {
+      console.error('Error cargando datos del usuario:', error);
+    }
+  };
+
   const cargarComentarios = useCallback(async () => {
     if (!visitaId) return;
     
@@ -88,22 +114,21 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
     }
   }, [visitaId]);
 
-  useEffect(() => {
-    cargarComentarios();
-  }, [cargarComentarios]);
-
   const agregarComentario = async () => {
-    if (!nuevoComentario.trim() || !visitaId) return;
+    if (!nuevoComentario.trim() || !visitaId || !userData) return;
 
     setIsSubmitting(true);
     try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) throw new Error('No se encontró el token de autenticación');
+
       const response = await fetch(API_ENDPOINTS.COMENTARIOS.CREATE(visitaId), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          nombreUsuario: 'Usuario',
           texto: nuevoComentario.trim()
         }),
       });
@@ -245,27 +270,34 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
     >
       <View style={styles.comentarioContainer}>
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar} />
+          <Image
+            source={{ 
+              uri: item.usuario?.profileImage || defaultProfileImage
+            }}
+            style={styles.avatar}
+          />
         </View>
         <View style={styles.comentarioContent}>
           <View style={styles.comentarioHeader}>
-            <ThemedText style={styles.nombreUsuario}>{item.nombreUsuario}</ThemedText>
+            <ThemedText style={styles.nombreUsuario}>{item.usuario?.name || 'Usuario sin nombre'}</ThemedText>
             <ThemedText style={styles.fecha}>
               {new Date(item.fechaHora).toLocaleDateString()}
             </ThemedText>
           </View>
           <ThemedText style={styles.textoComentario}>{item.texto}</ThemedText>
         </View>
-        <TouchableOpacity 
-          ref={setMenuButtonRef(item.id)}
-          style={styles.moreButton}
-          onPress={(e) => {
-            e.stopPropagation();
-            handleShowOptions(item.id);
-          }}
-        >
-          <Ionicons name="ellipsis-vertical" size={20} color="#666" />
-        </TouchableOpacity>
+        {userData?.id === item.usuario?.id && (
+          <TouchableOpacity 
+            ref={setMenuButtonRef(item.id)}
+            style={styles.moreButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleShowOptions(item.id);
+            }}
+          >
+            <Ionicons name="ellipsis-vertical" size={20} color="#666" />
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -352,7 +384,12 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
         ]}>
           <View style={styles.inputContainer}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatar} />
+              <Image
+                source={{ 
+                  uri: userData?.profileImage || defaultProfileImage
+                }}
+                style={styles.avatar}
+              />
             </View>
             <TextInput
               value={nuevoComentario}
@@ -387,7 +424,12 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
         >
           <View style={styles.inputContainer}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatar} />
+              <Image
+                source={{ 
+                  uri: userData?.profileImage || defaultProfileImage
+                }}
+                style={styles.avatar}
+              />
             </View>
             <TextInput
               value={nuevoComentario}

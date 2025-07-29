@@ -13,18 +13,17 @@ Comentario.init({
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'visitas', // Cambiado a minúsculas
+      model: 'visitas',
       key: 'id'
     }
   },
   userId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    defaultValue: 1 // Por ahora usaremos el usuario 1 por defecto
-  },
-  nombreUsuario: {
-    type: DataTypes.STRING,
-    allowNull: false
+    references: {
+      model: 'Users', // Cambiado de 'users' a 'Users'
+      key: 'id'
+    }
   },
   texto: {
     type: DataTypes.TEXT,
@@ -38,7 +37,7 @@ Comentario.init({
 }, {
   sequelize,
   modelName: 'Comentario',
-  tableName: 'comentarios', // Cambiado a minúsculas
+  tableName: 'comentarios',
   timestamps: true
 });
 

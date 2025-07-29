@@ -54,6 +54,17 @@ Comentario.belongsTo(Visita, {
   as: 'visita'
 });
 
+// Relación entre Usuario y Comentario
+User.hasMany(Comentario, {
+  foreignKey: 'userId',
+  as: 'comentarios'
+});
+
+Comentario.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'usuario'
+});
+
 // Exportar todos los modelos en una sola declaración
 export { 
   Visita, 
