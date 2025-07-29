@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { AntDesign } from '@expo/vector-icons';
 import { API_URL } from '../constants/Config';
+import { useAuth } from '../context/AuthContext';
 
 interface CafeteriaFavorita {
   cafeteria: {
@@ -39,17 +40,28 @@ interface Estadisticas {
 
 export default function StatsScreen() {
   const router = useRouter();
+  const { user, token } = useAuth();
   const [stats, setStats] = useState<Estadisticas | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    console.log('Estado de autenticación:', { user, token });
+    if (user && token) {
+      fetchStats();
+    }
+  }, [user, token]);
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API_URL}/estadisticas/usuarios/1`);
+      console.log('Haciendo fetch de estadísticas para usuario:', user?.id);
+      const response = await fetch(`${API_URL}/estadisticas/usuarios/${user?.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error respuesta:', errorData);
         throw new Error('Error al obtener estadísticas');
       }
       const data = await response.json();
@@ -60,6 +72,15 @@ export default function StatsScreen() {
       setLoading(false);
     }
   };
+
+  if (!user || !token) {
+    console.log('No hay usuario o token:', { user, token });
+    return (
+      <View style={styles.errorContainer}>
+        <Text>Debes iniciar sesión para ver tus estadísticas</Text>
+      </View>
+    );
+  }
 
   if (loading) {
     return (
