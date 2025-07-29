@@ -9,6 +9,8 @@ import {
   ScrollView,
   Pressable,
   TouchableOpacity,
+  Platform,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import TagChip from '../../components/TagChip';
@@ -21,7 +23,6 @@ import { VisitCard } from '../../components/VisitCard';
 import { useAuth } from '../../context/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
-import { Platform, Linking } from 'react-native';
 
 type Cafe = {
   id: number;
@@ -40,7 +41,6 @@ type Usuario = {
   name: string;
   profileImage: string | null;
 };
-
 
 type Reseña = {
   id: number;
