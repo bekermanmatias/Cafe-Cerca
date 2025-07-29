@@ -235,8 +235,6 @@ export default function CafeDetail() {
               key={visita.id}
               visit={{
                 id: visita.id,
-                usuarioId: visita.usuarioId,
-                cafeteriaId: cafe.id,
                 comentario: visita.comentario,
                 calificacion: visita.calificacion,
                 fecha: visita.fecha,
