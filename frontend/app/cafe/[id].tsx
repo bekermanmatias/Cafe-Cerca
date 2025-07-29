@@ -14,11 +14,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import TagChip from '../../components/TagChip';
 import DireccionIcon from '../../assets/icons/direccion.svg';
 import HorarioIcon from '../../assets/icons/horario.svg';
-import GuardarIcon from '../../assets/icons/guardar.svg';
 import IrDireccionIcon from '../../assets/icons/irdireccion.svg';
 import Lapiz from '../../assets/icons/lapiz.svg';
 import { API_URL } from '../../constants/Config';
 import { VisitCard } from '../../components/VisitCard';
+import { useAuth } from '../../context/AuthContext';
+import { MaterialIcons } from '@expo/vector-icons';
+import { apiService } from '../../services/api';
 
 type Cafe = {
   id: number;
@@ -47,6 +49,7 @@ type Reseña = {
     orden: number;
   }>;
   usuario: Usuario;
+  likesCount: number;
 };
 
 type CafeResponse = {
@@ -69,6 +72,8 @@ export default function CafeDetail() {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const { token } = useAuth();
 
   const fetchCafe = async (page = 1) => {
     try {
@@ -102,6 +107,32 @@ export default function CafeDetail() {
   useEffect(() => {
     fetchCafe();
   }, [id]);
+
+  useEffect(() => {
+    if (token && cafe?.id) {
+      checkSavedStatus();
+    }
+  }, [cafe?.id, token]);
+
+  const checkSavedStatus = async () => {
+    if (!token || !cafe?.id) return;
+    try {
+      const response = await apiService.getSavedStatus(cafe.id, token);
+      setIsSaved(response.saved);
+    } catch (error) {
+      console.error('Error al obtener estado de guardado:', error);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!token || !cafe?.id) return;
+    try {
+      const response = await apiService.toggleSavedCafe(cafe.id, token);
+      setIsSaved(response.saved);
+    } catch (error) {
+      console.error('Error al guardar cafetería:', error);
+    }
+  };
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) {
@@ -163,6 +194,17 @@ export default function CafeDetail() {
     });
   };
 
+  const handleLikeChange = (visitId: number, liked: boolean, likesCount: number) => {
+    // Actualizar el estado local de las reseñas cuando cambia un like
+    setReseñas(prevReseñas => 
+      prevReseñas.map(reseña => 
+        reseña.id === visitId 
+          ? { ...reseña, isLiked: liked, likesCount }
+          : reseña
+      )
+    );
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.imageContainer}>
@@ -177,8 +219,12 @@ export default function CafeDetail() {
           <Text style={styles.name}>{cafe.name}</Text>
 
           <View style={styles.iconsRight}>
-            <Pressable onPress={onGuardarPress} hitSlop={8}>
-              <GuardarIcon width={24} height={24} style={styles.iconSvg} />
+            <Pressable onPress={handleSave} hitSlop={8}>
+              <MaterialIcons 
+                name={isSaved ? "bookmark" : "bookmark-outline"} 
+                size={24} 
+                color="#A76F4D" 
+              />
             </Pressable>
           </View>
         </View>
@@ -240,9 +286,10 @@ export default function CafeDetail() {
                 fecha: visita.fecha,
                 cafeteria: cafe,
                 imagenes: visita.visitaImagenes,
-                usuario: visita.usuario
+                usuario: visita.usuario,
+                likesCount: visita.likesCount
               }}
-              onLike={handleLike}
+              onLikeChange={(liked) => handleLikeChange(visita.id, liked, visita.likesCount)}
               onShare={() => handleShare(visita.id)}
               onDetails={() => handleDetails(visita)}
             />

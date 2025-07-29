@@ -1,6 +1,8 @@
 import { StyleSheet, View, Text, Image, TouchableOpacity, Dimensions, FlatList, ViewToken } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { apiService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const windowWidth = Dimensions.get('window').width;
 
@@ -25,10 +27,11 @@ export interface VisitCardProps {
       name: string;
       profileImage: string | null;
     };
+    likesCount?: number;
   };
-  onLike?: () => void;
   onShare?: () => void;
   onDetails?: () => void;
+  onLikeChange?: (liked: boolean) => void;
 }
 
 interface RenderImageProps {
@@ -43,12 +46,51 @@ interface ViewableItemsChanged {
 
 export const VisitCard = ({
   visit,
-  onLike,
   onShare,
   onDetails,
+  onLikeChange,
 }: VisitCardProps) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [localLikesCount, setLocalLikesCount] = useState(visit.likesCount || 0);
   const flatListRef = useRef<FlatList>(null);
+  const { token } = useAuth();
+
+  useEffect(() => {
+    if (token) {
+      checkLikeStatus();
+    }
+  }, [visit.id, token]);
+
+  useEffect(() => {
+    // Actualizar el contador local cuando cambia en las props
+    setLocalLikesCount(visit.likesCount || 0);
+  }, [visit.likesCount]);
+
+  const checkLikeStatus = async () => {
+    if (!token) return;
+    try {
+      const response = await apiService.getLikeStatus(visit.id, token);
+      setIsLiked(response.liked);
+      setLocalLikesCount(response.likesCount);
+    } catch (error) {
+      console.error('Error al obtener estado del like:', error);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!token) return;
+    try {
+      const response = await apiService.toggleLike(visit.id, token);
+      setIsLiked(response.liked);
+      setLocalLikesCount(response.likesCount);
+      if (onLikeChange) {
+        onLikeChange(response.liked);
+      }
+    } catch (error) {
+      console.error('Error al procesar el like:', error);
+    }
+  };
 
   const renderImage = ({ item: imageUrl }: RenderImageProps) => (
     <View style={styles.imageWrapper}>
@@ -127,8 +169,22 @@ export const VisitCard = ({
       <View style={styles.footer}>
         <View style={styles.actions}>
           <View style={styles.leftActions}>
-            <TouchableOpacity style={styles.actionButton} onPress={onLike}>
-              <Ionicons name="heart-outline" size={24} color="#666" />
+            <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+              <View style={styles.likeContainer}>
+                <Ionicons 
+                  name={isLiked ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={isLiked ? "#FF4B4B" : "#666"} 
+                />
+                {localLikesCount > 0 && (
+                  <Text style={[
+                    styles.likesCount,
+                    isLiked && styles.likesCountActive
+                  ]}>
+                    {localLikesCount}
+                  </Text>
+                )}
+              </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton} onPress={onShare}>
               <Ionicons name="share-social-outline" size={24} color="#666" />
@@ -268,5 +324,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     lineHeight: 22,
+  },
+  likeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  likesCount: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+  },
+  likesCountActive: {
+    color: '#FF4B4B',
   },
 }); 

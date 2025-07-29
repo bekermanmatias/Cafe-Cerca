@@ -1,4 +1,4 @@
-import { Visita, VisitaImagen, Cafe, User } from '../models/index.js';
+import { Visita, Cafe, User, VisitaImagen, Like } from '../models/index.js';
 import sequelize from '../config/database.js';
 import { Op } from 'sequelize';
 
@@ -318,5 +318,109 @@ export const obtenerDiarioUsuario = async (req, res) => {
       mensaje: 'Error al obtener el diario del usuario',
       error: error.message
     });
+  }
+};
+
+export const getVisitasByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const visitas = await Visita.findAll({
+      where: { usuarioId: userId },
+      include: [
+        {
+          model: Cafe,
+          as: 'cafeteria',
+          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+        },
+        {
+          model: User,
+          as: 'usuario',
+          attributes: ['id', 'name', 'profileImage']
+        },
+        {
+          model: VisitaImagen,
+          as: 'visitaImagenes',
+          attributes: ['imageUrl', 'orden']
+        },
+        {
+          model: Like,
+          as: 'likes'
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Transformar los datos y agregar el conteo de likes
+    const visitasConLikes = visitas.map(visita => {
+      const visitaJSON = visita.toJSON();
+      return {
+        ...visitaJSON,
+        likesCount: visitaJSON.likes.length,
+        likes: undefined // Removemos el array de likes ya que solo necesitamos el conteo
+      };
+    });
+
+    res.json({
+      mensaje: 'Visitas encontradas',
+      totalVisitas: visitas.length,
+      visitas: visitasConLikes
+    });
+  } catch (error) {
+    console.error('Error al obtener visitas:', error);
+    res.status(500).json({ mensaje: 'Error al obtener las visitas' });
+  }
+};
+
+export const getVisitaById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const visita = await Visita.findOne({
+      where: { id },
+      include: [
+        {
+          model: Cafe,
+          as: 'cafeteria',
+          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+        },
+        {
+          model: User,
+          as: 'usuario',
+          attributes: ['id', 'name', 'profileImage']
+        },
+        {
+          model: VisitaImagen,
+          as: 'visitaImagenes',
+          attributes: ['imageUrl', 'orden']
+        },
+        {
+          model: Like,
+          as: 'likes'
+        }
+      ]
+    });
+
+    if (!visita) {
+      return res.status(404).json({ mensaje: 'Visita no encontrada' });
+    }
+
+    // Agregar el conteo de likes a la respuesta
+    const visitaJSON = visita.toJSON();
+    const visitaConLikes = {
+      ...visitaJSON,
+      likesCount: visitaJSON.likes.length,
+      likes: undefined // Removemos el array de likes ya que solo necesitamos el conteo
+    };
+
+    // Log para debug
+    console.log('Enviando visita con likes:', {
+      id: visitaConLikes.id,
+      likesCount: visitaConLikes.likesCount
+    });
+
+    res.json({ mensaje: 'Visita encontrada', visita: visitaConLikes });
+  } catch (error) {
+    console.error('Error al obtener visita:', error);
+    res.status(500).json({ mensaje: 'Error al obtener la visita' });
   }
 };

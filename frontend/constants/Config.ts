@@ -36,6 +36,11 @@ export const API_ENDPOINTS = {
     CREATE: (visitaId: number) => `${API_URL}/visita/${visitaId}/comentarios`,
     UPDATE: (comentarioId: number) => `${API_URL}/comentarios/${comentarioId}`,
     DELETE: (comentarioId: number) => `${API_URL}/comentarios/${comentarioId}`,
+  },
+  LIKES: {
+    TOGGLE: (visitaId: number) => `${API_URL}/visitas/${visitaId}/like`,
+    GET_STATUS: (visitaId: number) => `${API_URL}/visitas/${visitaId}/like`,
+    GET_LIKED_VISITAS: `${API_URL}/likes`
   }
 };
 

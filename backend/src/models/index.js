@@ -5,6 +5,8 @@ import sequelize from '../config/database.js';
 import { DataTypes } from 'sequelize';
 import userModel from './user.model.js';
 import Comentario from './Comentario.js';
+import Like from './Like.js';
+import SavedCafe from './SavedCafe.js';
 
 // Inicializar el modelo de usuario
 const User = userModel(sequelize, DataTypes);
@@ -65,11 +67,55 @@ Comentario.belongsTo(User, {
   as: 'usuario'
 });
 
+// Relaciones para Likes
+User.hasMany(Like, {
+  foreignKey: 'userId',
+  as: 'likes'
+});
+
+Like.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user'
+});
+
+Visita.hasMany(Like, {
+  foreignKey: 'visitaId',
+  as: 'likes'
+});
+
+Like.belongsTo(Visita, {
+  foreignKey: 'visitaId',
+  as: 'visita'
+});
+
+// Relaciones para SavedCafes
+User.hasMany(SavedCafe, {
+  foreignKey: 'userId',
+  as: 'savedCafes'
+});
+
+SavedCafe.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user'
+});
+
+Cafe.hasMany(SavedCafe, {
+  foreignKey: 'cafeId',
+  as: 'savedBy'
+});
+
+SavedCafe.belongsTo(Cafe, {
+  foreignKey: 'cafeId',
+  as: 'cafe'
+});
+
 // Exportar todos los modelos en una sola declaración
 export { 
   Visita, 
   Cafe, 
   VisitaImagen, 
   User, 
-  Comentario 
+  Comentario,
+  Like,
+  SavedCafe
 }; 

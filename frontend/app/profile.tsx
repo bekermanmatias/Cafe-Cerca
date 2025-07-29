@@ -85,7 +85,16 @@ const ProfileScreen = () => {
   };
 
   const handleMenuPress = (action: string) => {
-    Alert.alert('Próximamente', 'Esta función estará disponible pronto');
+    switch (action) {
+      case 'Mis cafeterías guardadas':
+        router.push('/saved-cafes');
+        break;
+      case 'Mis likes':
+        router.push('/liked-visits');
+        break;
+      default:
+        Alert.alert('Próximamente', 'Esta función estará disponible pronto');
+    }
   };
 
   const handleLogout = () => {

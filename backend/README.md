@@ -3,27 +3,11 @@
 API backend para el proyecto **Cafe-Cerca**, desarrollada en Node.js con Express, Sequelize ORM y MySQL.  
 Permite gestionar la base de datos del proyecto y exponer endpoints REST para el frontend.
 
----
-
-## 📋 Tabla de contenidos
-
-- [Requisitos previos](#-requisitos-previos)
-- [Instalación](#-instalación)
-- [Configuración](#-configuración)
-- [Base de datos](#-base-de-datos)
-- [Probar conexión](#-probar-conexión)
-- [Correr el servidor](#-correr-el-servidor)
-- [Api-tester](#-api-tester)
-
----
-
 ## 🚀 Requisitos previos
 
 ✅ [Node.js](https://nodejs.org/) (LTS recomendado, mínimo v20.x)  
 ✅ [MySQL](https://dev.mysql.com/downloads/installer/) (8.x)  
 ✅ [Git](https://git-scm.com/) (opcional, para clonar el repositorio)
-
----
 
 ## 🛠 Instalación
 
@@ -40,17 +24,6 @@ Instalar las dependencias del proyecto:
 npm install
 ```
 
-### Dependencias principales instaladas:
-
-- **express** - Framework web para Node.js
-- **sequelize** - ORM para bases de datos SQL
-- **mysql2** - Driver MySQL para Node.js
-- **cors** - Middleware para habilitar CORS
-- **dotenv** - Para manejar variables de entorno
-- **nodemon** - Para desarrollo (reinicio automático)
-
----
-
 ## ⚙️ Configuración
 
 ### 1. Variables de entorno
@@ -60,7 +33,7 @@ Crear un archivo `.env` en la raíz del proyecto backend:
 ```env
 # Base de datos
 DB_HOST=localhost
-DB_PORT=3306
+DB_PORT=3307
 DB_NAME=cafecercadb
 DB_USER=tu_usuario
 DB_PASSWORD=tu_contraseña
@@ -81,8 +54,6 @@ Si tenés problemas con MySQL, agregá la ruta a las variables de entorno:
 C:\Program Files\MySQL\MySQL Server 8.0\bin
 ```
 
----
-
 ## 🗄️ Base de datos
 
 ### Crear la base de datos
@@ -94,18 +65,34 @@ CREATE DATABASE cafecercadb;
 USE cafecercadb;
 ```
 
-### Inicializar Sequelize
+### Migraciones
 
-El proyecto ya tiene configurado Sequelize. Las migraciones y modelos se ejecutan automáticamente al iniciar el servidor.
+El proyecto usa Sequelize CLI para manejar las migraciones. Las migraciones se ejecutan automáticamente al iniciar el servidor por primera vez o cuando hay cambios pendientes.
+
+Si necesitas ejecutar las migraciones manualmente:
+
+```bash
+npx sequelize-cli db:migrate
+```
+
+Para revertir la última migración:
+```bash
+npx sequelize-cli db:migrate:undo
+```
+
+Para revertir todas las migraciones:
+```bash
+npx sequelize-cli db:migrate:undo:all
+```
 
 ### Estructura de tablas principales:
 
-- **Usuarios** - Gestión de usuarios del sistema
-- **Cafeterías** - Información de las cafeterías
-- **Reseñas** - Reseñas y calificaciones
-- **Favoritos** - Cafeterías favoritas de usuarios
-
----
+- **Users** - Gestión de usuarios del sistema
+- **Cafes** - Información de las cafeterías
+- **Visitas** - Visitas y calificaciones
+- **Comentarios** - Comentarios en las visitas
+- **Likes** - Likes en las visitas
+- **SavedCafes** - Cafeterías guardadas por usuarios
 
 ## 🔍 Probar conexión
 
@@ -121,9 +108,10 @@ O iniciar el servidor y verificar en los logs:
 npm run dev
 ```
 
-Deberías ver el mensaje: `✅ Conexión a MySQL establecida correctamente`
-
----
+Deberías ver los siguientes mensajes:
+- `✅ Conexión a MySQL establecida correctamente`
+- `✅ Base de datos inicializada correctamente`
+- `✅ Migraciones completadas exitosamente` (si había migraciones pendientes)
 
 ## 🚀 Correr el servidor
 
@@ -140,8 +128,6 @@ npm start
 ```
 
 El servidor correrá en `http://localhost:3000` por defecto.
-
----
 
 ## 🧪 Api-tester
 

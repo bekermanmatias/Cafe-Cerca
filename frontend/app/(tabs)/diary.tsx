@@ -7,6 +7,7 @@ import { shareVisit, shareDiary } from '../../constants/Sharing';
 import { AntDesign } from '@expo/vector-icons';
 import { API_URL } from '../../constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../../context/AuthContext';
 
 interface Imagen {
   imageUrl: string;
@@ -32,6 +33,7 @@ interface Visita {
   fecha: string;
   imagenes: Imagen[];
   cafeteria: Cafeteria;
+  isLiked: boolean; // Added for local state management
 }
 
 interface DiarioResponse {
@@ -47,6 +49,7 @@ export default function DiaryScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const { token } = useAuth();
 
   const loadUserData = async () => {
     try {
@@ -71,8 +74,6 @@ export default function DiaryScreen() {
     try {
       setIsLoading(true);
       
-      // Obtener el token
-      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
         throw new Error('No se encontró el token de autenticación');
       }
@@ -117,6 +118,17 @@ export default function DiaryScreen() {
     setRefreshing(true);
     fetchDiario();
   }, []);
+
+  const handleLikeChange = (visitId: number, liked: boolean) => {
+    // Actualizar el estado local de las visitas cuando cambia un like
+    setVisitas(prevVisitas => 
+      prevVisitas.map(visita => 
+        visita.id === visitId 
+          ? { ...visita, isLiked: liked }
+          : visita
+      )
+    );
+  };
 
   const handleLike = () => {
     console.log('Like pressed');
@@ -213,7 +225,7 @@ export default function DiaryScreen() {
             <VisitCard
               key={visit.id}
               visit={visit}
-              onLike={handleLike}
+              onLikeChange={(liked) => handleLikeChange(visit.id, liked)}
               onShare={() => handleShare(visit.id)}
               onDetails={() => handleDetails(visit)}
             />

@@ -1,7 +1,4 @@
-import Cafe from '../models/Cafe.js';
-import Visita from '../models/Visita.js';
-import VisitaImagen from '../models/VisitaImagen.js';
-import { User } from '../models/index.js';
+import { Cafe, Visita, User, VisitaImagen, Like } from '../models/index.js';
 
 export const getAllCafes = async (req, res) => {
   try {
@@ -36,94 +33,65 @@ export const createCafe = async (req, res) => {
 
 export const getCafeById = async (req, res) => {
   try {
-    const { page = 1, limit = 3 } = req.query; // Por defecto, página 1 y 3 reseñas
+    const { id } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
 
-    console.log(`Buscando cafetería con ID: ${req.params.id}`);
-    // Primero verificamos si la cafetería existe
-    const cafe = await Cafe.findByPk(req.params.id);
+    const cafe = await Cafe.findByPk(id);
     if (!cafe) {
-      return res.status(404).json({ error: 'Cafetería no encontrada' });
+      return res.status(404).json({ mensaje: 'Cafetería no encontrada' });
     }
 
-    try {
-      console.log(`Buscando reseñas para cafetería ID: ${req.params.id}`);
-      console.log(`Parámetros de paginación: limit=${limit}, offset=${offset}`);
-      
-      // Obtener las reseñas paginadas con información del usuario
-      const reseñas = await Visita.findAndCountAll({
-        where: { 
-          cafeteriaId: req.params.id 
+    const { count, rows: reseñas } = await Visita.findAndCountAll({
+      where: { cafeteriaId: id },
+      include: [
+        {
+          model: User,
+          as: 'usuario',
+          attributes: ['id', 'name', 'profileImage']
         },
-        include: [
-          {
-            model: VisitaImagen,
-            as: 'visitaImagenes',
-            attributes: ['imageUrl', 'orden'],
-            required: false
-          },
-          {
-            model: User,
-            as: 'usuario',
-            attributes: ['id', 'name', 'profileImage'],
-            required: false
-          }
-        ],
-        attributes: [
-          'id',
-          'usuarioId',
-          'comentario',
-          'calificacion',
-          'fecha',
-          'createdAt'
-        ],
-        order: [['createdAt', 'DESC']],
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        distinct: true
-      });
-
-      console.log(`Reseñas encontradas: ${reseñas.count}`);
-
-      // Calcular el total de páginas
-      const totalPages = Math.ceil(reseñas.count / limit);
-
-      res.json({
-        cafe,
-        reseñas: {
-          items: reseñas.rows,
-          total: reseñas.count,
-          totalPages,
-          currentPage: parseInt(page),
-          hasMore: page < totalPages
+        {
+          model: VisitaImagen,
+          as: 'visitaImagenes',
+          attributes: ['imageUrl', 'orden']
+        },
+        {
+          model: Like,
+          as: 'likes'
         }
-      });
-    } catch (error) {
-      console.error('Error detallado al obtener reseñas:', error);
-      console.error('Stack trace:', error.stack);
-      
-      // Si falla al obtener las reseñas, al menos devolvemos la info de la cafetería
-      res.json({
-        cafe,
-        reseñas: {
-          items: [],
-          total: 0,
-          totalPages: 0,
-          currentPage: parseInt(page),
-          hasMore: false,
-          error: 'Error al cargar las reseñas',
-          errorDetails: error.message
-        }
-      });
-    }
-  } catch (err) {
-    console.error('Error detallado:', err);
-    console.error('Stack trace:', err.stack);
-    res.status(500).json({ 
-      error: 'Error al obtener la cafetería y reseñas',
-      details: err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      ],
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']]
     });
+
+    // Transformar las reseñas para incluir el conteo de likes
+    const reseñasConLikes = reseñas.map(reseña => {
+      const reseñaJSON = reseña.toJSON();
+      return {
+        ...reseñaJSON,
+        likesCount: reseñaJSON.likes.length,
+        likes: undefined // Removemos el array de likes ya que solo necesitamos el conteo
+      };
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    const hasMore = page < totalPages;
+
+    res.json({
+      cafe,
+      reseñas: {
+        items: reseñasConLikes,
+        total: count,
+        totalPages,
+        currentPage: page,
+        hasMore
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener cafetería:', error);
+    res.status(500).json({ mensaje: 'Error al obtener la cafetería' });
   }
 };
 
