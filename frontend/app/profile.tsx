@@ -86,8 +86,11 @@ const ProfileScreen = () => {
 
   const handleMenuPress = (action: string) => {
     switch (action) {
+      case 'Mis cafeterías guardadas':
+        router.push('/saved-cafes');
+        break;
       case 'Mis likes':
-        router.push('liked-visits');
+        router.push('/liked-visits');
         break;
       default:
         Alert.alert('Próximamente', 'Esta función estará disponible pronto');

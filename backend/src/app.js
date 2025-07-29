@@ -11,6 +11,7 @@ import cafesRoutes from './routes/cafes.js';
 import estadisticasRoutes from './routes/estadisticas.routes.js';
 import comentariosRoutes from './routes/comentarios.routes.js';
 import likesRoutes from './routes/likes.routes.js';
+import savedCafesRoutes from './routes/savedCafes.routes.js';
 
 // Importar modelos y sus relaciones
 import './models/index.js';
@@ -59,6 +60,7 @@ app.use('/api/visitas', visitaRoutes);
 app.use('/api/estadisticas', estadisticasRoutes);
 app.use('/api', comentariosRoutes); // Agregamos las rutas de comentarios
 app.use('/api', likesRoutes); // Agregamos las rutas de likes
+app.use('/api', savedCafesRoutes);
 
 // Mostrar rutas disponibles por consola para que las veas
 console.log('📋 Rutas disponibles:');
