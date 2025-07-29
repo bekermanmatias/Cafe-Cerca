@@ -48,6 +48,7 @@ type Reseña = {
     orden: number;
   }>;
   usuario: Usuario;
+  likesCount: number;
 };
 
 type CafeResponse = {
@@ -165,12 +166,12 @@ export default function CafeDetail() {
     });
   };
 
-  const handleLikeChange = (visitId: number, liked: boolean) => {
+  const handleLikeChange = (visitId: number, liked: boolean, likesCount: number) => {
     // Actualizar el estado local de las reseñas cuando cambia un like
     setReseñas(prevReseñas => 
       prevReseñas.map(reseña => 
         reseña.id === visitId 
-          ? { ...reseña, isLiked: liked }
+          ? { ...reseña, isLiked: liked, likesCount }
           : reseña
       )
     );
@@ -253,9 +254,10 @@ export default function CafeDetail() {
                 fecha: visita.fecha,
                 cafeteria: cafe,
                 imagenes: visita.visitaImagenes,
-                usuario: visita.usuario
+                usuario: visita.usuario,
+                likesCount: visita.likesCount
               }}
-              onLikeChange={(liked) => handleLikeChange(visita.id, liked)}
+              onLikeChange={(liked) => handleLikeChange(visita.id, liked, visita.likesCount)}
               onShare={() => handleShare(visita.id)}
               onDetails={() => handleDetails(visita)}
             />

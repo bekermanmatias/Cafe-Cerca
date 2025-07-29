@@ -53,6 +53,7 @@ interface VisitaDetalle {
   imagenes: Imagen[];
   cafeteria: Cafeteria;
   usuario: Usuario;
+  likesCount: number;
 }
 
 interface ApiResponse {
@@ -106,6 +107,11 @@ export default function VisitDetailsScreen() {
       const data = await response.json();
       console.log('Datos de visita recibidos:', data);
       setVisitData(data.visita);
+
+      // Si tenemos token, verificar el estado del like
+      if (token) {
+        checkLikeStatus();
+      }
     } catch (error) {
       console.error('Error obteniendo detalles:', error);
       setError('No se pudo cargar la información de la visita');
@@ -119,6 +125,14 @@ export default function VisitDetailsScreen() {
     try {
       const response = await apiService.getLikeStatus(visitData.id, token);
       setIsLiked(response.liked);
+      // Actualizar el contador de likes en el estado de la visita
+      setVisitData(prevData => {
+        if (!prevData) return null;
+        return {
+          ...prevData,
+          likesCount: response.likesCount
+        };
+      });
     } catch (error) {
       console.error('Error al obtener estado del like:', error);
     }
@@ -129,6 +143,14 @@ export default function VisitDetailsScreen() {
     try {
       const response = await apiService.toggleLike(visitData.id, token);
       setIsLiked(response.liked);
+      // Actualizar el contador de likes en el estado local
+      setVisitData(prevData => {
+        if (!prevData) return null;
+        return {
+          ...prevData,
+          likesCount: response.likesCount
+        };
+      });
     } catch (error) {
       console.error('Error al procesar el like:', error);
     }
@@ -242,11 +264,21 @@ export default function VisitDetailsScreen() {
         <View style={styles.actionButtons}>
           <View style={styles.leftActions}>
             <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-              <Ionicons 
-                name={isLiked ? "heart" : "heart-outline"} 
-                size={28} 
-                color={isLiked ? "#FF4B4B" : "#000"} 
-              />
+              <View style={styles.likeContainer}>
+                <Ionicons 
+                  name={isLiked ? "heart" : "heart-outline"} 
+                  size={28} 
+                  color={isLiked ? "#FF4B4B" : "#000"} 
+                />
+                {visitData.likesCount > 0 && (
+                  <Text style={[
+                    styles.likesCount,
+                    isLiked && styles.likesCountActive
+                  ]}>
+                    {visitData.likesCount}
+                  </Text>
+                )}
+              </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
               <Ionicons name="share-social-outline" size={28} color="#000" />
@@ -644,5 +676,19 @@ const styles = StyleSheet.create({
   },
   flatList: {
     flex: 1,
+  },
+  likeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  likesCount: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+    minWidth: 20, // Para evitar saltos cuando cambia el número
+  },
+  likesCountActive: {
+    color: '#FF4B4B',
   },
 }); 

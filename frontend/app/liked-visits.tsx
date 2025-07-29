@@ -3,12 +3,13 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-nativ
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { VisitCard } from '../components/VisitCard';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 
 export default function LikedVisitsScreen() {
   const [likedVisits, setLikedVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { token } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     loadLikedVisits();
@@ -32,6 +33,18 @@ export default function LikedVisitsScreen() {
       // Si se quitó el like, eliminar la visita de la lista
       setLikedVisits(prev => prev.filter(visit => visit.id !== visitId));
     }
+  };
+
+  const handleDetails = (visit: any) => {
+    router.push({
+      pathname: '/visit-details',
+      params: { visitId: visit.id.toString() }
+    });
+  };
+
+  const handleShare = (visitId: number) => {
+    // Implementar compartir si es necesario
+    console.log('Compartir visita:', visitId);
   };
 
   return (
@@ -66,6 +79,8 @@ export default function LikedVisitsScreen() {
             <VisitCard
               visit={item}
               onLikeChange={(liked) => handleLikeChange(item.id, liked)}
+              onDetails={() => handleDetails(item)}
+              onShare={() => handleShare(item.id)}
             />
           )}
           keyExtractor={(item) => item.id.toString()}

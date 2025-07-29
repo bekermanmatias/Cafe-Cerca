@@ -35,10 +35,12 @@ interface ProfileImageResponse {
 interface LikeResponse {
   liked: boolean;
   message: string;
+  likesCount: number;
 }
 
 interface LikeStatusResponse {
   liked: boolean;
+  likesCount: number;
 }
 
 class ApiService {

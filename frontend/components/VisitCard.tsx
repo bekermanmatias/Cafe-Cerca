@@ -27,6 +27,7 @@ export interface VisitCardProps {
       name: string;
       profileImage: string | null;
     };
+    likesCount?: number;
   };
   onShare?: () => void;
   onDetails?: () => void;
@@ -51,6 +52,7 @@ export const VisitCard = ({
 }: VisitCardProps) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [localLikesCount, setLocalLikesCount] = useState(visit.likesCount || 0);
   const flatListRef = useRef<FlatList>(null);
   const { token } = useAuth();
 
@@ -60,13 +62,19 @@ export const VisitCard = ({
     }
   }, [visit.id, token]);
 
+  useEffect(() => {
+    // Actualizar el contador local cuando cambia en las props
+    setLocalLikesCount(visit.likesCount || 0);
+  }, [visit.likesCount]);
+
   const checkLikeStatus = async () => {
     if (!token) return;
     try {
       const response = await apiService.getLikeStatus(visit.id, token);
       setIsLiked(response.liked);
+      setLocalLikesCount(response.likesCount);
     } catch (error) {
-      console.error('Error al obtener el estado del like:', error);
+      console.error('Error al obtener estado del like:', error);
     }
   };
 
@@ -75,6 +83,7 @@ export const VisitCard = ({
     try {
       const response = await apiService.toggleLike(visit.id, token);
       setIsLiked(response.liked);
+      setLocalLikesCount(response.likesCount);
       if (onLikeChange) {
         onLikeChange(response.liked);
       }
@@ -161,11 +170,21 @@ export const VisitCard = ({
         <View style={styles.actions}>
           <View style={styles.leftActions}>
             <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-              <Ionicons 
-                name={isLiked ? "heart" : "heart-outline"} 
-                size={24} 
-                color={isLiked ? "#FF4B4B" : "#666"} 
-              />
+              <View style={styles.likeContainer}>
+                <Ionicons 
+                  name={isLiked ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={isLiked ? "#FF4B4B" : "#666"} 
+                />
+                {localLikesCount > 0 && (
+                  <Text style={[
+                    styles.likesCount,
+                    isLiked && styles.likesCountActive
+                  ]}>
+                    {localLikesCount}
+                  </Text>
+                )}
+              </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton} onPress={onShare}>
               <Ionicons name="share-social-outline" size={24} color="#666" />
@@ -305,5 +324,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     lineHeight: 22,
+  },
+  likeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  likesCount: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+  },
+  likesCountActive: {
+    color: '#FF4B4B',
   },
 }); 
