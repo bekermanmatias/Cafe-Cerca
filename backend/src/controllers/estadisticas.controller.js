@@ -6,6 +6,13 @@ export const getEstadisticasUsuario = async (req, res) => {
   try {
     const { usuarioId } = req.params;
 
+    // Verificar que el usuario solo pueda ver sus propias estadísticas
+    if (parseInt(usuarioId) !== req.user.id) {
+      return res.status(403).json({
+        error: 'No tienes permiso para ver las estadísticas de otro usuario'
+      });
+    }
+
     // Obtener cantidad total de visitas
     const totalVisitas = await Visita.count({
       where: { usuarioId }

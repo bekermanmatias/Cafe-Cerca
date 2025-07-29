@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { LogBox } from 'react-native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import { AuthProvider } from '../context/AuthContext';
 
 // Mantener la pantalla de splash visible mientras cargamos recursos
 SplashScreen.preventAutoHideAsync();
@@ -32,64 +33,66 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <Stack
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: '#fff',
-          },
-          headerTintColor: '#8B4513',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-        }}
-      >
-        {/* Pantalla principal sin header */}
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+    <AuthProvider>
+      <SafeAreaProvider>
+        <Stack
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: '#fff',
+            },
+            headerTintColor: '#8B4513',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+          }}
+        >
+          {/* Pantalla principal sin header */}
+          <Stack.Screen name="index" options={{ headerShown: false }} />
 
-        {/* Pantalla de autenticación */}
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          {/* Pantalla de autenticación */}
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
 
-        {/* Grupo de tabs */}
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* Grupo de tabs */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-        <Stack.Screen
-          name="add-visit"
-          options={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen
-          name="edit-visit"
-          options={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen
-          name="visit-details"
-          options={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen
-          name="stats"
-          options={{
-            headerShown: false,
-            animation: 'slide_from_bottom',
-          }}
-        />
-        <Stack.Screen
-          name="cafe/[id]"
-          options={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        />
-      </Stack>
-      <StatusBar style="auto" />
-    </SafeAreaProvider>
+          <Stack.Screen
+            name="add-visit"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="edit-visit"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="visit-details"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="stats"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="cafe/[id]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+        </Stack>
+        <StatusBar style="auto" />
+      </SafeAreaProvider>
+    </AuthProvider>
   );
 }

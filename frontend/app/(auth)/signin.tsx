@@ -12,10 +12,11 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../../context/AuthContext';
 
 export default function SignInScreen() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,9 +31,8 @@ export default function SignInScreen() {
     try {
       const response = await apiService.login({ email, password });
       
-      // Guardar el token y la información del usuario
-      await AsyncStorage.setItem('userToken', response.token);
-      await AsyncStorage.setItem('userData', JSON.stringify(response.user));
+      // Usar el contexto de autenticación para guardar el token y usuario
+      await login(response.token, response.user);
       
       // Redirigir al usuario a la pestaña explore
       router.replace('/(tabs)/explore');
