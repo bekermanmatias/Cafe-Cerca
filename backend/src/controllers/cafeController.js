@@ -1,6 +1,7 @@
 import Cafe from '../models/Cafe.js';
 import Visita from '../models/Visita.js';
 import VisitaImagen from '../models/VisitaImagen.js';
+import { Op } from 'sequelize';
 
 export const getAllCafes = async (req, res) => {
   try {
@@ -13,7 +14,14 @@ export const getAllCafes = async (req, res) => {
 
 export const createCafe = async (req, res) => {
   try {
-    const { name, address, rating, tags, openingHours } = req.body;
+    const { name, address, rating, tags, openingHours, lat, lng } = req.body;
+
+    // Convierte lat y lng de string a float
+    const latNum = parseFloat(lat);
+    const lngNum = parseFloat(lng);
+    if (isNaN(latNum) || isNaN(lngNum)) {
+      return res.status(400).json({ error: 'Latitud o longitud inválida' });
+    }
 
     const imageUrl = req.file ? req.file.path : null;
     const tagsParsed = tags ? JSON.parse(tags) : [];
@@ -21,10 +29,12 @@ export const createCafe = async (req, res) => {
     const cafe = await Cafe.create({
       name,
       address,
-      rating,
+      rating: rating ? parseFloat(rating) : 0.0,
       imageUrl,
       tags: tagsParsed,
-      openingHours
+      openingHours,
+      lat: latNum,
+      lng: lngNum
     });
 
     res.status(201).json(cafe);
@@ -32,6 +42,7 @@ export const createCafe = async (req, res) => {
     res.status(400).json({ error: 'Error al crear la cafetería', details: err.message });
   }
 };
+
 
 export const getCafeById = async (req, res) => {
   try {
@@ -127,5 +138,32 @@ export const deleteCafe = async (req, res) => {
     res.json({ mensaje: 'Cafetería eliminada' });
   } catch (err) {
     res.status(500).json({ error: 'Error al eliminar' });
+  }
+};
+
+export const getNearbyCafes = async (req, res) => {
+  const { lat, lng, radius = 5 } = req.query; // radius en km
+  if (!lat || !lng) {
+    return res.status(400).json({ error: 'Faltan lat y lng en la query' });
+  }
+
+  const latNum = parseFloat(lat);
+  const lngNum = parseFloat(lng);
+  const radiusInDegrees = radius / 111; // aproximación simple (1 grado ≈ 111km)
+
+  try {
+    const cafes = await Cafe.findAll({
+      where: {
+        lat: {
+          [Op.between]: [latNum - radiusInDegrees, latNum + radiusInDegrees],
+        },
+        lng: {
+          [Op.between]: [lngNum - radiusInDegrees, lngNum + radiusInDegrees],
+        },
+      },
+    });
+    res.json(cafes);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
