@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Dimensions, Platform, Linking, ActivityIndicator, Text, Alert } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { StyleSheet, View, Dimensions, Platform, Linking, ActivityIndicator, Text, Alert, TouchableOpacity } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { API_URL } from '../../constants/Config';
@@ -15,7 +15,8 @@ export default function MapScreen() {
   const [cafes, setCafes] = useState<Cafe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const mapRef = useRef<MapView | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,8 +31,8 @@ export default function MapScreen() {
         // Obtener ubicación del usuario
         const location = await Location.getCurrentPositionAsync({});
         setUserLocation({
-          lat: location.coords.latitude,
-          lng: location.coords.longitude,
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
         });
 
         // Obtener cafeterías
@@ -69,6 +70,20 @@ export default function MapScreen() {
     }
   };
 
+  const goToUserLocation = () => {
+    if (userLocation && mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        1000 // duración en ms
+      );
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -80,29 +95,26 @@ export default function MapScreen() {
 
   const initialRegion = userLocation
     ? {
-        latitude: userLocation.lat,
-        longitude: userLocation.lng,
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
       }
     : {
-        latitude: cafes[0].lat,
-        longitude: cafes[0].lng,
+        latitude: cafes.length > 0 ? cafes[0].lat : -34.6037,
+        longitude: cafes.length > 0 ? cafes[0].lng : -58.3816,
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
       };
 
   return (
     <View style={styles.container}>
-      <MapView style={styles.map} initialRegion={initialRegion}>
-        {userLocation && (
-          <Marker
-            coordinate={{ latitude: userLocation.lat, longitude: userLocation.lng }}
-            title="Estás aquí"
-            pinColor="blue"
-          />
-        )}
-
+      <MapView 
+        ref={mapRef}
+        style={styles.map} 
+        initialRegion={initialRegion}
+        showsUserLocation
+      >
         {cafes.map(cafe => (
           <Marker
             key={cafe.id}
@@ -113,6 +125,11 @@ export default function MapScreen() {
           />
         ))}
       </MapView>
+
+      {/* Botón para volver a la ubicación del usuario */}
+      <TouchableOpacity style={styles.button} onPress={goToUserLocation}>
+        <Text style={styles.buttonText}>📍 Mi ubicación</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -131,5 +148,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: '#fff',
+  },
+  button: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  buttonText: {
+    color: '#333',
+    fontWeight: 'bold',
   },
 });
