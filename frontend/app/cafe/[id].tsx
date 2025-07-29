@@ -21,6 +21,7 @@ import { VisitCard } from '../../components/VisitCard';
 import { useAuth } from '../../context/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
+import { Platform, Linking } from 'react-native';
 
 type Cafe = {
   id: number;
@@ -30,6 +31,8 @@ type Cafe = {
   tags: string[];
   rating: number;
   openingHours: string;
+  lat: number;
+  lng: number;
 };
 
 type Usuario = {
@@ -37,6 +40,7 @@ type Usuario = {
   name: string;
   profileImage: string | null;
 };
+
 
 type Reseña = {
   id: number;
@@ -163,9 +167,34 @@ export default function CafeDetail() {
     console.log('Guardar pressed');
   };
 
-  const onIrDireccionIconPress = () => {
-    console.log('Icono Ir Dirección pressed');
-  };
+const onIrDireccionIconPress = () => {
+  if (!cafe) return;
+
+  const lat = (cafe as any).lat;  // temporal, idealmente tipar bien Café
+  const lng = (cafe as any).lng;
+
+  if (lat && lng) {
+    const label = encodeURIComponent(cafe.name || 'Cafetería');
+    const url = Platform.select({
+      ios: `maps:0,0?q=${label}@${lat},${lng}`,
+      android: `geo:0,0?q=${lat},${lng}(${label})`,
+    });
+
+    if (url) {
+      Linking.openURL(url).catch(err =>
+        console.error('Error abriendo Google Maps:', err)
+      );
+    }
+  } else {
+    // fallback: dirección textual
+    const address = encodeURIComponent(cafe.address);
+    const url = `https://www.google.com/maps/search/?api=1&query=${address}`;
+
+    Linking.openURL(url).catch(err =>
+      console.error('Error abriendo Google Maps con dirección:', err)
+    );
+  }
+};
 
   const handleVisitar = () => {
     router.push({
