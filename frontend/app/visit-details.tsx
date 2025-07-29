@@ -35,6 +35,12 @@ interface Cafeteria {
   openingHours: string;
 }
 
+interface Usuario {
+  id: number;
+  name: string;
+  profileImage: string | null;
+}
+
 interface VisitaDetalle {
   id: number;
   usuarioId: number;
@@ -44,6 +50,7 @@ interface VisitaDetalle {
   fecha: string;
   imagenes: Imagen[];
   cafeteria: Cafeteria;
+  usuario: Usuario;
 }
 
 interface ApiResponse {
@@ -157,82 +164,99 @@ export default function VisitDetailsScreen() {
     optionsButtonRef.current.measure(measureCallback);
   };
 
-  const renderHeader = () => (
-    <>
-      <View style={styles.header}>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>{visitData.cafeteria.name}</Text>
-          <Text style={styles.headerDate}>
-            {new Date(visitData.fecha).toLocaleDateString()}
-          </Text>
-        </View>
-        <View style={styles.participantsContainer}>
-          <View style={styles.participantPhoto} />
-        </View>
-      </View>
+  // URL de la imagen de perfil por defecto
+  const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
 
-      <View style={styles.mainImageContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.imageScrollContainer}
-        >
-          {visitData.imagenes.map((imagen, index) => (
-            <View key={index} style={styles.imageWrapper}>
-              <Image 
-                source={{ uri: imagen.imageUrl }} 
-                style={styles.mainImage}
-              />
-            </View>
-          ))}
-        </ScrollView>
-        <View style={styles.ratingBadge}>
-          <Text style={styles.ratingText}>{visitData.calificacion} ★</Text>
-        </View>
-      </View>
+  const renderHeader = () => {
+    if (!visitData) return null;
 
-      <View style={styles.actionButtons}>
-        <View style={styles.leftActions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="heart-outline" size={28} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-            <Ionicons name="share-social-outline" size={28} color="#000" />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.rightActions}>
-          <TouchableOpacity 
-            ref={optionsButtonRef}
-            style={styles.actionButton}
-            onPress={handleShowOptions}
-          >
-            <Ionicons name="ellipsis-vertical" size={28} color="#000" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.mainReviewContainer}>
-        <View style={styles.authorSection}>
-          <View style={styles.authorPhoto} />
-          <View style={styles.authorInfo}>
-            <Text style={styles.authorName}>Usuario {visitData.usuarioId}</Text>
-            <View style={styles.starsContainer}>
-              {[...Array(5)].map((_, i) => (
-                <Ionicons
-                  key={i}
-                  name={i < visitData.calificacion ? "star" : "star-outline"}
-                  size={20}
-                  color="#FFD700"
-                />
-              ))}
-            </View>
+    return (
+      <>
+        <View style={styles.header}>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>{visitData.cafeteria.name}</Text>
+            <Text style={styles.headerDate}>
+              {new Date(visitData.fecha).toLocaleDateString()}
+            </Text>
+          </View>
+          <View style={styles.participantsContainer}>
+            <Image
+              source={{ 
+                uri: visitData.usuario?.profileImage || defaultProfileImage
+              }}
+              style={styles.participantPhoto}
+            />
           </View>
         </View>
-        <Text style={styles.mainReviewText}>{visitData.comentario}</Text>
-      </View>
-    </>
-  );
+
+        <View style={styles.mainImageContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.imageScrollContainer}
+          >
+            {visitData.imagenes.map((imagen, index) => (
+              <View key={index} style={styles.imageWrapper}>
+                <Image 
+                  source={{ uri: imagen.imageUrl }} 
+                  style={styles.mainImage}
+                />
+              </View>
+            ))}
+          </ScrollView>
+          <View style={styles.ratingBadge}>
+            <Text style={styles.ratingText}>{visitData.calificacion} ★</Text>
+          </View>
+        </View>
+
+        <View style={styles.actionButtons}>
+          <View style={styles.leftActions}>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="heart-outline" size={28} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+              <Ionicons name="share-social-outline" size={28} color="#000" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.rightActions}>
+            <TouchableOpacity 
+              ref={optionsButtonRef}
+              style={styles.actionButton}
+              onPress={handleShowOptions}
+            >
+              <Ionicons name="ellipsis-vertical" size={28} color="#000" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.mainReviewContainer}>
+          <View style={styles.authorSection}>
+            <Image
+              source={{ 
+                uri: visitData.usuario?.profileImage || defaultProfileImage
+              }}
+              style={styles.authorPhoto}
+            />
+            <View style={styles.authorInfo}>
+              <Text style={styles.authorName}>{visitData.usuario?.name || 'Usuario sin nombre'}</Text>
+              <View style={styles.starsContainer}>
+                {[...Array(5)].map((_, i) => (
+                  <Ionicons
+                    key={i}
+                    name={i < visitData.calificacion ? "star" : "star-outline"}
+                    size={20}
+                    color="#FFD700"
+                  />
+                ))}
+              </View>
+            </View>
+          </View>
+          <Text style={styles.mainReviewText}>{visitData.comentario}</Text>
+        </View>
+      </>
+    );
+  };
 
   // Mostrar un indicador de carga mientras se obtienen los datos
   if (isLoading) {

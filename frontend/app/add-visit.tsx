@@ -6,6 +6,7 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { AntDesign } from '@expo/vector-icons';
 import ImageEditor from '../components/ImageEditor';
 import { API_URL } from '../constants/Config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STANDARD_SIZE = 1080; // Tamaño estándar para las imágenes (1080x1080)
 
@@ -30,8 +31,10 @@ export default function AddVisitScreen() {
   const [selectedCafe, setSelectedCafe] = useState<Cafe | null>(null);
   const [showCafeSelector, setShowCafeSelector] = useState(false);
   const [isLoadingCafes, setIsLoadingCafes] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
 
   useEffect(() => {
+    loadUserData();
     fetchCafes();
 
     // Si hay una cafetería preseleccionada, la buscamos y seleccionamos
@@ -77,6 +80,22 @@ export default function AddVisitScreen() {
       };
     }
   }, [preselectedCafeId, showCafeSelector]);
+
+  const loadUserData = async () => {
+    try {
+      const userDataStr = await AsyncStorage.getItem('userData');
+      if (userDataStr) {
+        setUserData(JSON.parse(userDataStr));
+      } else {
+        // Si no hay datos de usuario, redirigir al login
+        Alert.alert('Error', 'Debes iniciar sesión para crear una visita');
+        router.replace('/(auth)/signin');
+      }
+    } catch (error) {
+      console.error('Error cargando datos del usuario:', error);
+      Alert.alert('Error', 'No se pudieron cargar los datos del usuario');
+    }
+  };
 
   const fetchCafes = async () => {
     try {
@@ -151,6 +170,11 @@ export default function AddVisitScreen() {
   };
 
   const handlePublish = async () => {
+    if (!userData?.id) {
+      Alert.alert('Error', 'Debes iniciar sesión para crear una visita');
+      return;
+    }
+
     if (!selectedCafe) {
       Alert.alert('Error', 'Por favor selecciona una cafetería');
       return;
@@ -168,7 +192,7 @@ export default function AddVisitScreen() {
 
     try {
       const formData = new FormData();
-      formData.append('usuarioId', '1');
+      formData.append('usuarioId', userData.id.toString());
       formData.append('cafeteriaId', selectedCafe.id.toString());
       formData.append('comentario', comment);
       formData.append('calificacion', rating.toString());
@@ -181,11 +205,18 @@ export default function AddVisitScreen() {
         } as any);
       });
 
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Error', 'No se encontró el token de autenticación');
+        return;
+      }
+
       const response = await fetch(`${API_URL}/visitas`, {
         method: 'POST',
         body: formData,
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
         },
       });
 
@@ -203,6 +234,7 @@ export default function AddVisitScreen() {
         }
       ]);
     } catch (error) {
+      console.error('Error publicando visita:', error);
       Alert.alert('Error', 'No se pudo publicar la visita');
     }
   };

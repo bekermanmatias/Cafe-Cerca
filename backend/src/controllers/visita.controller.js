@@ -1,4 +1,4 @@
-import { Visita, VisitaImagen, Cafe } from '../models/index.js';
+import { Visita, VisitaImagen, Cafe, User } from '../models/index.js';
 import sequelize from '../config/database.js';
 import { Op } from 'sequelize';
 
@@ -16,6 +16,13 @@ const includeCafeteria = {
   attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
 };
 
+// Función helper para incluir el usuario
+const includeUsuario = {
+  model: User,
+  as: 'usuario',
+  attributes: ['id', 'name', 'profileImage']
+};
+
 // Función helper para ordenar las imágenes
 const orderOptions = [
   ['fecha', 'DESC'],
@@ -26,7 +33,9 @@ export const crearVisita = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const { usuarioId, cafeteriaId, comentario, calificacion } = req.body;
+    // Usar el ID del usuario del token de autenticación
+    const usuarioId = req.user.id;
+    const { cafeteriaId, comentario, calificacion } = req.body;
     const imagenes = req.files; // Múltiples archivos
 
     // Validar número máximo de imágenes
@@ -81,11 +90,10 @@ export const crearVisita = async (req, res) => {
 export const obtenerVisitas = async (req, res) => {
   try {
     const visitas = await Visita.findAll({
-      include: [includeImagenes, includeCafeteria],
+      include: [includeImagenes, includeCafeteria, includeUsuario],
       order: orderOptions
     });
 
-    // Transformar la respuesta para mantener compatibilidad con el frontend
     const visitasTransformadas = visitas.map(visita => ({
       ...visita.toJSON(),
       imagenes: visita.visitaImagenes
@@ -109,7 +117,7 @@ export const obtenerVisitaPorId = async (req, res) => {
   try {
     const { id } = req.params;
     const visita = await Visita.findByPk(id, {
-      include: [includeImagenes, includeCafeteria],
+      include: [includeImagenes, includeCafeteria, includeUsuario],
       order: orderOptions
     });
     
@@ -117,7 +125,6 @@ export const obtenerVisitaPorId = async (req, res) => {
       return res.status(404).json({ mensaje: 'Visita no encontrada' });
     }
 
-    // Transformar la respuesta para mantener compatibilidad con el frontend
     const visitaTransformada = {
       ...visita.toJSON(),
       imagenes: visita.visitaImagenes
@@ -284,11 +291,12 @@ export const eliminarVisita = async (req, res) => {
 
 export const obtenerDiarioUsuario = async (req, res) => {
   try {
-    const { usuarioId } = req.params;
+    // Usar el ID del usuario del token
+    const usuarioId = req.user.id;
 
     const visitas = await Visita.findAll({
       where: { usuarioId },
-      include: [includeImagenes, includeCafeteria],
+      include: [includeImagenes, includeCafeteria, includeUsuario],
       order: orderOptions
     });
 
@@ -299,7 +307,7 @@ export const obtenerDiarioUsuario = async (req, res) => {
     }));
 
     res.json({
-      mensaje: visitasTransformadas.length > 0 ? 'Diario recuperado exitosamente' : 'El usuario no tiene visitas registradas',
+      mensaje: visitasTransformadas.length > 0 ? 'Diario recuperado exitosamente' : 'No tienes visitas registradas',
       totalVisitas: visitas.length,
       visitas: visitasTransformadas
     });

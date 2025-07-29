@@ -1,6 +1,7 @@
 import Cafe from '../models/Cafe.js';
 import Visita from '../models/Visita.js';
 import VisitaImagen from '../models/VisitaImagen.js';
+import { User } from '../models/index.js';
 
 export const getAllCafes = async (req, res) => {
   try {
@@ -49,7 +50,7 @@ export const getCafeById = async (req, res) => {
       console.log(`Buscando reseñas para cafetería ID: ${req.params.id}`);
       console.log(`Parámetros de paginación: limit=${limit}, offset=${offset}`);
       
-      // Obtener las reseñas paginadas
+      // Obtener las reseñas paginadas con información del usuario
       const reseñas = await Visita.findAndCountAll({
         where: { 
           cafeteriaId: req.params.id 
@@ -59,6 +60,12 @@ export const getCafeById = async (req, res) => {
             model: VisitaImagen,
             as: 'visitaImagenes',
             attributes: ['imageUrl', 'orden'],
+            required: false
+          },
+          {
+            model: User,
+            as: 'usuario',
+            attributes: ['id', 'name', 'profileImage'],
             required: false
           }
         ],

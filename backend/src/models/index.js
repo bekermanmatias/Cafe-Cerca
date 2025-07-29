@@ -33,12 +33,12 @@ VisitaImagen.belongsTo(Visita, {
 
 // Relación entre Usuario y Visita
 User.hasMany(Visita, {
-  foreignKey: 'userId',
+  foreignKey: 'usuarioId',
   as: 'visitas'
 });
 
 Visita.belongsTo(User, {
-  foreignKey: 'userId',
+  foreignKey: 'usuarioId',
   as: 'usuario'
 });
 
