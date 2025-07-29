@@ -34,18 +34,24 @@ async function createInitialData() {
     if (!cafeExists) {
       await Cafe.bulkCreate([
         {
-          nombre: 'Café Tortoni',
-          direccion: 'Av. de Mayo 825, Buenos Aires',
-          latitud: -34.6085,
-          longitud: -58.3795,
-          horario: 'Lunes a Domingo 8:00 - 22:00'
+          name: 'Café Tortoni',
+          address: 'Av. de Mayo 825, Buenos Aires',
+          lat: -34.6085,
+          lng: -58.3795,
+          openingHours: 'Lunes a Domingo 8:00 - 22:00',
+          rating: 4.5,
+          tags: ['histórico', 'tradicional', 'turístico'],
+          imageUrl: 'https://example.com/tortoni.jpg'
         },
         {
-          nombre: 'Café Martinez',
-          direccion: 'Av. Santa Fe 1234, Buenos Aires',
-          latitud: -34.5955,
-          longitud: -58.3937,
-          horario: 'Lunes a Sábado 7:30 - 20:00'
+          name: 'Café Martinez',
+          address: 'Av. Santa Fe 1234, Buenos Aires',
+          lat: -34.5955,
+          lng: -58.3937,
+          openingHours: 'Lunes a Sábado 7:30 - 20:00',
+          rating: 4.0,
+          tags: ['moderno', 'franquicia'],
+          imageUrl: 'https://example.com/martinez.jpg'
         }
       ]);
       console.log('✅ Cafés iniciales creados');
