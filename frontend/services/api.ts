@@ -27,6 +27,11 @@ interface RegisterResponse {
   name: string;
 }
 
+interface ProfileImageResponse {
+  message: string;
+  profileImage: string;
+}
+
 class ApiService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     console.log('Intentando login con URL:', API_ENDPOINTS.AUTH.LOGIN);
@@ -76,6 +81,34 @@ class ApiService {
       console.error('Error detallado:', error);
       throw error;
     }
+  }
+
+  async updateProfileImage(imageUri: string, token: string): Promise<ProfileImageResponse> {
+    console.log('Actualizando imagen de perfil...');
+    
+    const formData = new FormData();
+    formData.append('profileImage', {
+      uri: imageUri,
+      type: 'image/jpeg',
+      name: 'profile.jpg',
+    } as any);
+
+    const response = await fetch(API_ENDPOINTS.AUTH.UPDATE_PROFILE_IMAGE, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al actualizar la imagen de perfil');
+    }
+
+    return data;
   }
 
   async makeAuthenticatedRequest(endpoint: string, token: string, options: RequestInit = {}) {

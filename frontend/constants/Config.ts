@@ -26,6 +26,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: `${API_URL}/auth/login`,
     REGISTER: `${API_URL}/auth/register`,
+    UPDATE_PROFILE_IMAGE: `${API_URL}/auth/profile-image`,
   },
   CAFES: `${API_URL}/cafes`,
   VISITAS: `${API_URL}/visitas`,

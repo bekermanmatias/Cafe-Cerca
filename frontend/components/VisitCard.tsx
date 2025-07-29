@@ -20,6 +20,11 @@ export interface VisitCardProps {
       imageUrl: string | null;
       rating: number;
     } | null;
+    usuario?: {
+      id: number;
+      name: string;
+      profileImage: string | null;
+    };
   };
   onLike?: () => void;
   onShare?: () => void;
@@ -66,6 +71,9 @@ export const VisitCard = ({
 
   // Obtener el nombre de la cafetería de forma segura
   const cafeteriaName = visit.cafeteria?.name || 'Cafetería no disponible';
+  
+  // URL de la imagen de perfil por defecto
+  const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
 
   return (
     <View style={styles.card}>
@@ -76,7 +84,12 @@ export const VisitCard = ({
         </View>
         <View style={styles.headerRight}>
           <View style={styles.participantsContainer}>
-            <View style={styles.participantPhoto} />
+            <Image
+              source={{ 
+                uri: visit.usuario?.profileImage || defaultProfileImage
+              }}
+              style={styles.participantPhoto}
+            />
           </View>
         </View>
       </View>

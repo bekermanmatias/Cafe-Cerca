@@ -30,6 +30,12 @@ type Cafe = {
   openingHours: string;
 };
 
+type Usuario = {
+  id: number;
+  name: string;
+  profileImage: string | null;
+};
+
 type Reseña = {
   id: number;
   usuarioId: number;
@@ -40,6 +46,7 @@ type Reseña = {
     imageUrl: string;
     orden: number;
   }>;
+  usuario: Usuario;
 };
 
 type CafeResponse = {
@@ -227,9 +234,15 @@ export default function CafeDetail() {
             <VisitCard
               key={visita.id}
               visit={{
-                ...visita,
+                id: visita.id,
+                usuarioId: visita.usuarioId,
+                cafeteriaId: cafe.id,
+                comentario: visita.comentario,
+                calificacion: visita.calificacion,
+                fecha: visita.fecha,
                 cafeteria: cafe,
-                imagenes: visita.visitaImagenes
+                imagenes: visita.visitaImagenes,
+                usuario: visita.usuario
               }}
               onLike={handleLike}
               onShare={() => handleShare(visita.id)}

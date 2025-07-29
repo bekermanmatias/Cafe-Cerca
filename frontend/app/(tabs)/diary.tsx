@@ -6,6 +6,7 @@ import Constants from 'expo-constants';
 import { shareVisit, shareDiary } from '../../constants/Sharing';
 import { AntDesign } from '@expo/vector-icons';
 import { API_URL } from '../../constants/Config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Imagen {
   imageUrl: string;
@@ -45,15 +46,47 @@ export default function DiaryScreen() {
   const [visitas, setVisitas] = useState<Visita[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+
+  const loadUserData = async () => {
+    try {
+      const userDataStr = await AsyncStorage.getItem('userData');
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        setUserData(userData);
+        return userData;
+      } else {
+        // Si no hay datos de usuario, redirigir al login
+        Alert.alert('Error', 'Debes iniciar sesión para ver tu diario');
+        router.replace('/(auth)/signin');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error cargando datos del usuario:', error);
+      return null;
+    }
+  };
 
   const fetchDiario = async () => {
     try {
       setIsLoading(true);
-      console.log('Fetching from:', `${API_URL}/visitas/usuario/1`); // Debug log
-      const response = await fetch(`${API_URL}/visitas/usuario/1`, {
+      
+      // Obtener el token
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        throw new Error('No se encontró el token de autenticación');
+      }
+
+      // Obtener datos del usuario si no los tenemos
+      const user = userData || await loadUserData();
+      if (!user) return;
+
+      console.log('Fetching diary for user:', user.id);
+      const response = await fetch(`${API_URL}/visitas/usuario/${user.id}`, {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
       });
       
@@ -62,7 +95,6 @@ export default function DiaryScreen() {
       }
       
       const data: DiarioResponse = await response.json();
-      console.log('Response data:', data); // Debug log
       setVisitas(data.visitas);
     } catch (error) {
       console.error('Error fetching diario:', error);
@@ -78,8 +110,8 @@ export default function DiaryScreen() {
   };
 
   useEffect(() => {
-    fetchDiario();
-  }, [refresh]); // Se actualizará cuando cambie el parámetro refresh
+    loadUserData().then(() => fetchDiario());
+  }, [refresh]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -111,8 +143,11 @@ export default function DiaryScreen() {
 
   const handleShareDiary = async () => {
     try {
-      // Por ahora hardcodeamos el userId a 1
-      await shareDiary(1);
+      if (!userData?.id) {
+        Alert.alert('Error', 'Debes iniciar sesión para compartir tu diario');
+        return;
+      }
+      await shareDiary(userData.id);
     } catch (error) {
       console.error('Error sharing diary:', error);
       Alert.alert(
@@ -164,15 +199,26 @@ export default function DiaryScreen() {
           />
         }
       >
-        {visitas.map((visit) => (
-          <VisitCard
-            key={visit.id}
-            visit={visit}
-            onLike={handleLike}
-            onShare={() => handleShare(visit.id)}
-            onDetails={() => handleDetails(visit)}
-          />
-        ))}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Cargando visitas...</Text>
+          </View>
+        ) : visitas.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No tienes visitas registradas</Text>
+            <Text style={styles.emptySubtext}>¡Comienza agregando tu primera visita!</Text>
+          </View>
+        ) : (
+          visitas.map((visit) => (
+            <VisitCard
+              key={visit.id}
+              visit={visit}
+              onLike={handleLike}
+              onShare={() => handleShare(visit.id)}
+              onDetails={() => handleDetails(visit)}
+            />
+          ))
+        )}
       </ScrollView>
       
       <TouchableOpacity 
@@ -256,5 +302,31 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
   },
 }); 

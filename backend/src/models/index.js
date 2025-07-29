@@ -33,12 +33,12 @@ VisitaImagen.belongsTo(Visita, {
 
 // Relación entre Usuario y Visita
 User.hasMany(Visita, {
-  foreignKey: 'userId',
+  foreignKey: 'usuarioId',
   as: 'visitas'
 });
 
 Visita.belongsTo(User, {
-  foreignKey: 'userId',
+  foreignKey: 'usuarioId',
   as: 'usuario'
 });
 
@@ -52,6 +52,17 @@ Visita.hasMany(Comentario, {
 Comentario.belongsTo(Visita, {
   foreignKey: 'visitaId',
   as: 'visita'
+});
+
+// Relación entre Usuario y Comentario
+User.hasMany(Comentario, {
+  foreignKey: 'userId',
+  as: 'comentarios'
+});
+
+Comentario.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'usuario'
 });
 
 // Exportar todos los modelos en una sola declaración
