@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
+import { unlink } from 'fs/promises';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -21,7 +22,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configurar el almacenamiento
+// Configurar el almacenamiento para visitas
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -41,6 +42,7 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
+// Multer configurado para visitas
 export const upload = multer({
   storage,
   fileFilter,
@@ -50,15 +52,47 @@ export const upload = multer({
   }
 });
 
-// Función para eliminar imagen de Cloudinary
-export const deleteImage = async (publicId) => {
+/**
+ * Sube un archivo a Cloudinary (para imágenes de perfil)
+ * @param {string} filePath - Ruta del archivo temporal
+ * @returns {Promise<Object>} - Respuesta de Cloudinary con la URL de la imagen
+ */
+export const uploadToCloudinary = async (filePath) => {
   try {
-    const result = await cloudinary.uploader.destroy(publicId);
-    return result;
+    // Subir el archivo a Cloudinary
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder: 'cafe-cerca/profile-images', // Carpeta específica para imágenes de perfil
+      use_filename: true,
+      unique_filename: true,
+      overwrite: true,
+      transformation: [{ width: 500, height: 500, crop: 'fill', gravity: 'face' }] // Optimizado para fotos de perfil
+    });
+
+    // Eliminar el archivo temporal
+    await unlink(filePath);
+
+    return {
+      secure_url: result.secure_url,
+      public_id: result.public_id
+    };
   } catch (error) {
-    console.error('Error al eliminar imagen de Cloudinary:', error);
-    throw error;
+    // Si hay un error, intentar eliminar el archivo temporal
+    try {
+      await unlink(filePath);
+    } catch (unlinkError) {
+      console.error('Error eliminando archivo temporal:', unlinkError);
+    }
+    
+    throw new Error(`Error al subir imagen a Cloudinary: ${error.message}`);
   }
 };
 
-export default cloudinary;
+// Función para eliminar imagen de Cloudinary
+export const deleteFromCloudinary = async (publicId) => {
+  try {
+    await cloudinary.uploader.destroy(publicId);
+  } catch (error) {
+    console.error('Error eliminando imagen de Cloudinary:', error);
+    throw error;
+  }
+};

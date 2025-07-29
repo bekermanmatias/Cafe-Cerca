@@ -90,14 +90,13 @@ export const login = async (req, res) => {
   }
 };
 
-// Nueva función para actualizar la foto de perfil
 export const updateProfileImage = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No se proporcionó ninguna imagen' });
     }
 
-    const userId = req.user.id; // Asumiendo que tienes middleware de autenticación
+    const userId = req.user.id;
     const user = await User.findByPk(userId);
 
     if (!user) {

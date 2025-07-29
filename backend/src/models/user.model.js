@@ -17,7 +17,7 @@ export default (sequelize, DataTypes) => {
     profileImage: {
       type: DataTypes.STRING,
       allowNull: true,
-      defaultValue: null // URL de la imagen en Cloudinary
+      defaultValue: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753747419/prede_glxiry.avif' // URL de la imagen predeterminada
     }
   });
 
