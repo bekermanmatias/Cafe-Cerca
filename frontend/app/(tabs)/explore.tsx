@@ -1,11 +1,12 @@
 import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useEffect, useState } from 'react';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import SearchBar from '../../components/SearchBar';
 import FilterChips from '../../components/FilterChips';
 import TagChip from '../../components/TagChip';
 import { filters } from '../../constants/Filters';
 import { API_URL } from '../../constants/Config';
+import * as Location from 'expo-location';
 
 interface Cafe {
   id: number;
@@ -15,6 +16,9 @@ interface Cafe {
   imageUrl: string | null;
   tags: string[];
   openingHours: string;
+  lat?: number;
+  lng?: number;
+  distance?: number;
 }
 
 export default function ExploreScreen() {
@@ -23,29 +27,61 @@ export default function ExploreScreen() {
   const [cafes, setCafes] = useState<Cafe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  const router = useRouter();
 
   useEffect(() => {
-    fetchCafes();
+    const fetchData = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.warn('Permiso de ubicación denegado');
+          fetchCafes(); // aún así se cargan los cafés sin ubicación
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({});
+        const coords = {
+          lat: location.coords.latitude,
+          lng: location.coords.longitude,
+        };
+        setUserLocation(coords);
+        fetchCafes(coords.lat, coords.lng);
+      } catch (error) {
+        console.error('Error obteniendo ubicación:', error);
+        fetchCafes();
+      }
+    };
+
+    fetchData();
   }, []);
 
-  // Dentro del componente
-const router = useRouter();
+  const handleCafePress = (id: number) => {
+    router.push(`../cafe/${id}`);
+  };
 
-const handleCafePress = (id: number) => {
-  router.push(`../cafe/${id}`);
-};
-  const fetchCafes = async () => {
+  const fetchCafes = async (lat?: number, lng?: number) => {
     try {
       setLoading(true);
       setError(null);
       const response = await fetch(`${API_URL}/cafes`);
-      
-      if (!response.ok) {
-        throw new Error('Error al obtener las cafeterías');
-      }
+      if (!response.ok) throw new Error('Error al obtener las cafeterías');
 
       const data = await response.json();
-      setCafes(data);
+
+      let orderedCafes = data;
+
+      if (lat && lng) {
+        orderedCafes = data
+          .map((cafe: Cafe) => {
+            const distance = cafe.lat && cafe.lng ? getDistance(lat, lng, cafe.lat, cafe.lng) : Infinity;
+            return { ...cafe, distance };
+          })
+          .sort((a: Cafe, b: Cafe) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+      }
+
+      setCafes(orderedCafes);
     } catch (error) {
       console.error('Error al obtener cafeterías:', error);
       setError('No se pudieron cargar las cafeterías');
@@ -89,50 +125,70 @@ const handleCafePress = (id: number) => {
         onSelect={setSelectedFilters}
       />
 
-        {filteredCafes.map((cafe, index) => (
-    <TouchableOpacity
-      key={cafe.id || index}
-      onPress={() => handleCafePress(cafe.id)}
-      activeOpacity={0.8} // opcional para efecto visual
-    >
-      <View style={styles.card}>
-        <View style={styles.imageWrapper}>
-          {cafe.imageUrl ? (
-            <Image 
-              source={{ uri: cafe.imageUrl }} 
-              style={styles.image}
-            />
-          ) : (
-            <View style={[styles.image, styles.placeholderImage]}>
-              <Text style={styles.placeholderText}>{cafe.name[0].toUpperCase()}</Text>
+      {filteredCafes.map((cafe, index) => (
+        <TouchableOpacity
+          key={cafe.id || index}
+          onPress={() => handleCafePress(cafe.id)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.card}>
+            <View style={styles.imageWrapper}>
+              {cafe.imageUrl ? (
+                <Image
+                  source={{ uri: cafe.imageUrl }}
+                  style={styles.image}
+                />
+              ) : (
+                <View style={[styles.image, styles.placeholderImage]}>
+                  <Text style={styles.placeholderText}>{cafe.name[0].toUpperCase()}</Text>
+                </View>
+              )}
+              {cafe.openingHours && (
+                <TagChip
+                  label={cafe.openingHours}
+                  style={styles.horarioChip}
+                  textStyle={{ fontWeight: '500' }}
+                />
+              )}
             </View>
-          )}
-          {cafe.openingHours && (
-            <TagChip
-              label={cafe.openingHours}
-              style={styles.horarioChip}
-              textStyle={{ fontWeight: '500' }}
-            />
-          )}
-        </View>
-        <View style={styles.textContainer}>
-          <View style={styles.row}>
-            <Text style={styles.name}>{cafe.name}</Text>
-            <Text style={styles.puntaje}>{cafe.rating} ★</Text>
+            <View style={styles.textContainer}>
+              <View style={styles.row}>
+                <Text style={styles.name}>{cafe.name}</Text>
+                <Text style={styles.puntaje}>{cafe.rating} ★</Text>
+              </View>
+              <Text style={styles.location}>{cafe.address}</Text>
+              {cafe.distance !== undefined && cafe.distance !== Infinity && (
+                <Text style={styles.distanceText}>
+                  A {cafe.distance.toFixed(1)} km de ti
+                </Text>
+              )}
+              <View style={styles.tagsContainer}>
+                {cafe.tags?.map((tag: string, idx: number) => (
+                  <TagChip key={idx} label={tag} />
+                ))}
+              </View>
+            </View>
           </View>
-          <Text style={styles.location}>{cafe.address}</Text>
-          <View style={styles.tagsContainer}>
-            {cafe.tags?.map((tag: string, idx: number) => (
-              <TagChip key={idx} label={tag} />
-            ))}
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  ))}
-
+        </TouchableOpacity>
+      ))}
     </ScrollView>
   );
+}
+
+function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+
+  const R = 6371; // km
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLng / 2) ** 2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 const styles = StyleSheet.create({
@@ -158,15 +214,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   errorText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  noResultsContainer: {
-    padding: 32,
-    alignItems: 'center',
-  },
-  noResultsText: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
@@ -216,6 +263,11 @@ const styles = StyleSheet.create({
   location: {
     fontSize: 14,
     color: '#555',
+    marginTop: 4,
+  },
+  distanceText: {
+    fontSize: 13,
+    color: '#999',
     marginTop: 4,
   },
   tagsContainer: {

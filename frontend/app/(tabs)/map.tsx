@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Dimensions, Platform, Linking, ActivityIndicator, Text } from 'react-native';
+import { StyleSheet, View, Dimensions, Platform, Linking, ActivityIndicator, Text, Alert } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { API_URL } from '../../constants/Config';
 
 interface Cafe {
@@ -14,10 +15,26 @@ export default function MapScreen() {
   const [cafes, setCafes] = useState<Cafe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
-    const fetchCafes = async () => {
+    const fetchData = async () => {
       try {
+        // Pedir permisos
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permiso denegado', 'No se pudo obtener tu ubicación');
+          return;
+        }
+
+        // Obtener ubicación del usuario
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          lat: location.coords.latitude,
+          lng: location.coords.longitude,
+        });
+
+        // Obtener cafeterías
         const response = await fetch(`${API_URL}/cafes`);
         if (!response.ok) throw new Error('Error al obtener las cafeterías');
         const data = await response.json();
@@ -30,7 +47,7 @@ export default function MapScreen() {
       }
     };
 
-    fetchCafes();
+    fetchData();
   }, []);
 
   const openMapsApp = (lat: number, lng: number) => {
@@ -61,27 +78,31 @@ export default function MapScreen() {
     );
   }
 
-  if (error || cafes.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <Text style={{ color: '#666', textAlign: 'center' }}>
-          {error || 'No se encontraron cafeterías.'}
-        </Text>
-      </View>
-    );
-  }
+  const initialRegion = userLocation
+    ? {
+        latitude: userLocation.lat,
+        longitude: userLocation.lng,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }
+    : {
+        latitude: cafes[0].lat,
+        longitude: cafes[0].lng,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      };
 
   return (
     <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: cafes[0].lat,
-          longitude: cafes[0].lng,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-      >
+      <MapView style={styles.map} initialRegion={initialRegion}>
+        {userLocation && (
+          <Marker
+            coordinate={{ latitude: userLocation.lat, longitude: userLocation.lng }}
+            title="Estás aquí"
+            pinColor="blue"
+          />
+        )}
+
         {cafes.map(cafe => (
           <Marker
             key={cafe.id}
