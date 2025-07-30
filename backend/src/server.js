@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 initDatabase()
   .then(success => {
     if (success) {
-      app.listen(PORT, () => {
+      app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
       });
     } else {

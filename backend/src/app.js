@@ -10,6 +10,9 @@ import dotenv from 'dotenv';
 import cafesRoutes from './routes/cafes.js';
 import estadisticasRoutes from './routes/estadisticas.routes.js';
 import comentariosRoutes from './routes/comentarios.routes.js';
+import amigosRoutes from './routes/amigos.routes.js';
+import sequelize from './config/database.js';  
+import userRoutes from './routes/user.routes.js';
 
 // Importar modelos y sus relaciones
 import './models/index.js';
@@ -57,6 +60,10 @@ app.use('/api/cafes', cafesRoutes);
 app.use('/api/visitas', visitaRoutes);
 app.use('/api/estadisticas', estadisticasRoutes);
 app.use('/api', comentariosRoutes); // Agregamos las rutas de comentarios
+app.use('/api/amigos', amigosRoutes);
+app.use('/api/example', exampleRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Mostrar rutas disponibles por consola para que las veas
 console.log('📋 Rutas disponibles:');
@@ -67,6 +74,16 @@ console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/caf
 console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/cafes');
 console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visita/:visitaId/comentarios');
 console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/visita/:visitaId/comentarios');
+console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/enviar');
+console.log('   PATCH http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/responder/:solicitudId');
+console.log('   DELETE http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/eliminar');
+console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/lista');
+console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/solicitudes/recibidas');
+console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/solicitudes/enviadas');
+
+
+//JWT SECRET
+console.log('JWT_SECRET:', process.env.JWT_SECRET); // Para verificar que cargue bien
 
 // Manejo de errores global
 app.use((err, req, res, next) => {
@@ -77,9 +94,6 @@ app.use((err, req, res, next) => {
     stack: err.stack // para más detalle en desarrollo
   });
 });
-
-app.use('/api/example', exampleRoutes);
-app.use('/api/auth', authRoutes);
 
 // Manejo de rutas no encontradas
 app.use((req, res) => {
