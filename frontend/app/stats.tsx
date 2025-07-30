@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign, Feather } from '@expo/vector-icons';
 import { API_URL } from '../constants/Config';
 import { useAuth } from '../context/AuthContext';
 
@@ -38,14 +38,27 @@ interface Estadisticas {
   progresoMensual: ProgresoMensual[];
 }
 
+const EmptyStats = ({ onExplore }: { onExplore: () => void }) => (
+  <View style={styles.emptyContainer}>
+    <Feather name="coffee" size={64} color="#E0E0E0" style={styles.emptyIcon} />
+    <Text style={styles.emptyTitle}>¡Aún no tienes estadísticas!</Text>
+    <Text style={styles.emptyText}>
+      Comienza visitando cafeterías y compartiendo tus experiencias para ver tus estadísticas aquí.
+    </Text>
+    <TouchableOpacity style={styles.exploreButton} onPress={onExplore}>
+      <Text style={styles.exploreButtonText}>Explorar cafeterías</Text>
+    </TouchableOpacity>
+  </View>
+);
+
 export default function StatsScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
   const [stats, setStats] = useState<Estadisticas | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('Estado de autenticación:', { user, token });
     if (user && token) {
       fetchStats();
     }
@@ -53,31 +66,49 @@ export default function StatsScreen() {
 
   const fetchStats = async () => {
     try {
-      console.log('Haciendo fetch de estadísticas para usuario:', user?.id);
       const response = await fetch(`${API_URL}/estadisticas/usuarios/${user?.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error respuesta:', errorData);
-        throw new Error('Error al obtener estadísticas');
-      }
+      
       const data = await response.json();
-      setStats(data);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Si no hay estadísticas, establecemos un objeto vacío con valores por defecto
+          setStats({
+            totalVisitas: 0,
+            cafeteriasUnicas: 0,
+            promedioCalificaciones: "0.0",
+            distribucionCalificaciones: {},
+            cafeteriasFavoritas: [],
+            progresoMensual: []
+          });
+        } else {
+          throw new Error(data.error || 'Error al obtener estadísticas');
+        }
+      } else {
+        setStats(data);
+      }
     } catch (error) {
       console.error('Error:', error);
+      setError('No se pudieron cargar las estadísticas');
     } finally {
       setLoading(false);
     }
   };
 
   if (!user || !token) {
-    console.log('No hay usuario o token:', { user, token });
     return (
       <View style={styles.errorContainer}>
-        <Text>Debes iniciar sesión para ver tus estadísticas</Text>
+        <Text style={styles.errorText}>Debes iniciar sesión para ver tus estadísticas</Text>
+        <TouchableOpacity 
+          style={styles.loginButton}
+          onPress={() => router.push('/(auth)/signin')}
+        >
+          <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -90,16 +121,25 @@ export default function StatsScreen() {
     );
   }
 
-  if (!stats) {
+  if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Text>No se pudieron cargar las estadísticas</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={fetchStats}
+        >
+          <Text style={styles.retryButtonText}>Reintentar</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
-  const maxVisitas = stats?.progresoMensual.reduce((max, mes) => 
-    Math.max(max, mes.cantidadVisitas), 0) || 0;
+  if (!stats || (stats.totalVisitas === 0 && stats.cafeteriasUnicas === 0)) {
+    return <EmptyStats onExplore={() => router.push('/(tabs)/explore')} />;
+  }
+
+  const maxVisitas = Math.max(...stats.progresoMensual.map(mes => mes.cantidadVisitas), 1);
 
   return (
     <ScrollView style={styles.container}>
@@ -128,24 +168,28 @@ export default function StatsScreen() {
           <AntDesign name="linechart" size={18} color="#8D6E63" style={{ marginRight: 8 }} />
           Progreso Mensual
         </Text>
-        {stats.progresoMensual.map((mes, index) => (
-          <View key={index} style={styles.progressItem}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.monthLabel}>{mes.mes}</Text>
-              <Text style={styles.visitCount}>{mes.cantidadVisitas} visitas</Text>
+        {stats.progresoMensual.length > 0 ? (
+          stats.progresoMensual.map((mes, index) => (
+            <View key={index} style={styles.progressItem}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.monthLabel}>{mes.mes}</Text>
+                <Text style={styles.visitCount}>{mes.cantidadVisitas} visitas</Text>
+              </View>
+              <View style={styles.progressBarContainer}>
+                <View 
+                  style={[
+                    styles.progressBar, 
+                    { width: `${(mes.cantidadVisitas / maxVisitas) * 100}%` }
+                  ]} 
+                />
+              </View>
             </View>
-            <View style={styles.progressBarContainer}>
-              <View 
-                style={[
-                  styles.progressBar, 
-                  { 
-                    width: `${(mes.cantidadVisitas / maxVisitas) * 100}%`,
-                  }
-                ]} 
-              />
-            </View>
-          </View>
-        ))}
+          ))
+        ) : (
+          <Text style={styles.emptyMessage}>
+            Aún no tienes visitas registradas este mes
+          </Text>
+        )}
       </View>
 
       {/* Cafeterías Favoritas */}
@@ -154,34 +198,40 @@ export default function StatsScreen() {
           <AntDesign name="Trophy" size={18} color="#8D6E63" style={{ marginRight: 8 }} />
           Cafeterías Favoritas
         </Text>
-        {stats.cafeteriasFavoritas.map((item, index) => (
-          <View key={index} style={styles.cafeItem}>
-            <View style={styles.cafeRank}>
-              <Text style={styles.rankNumber}>{index + 1}</Text>
-            </View>
-            <Image
-              source={{ uri: item.cafeteria.imageUrl }}
-              style={styles.cafeImage}
-            />
-            <View style={styles.cafeInfo}>
-              <Text style={styles.cafeName}>{item.cafeteria.name}</Text>
-              <Text style={styles.cafeAddress} numberOfLines={1}>
-                {item.cafeteria.address}
-              </Text>
-              <View style={styles.ratingContainer}>
-                <Text style={styles.visitCount}>
-                  {item.cantidadVisitas} visitas
+        {stats.cafeteriasFavoritas.length > 0 ? (
+          stats.cafeteriasFavoritas.map((item, index) => (
+            <View key={index} style={styles.cafeItem}>
+              <View style={styles.cafeRank}>
+                <Text style={styles.rankNumber}>{index + 1}</Text>
+              </View>
+              <Image
+                source={{ uri: item.cafeteria.imageUrl }}
+                style={styles.cafeImage}
+              />
+              <View style={styles.cafeInfo}>
+                <Text style={styles.cafeName}>{item.cafeteria.name}</Text>
+                <Text style={styles.cafeAddress} numberOfLines={1}>
+                  {item.cafeteria.address}
                 </Text>
-                <View style={styles.rating}>
-                  <AntDesign name="star" size={16} color="#FFD700" />
-                  <Text style={styles.ratingText}>
-                    {item.cafeteria.rating.toFixed(1)}
+                <View style={styles.ratingContainer}>
+                  <Text style={styles.visitCount}>
+                    {item.cantidadVisitas} visitas
                   </Text>
+                  <View style={styles.rating}>
+                    <AntDesign name="star" size={16} color="#FFD700" />
+                    <Text style={styles.ratingText}>
+                      {item.cafeteria.rating.toFixed(1)}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
-          </View>
-        ))}
+          ))
+        ) : (
+          <Text style={styles.emptyMessage}>
+            Visita más cafeterías para ver tus favoritas aquí
+          </Text>
+        )}
       </View>
     </ScrollView>
   );
@@ -345,5 +395,78 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#8D6E63',
     borderRadius: 6,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: '#FFF',
+  },
+  emptyIcon: {
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#8D6E63',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  exploreButton: {
+    backgroundColor: '#8D6E63',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exploreButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  loginButton: {
+    backgroundColor: '#8D6E63',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+  },
+  loginButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  retryButton: {
+    backgroundColor: '#8D6E63',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    paddingVertical: 24,
+    fontStyle: 'italic',
   },
 }); 

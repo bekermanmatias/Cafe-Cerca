@@ -1,5 +1,5 @@
 // app/profile.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,29 +12,14 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
 
 const ProfileScreen = () => {
   const router = useRouter();
-  const [userData, setUserData] = useState<any>(null);
+  const { user, logout: contextLogout, login: updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      const userDataStr = await AsyncStorage.getItem('userData');
-      if (userDataStr) {
-        setUserData(JSON.parse(userDataStr));
-      }
-    } catch (error) {
-      console.error('Error cargando datos del usuario:', error);
-    }
-  };
 
   const handleImagePick = async () => {
     try {
@@ -58,17 +43,14 @@ const ProfileScreen = () => {
       if (!result.canceled && result.assets[0]) {
         setLoading(true);
         try {
-          // Obtener el token
-          const token = await AsyncStorage.getItem('userToken');
-          if (!token) throw new Error('No se encontró el token');
-
           // Usar el servicio para actualizar la imagen
-          const response = await apiService.updateProfileImage(result.assets[0].uri, token);
+          const response = await apiService.updateProfileImage(result.assets[0].uri);
           
-          // Actualizar datos del usuario
-          const updatedUserData = { ...userData, profileImage: response.profileImage };
-          await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
-          setUserData(updatedUserData);
+          // Actualizar datos del usuario en el contexto
+          if (user) {
+            const updatedUser = { ...user, profileImage: response.profileImage };
+            await updateUser(updatedUser);
+          }
           
           Alert.alert('Éxito', 'Foto de perfil actualizada');
         } catch (error) {
@@ -111,9 +93,7 @@ const ProfileScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Limpiar el almacenamiento
-              await AsyncStorage.multiRemove(['userToken', 'userData']);
-              // Redirigir al login
+              await contextLogout();
               router.replace('/(auth)/signin');
             } catch (error) {
               console.error('Error al cerrar sesión:', error);
@@ -133,6 +113,14 @@ const ProfileScreen = () => {
     { title: 'Cambiar Contraseña', icon: 'lock' as const },
   ];
 
+  if (!user) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text>Cargando perfil...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
@@ -140,7 +128,7 @@ const ProfileScreen = () => {
           <View style={styles.imageContainer}>
             <Image
               source={{ 
-                uri: userData?.profileImage || 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png'
+                uri: user.profileImage || 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png'
               }}
               style={styles.profileImage}
             />
@@ -152,8 +140,8 @@ const ProfileScreen = () => {
               <MaterialIcons name="camera-alt" size={20} color="white" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.userName}>{userData?.name || 'Cargando...'}</Text>
-          <Text style={styles.userHandle}>@{userData?.email?.split('@')[0] || 'usuario'}</Text>
+          <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userHandle}>@{user.email.split('@')[0]}</Text>
         </View>
 
         <View style={styles.menuContainer}>
@@ -266,6 +254,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

@@ -45,12 +45,21 @@ export const crearVisita = async (req, res) => {
       });
     }
 
+    // Verificar que la cafetería existe
+    const cafe = await Cafe.findByPk(cafeteriaId);
+    if (!cafe) {
+      return res.status(404).json({
+        mensaje: 'Cafetería no encontrada'
+      });
+    }
+
     // Crear la visita
     const nuevaVisita = await Visita.create({
       usuarioId,
       cafeteriaId,
       comentario,
-      calificacion
+      calificacion,
+      fecha: new Date()
     }, { transaction: t });
 
     // Si hay imágenes, guardarlas
@@ -66,15 +75,33 @@ export const crearVisita = async (req, res) => {
 
     await t.commit();
 
-    // Obtener la visita con sus imágenes
-    const visitaConImagenes = await Visita.findByPk(nuevaVisita.id, {
-      include: [includeImagenes],
+    // Obtener la visita completa con todas las relaciones
+    const visitaCompleta = await Visita.findByPk(nuevaVisita.id, {
+      include: [
+        includeImagenes,
+        includeCafeteria,
+        {
+          model: User,
+          as: 'usuario',
+          attributes: ['id', 'name', 'profileImage'],
+          required: true
+        }
+      ],
       order: orderOptions
     });
 
+    if (!visitaCompleta) {
+      throw new Error('Error al obtener la visita creada');
+    }
+
+    const visitaTransformada = {
+      ...visitaCompleta.toJSON(),
+      imagenes: visitaCompleta.visitaImagenes || []
+    };
+
     res.status(201).json({
       mensaje: 'Visita creada exitosamente',
-      visita: visitaConImagenes
+      visita: visitaTransformada
     });
 
   } catch (error) {
@@ -294,26 +321,53 @@ export const obtenerDiarioUsuario = async (req, res) => {
     // Usar el ID del usuario del token
     const usuarioId = req.user.id;
 
+    // Primero verificar si hay visitas para este usuario
+    const tieneVisitas = await Visita.count({
+      where: { usuarioId }
+    });
+
+    // Si no hay visitas o hay un error de columna, devolver respuesta vacía
+    if (tieneVisitas === 0) {
+      return res.status(200).json({
+        mensaje: '¡Aún no tienes visitas registradas! 🌟 Explora nuevas cafeterías y comparte tus experiencias.',
+        totalVisitas: 0,
+        visitas: [],
+        sugerencia: 'Puedes empezar visitando alguna de nuestras cafeterías recomendadas y compartir tu experiencia.'
+      });
+    }
+
     const visitas = await Visita.findAll({
       where: { usuarioId },
       include: [includeImagenes, includeCafeteria, includeUsuario],
-      order: orderOptions
+      order: [['createdAt', 'DESC']]
     });
 
     // Transformar la respuesta para mantener compatibilidad con el frontend
     const visitasTransformadas = visitas.map(visita => ({
       ...visita.toJSON(),
-      imagenes: visita.visitaImagenes
+      imagenes: visita.visitaImagenes || []
     }));
 
     res.json({
-      mensaje: visitasTransformadas.length > 0 ? 'Diario recuperado exitosamente' : 'No tienes visitas registradas',
+      mensaje: 'Diario recuperado exitosamente',
       totalVisitas: visitas.length,
       visitas: visitasTransformadas
     });
 
   } catch (error) {
     console.error('Error al obtener el diario del usuario:', error);
+
+    // Si el error es por columna faltante, devolver respuesta vacía
+    if (error.name === 'SequelizeDatabaseError' && 
+        error.parent?.code === 'ER_BAD_FIELD_ERROR') {
+      return res.status(200).json({
+        mensaje: '¡Aún no tienes visitas registradas! 🌟 Explora nuevas cafeterías y comparte tus experiencias.',
+        totalVisitas: 0,
+        visitas: [],
+        sugerencia: 'Puedes empezar visitando alguna de nuestras cafeterías recomendadas y compartir tu experiencia.'
+      });
+    }
+
     res.status(500).json({
       mensaje: 'Error al obtener el diario del usuario',
       error: error.message

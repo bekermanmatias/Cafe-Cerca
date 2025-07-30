@@ -1,5 +1,6 @@
 // services/api.ts - Servicio para llamadas a la API
 import { API_URL, API_ENDPOINTS } from '../constants/Config';
+import { storage, StorageKeys } from '../utils/storage';
 
 interface LoginRequest {
   email: string;
@@ -50,6 +51,34 @@ interface SaveResponse {
 
 interface SaveStatusResponse {
   saved: boolean;
+}
+
+interface LikedVisitasResponse {
+  message: string;
+  totalVisitas: number;
+  visitas: any[];
+  sugerencia?: string;
+}
+
+interface SavedCafesResponse {
+  message: string;
+  totalCafes: number;
+  cafes: any[];
+  sugerencia?: string;
+}
+
+interface ComentarioResponse {
+  message: string;
+  comentario: {
+    id: number;
+    contenido: string;
+    createdAt: string;
+    usuario: {
+      id: number;
+      name: string;
+      profileImage: string;
+    };
+  };
 }
 
 class ApiService {
@@ -103,9 +132,14 @@ class ApiService {
     }
   }
 
-  async updateProfileImage(imageUri: string, token: string): Promise<ProfileImageResponse> {
+  async updateProfileImage(imageUri: string): Promise<ProfileImageResponse> {
     console.log('Actualizando imagen de perfil...');
     
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) {
+      throw new Error('No se encontró el token de autenticación');
+    }
+
     const formData = new FormData();
     formData.append('profileImage', {
       uri: imageUri,
@@ -133,7 +167,7 @@ class ApiService {
 
   async toggleLike(visitaId: number, token: string): Promise<LikeResponse> {
     return this.makeAuthenticatedRequest(
-      `/visitas/${visitaId}/like`,
+      `/likes/toggle/${visitaId}`,
       token,
       { method: 'POST' }
     );
@@ -141,13 +175,13 @@ class ApiService {
 
   async getLikeStatus(visitaId: number, token: string): Promise<LikeStatusResponse> {
     return this.makeAuthenticatedRequest(
-      `/visitas/${visitaId}/like`,
+      `/likes/status/${visitaId}`,
       token,
       { method: 'GET' }
     );
   }
 
-  async getLikedVisitas(token: string): Promise<any[]> {
+  async getLikedVisitas(token: string): Promise<LikedVisitasResponse> {
     return this.makeAuthenticatedRequest(
       '/likes',
       token,
@@ -157,7 +191,7 @@ class ApiService {
 
   async toggleSavedCafe(cafeId: number, token: string): Promise<SaveResponse> {
     return this.makeAuthenticatedRequest(
-      `/cafes/${cafeId}/save`,
+      `/saved-cafes/toggle/${cafeId}`,
       token,
       { method: 'POST' }
     );
@@ -165,13 +199,13 @@ class ApiService {
 
   async getSavedStatus(cafeId: number, token: string): Promise<SaveStatusResponse> {
     return this.makeAuthenticatedRequest(
-      `/cafes/${cafeId}/save`,
+      `/saved-cafes/status/${cafeId}`,
       token,
       { method: 'GET' }
     );
   }
 
-  async getSavedCafes(token: string): Promise<any[]> {
+  async getSavedCafes(token: string): Promise<SavedCafesResponse> {
     return this.makeAuthenticatedRequest(
       '/saved-cafes',
       token,
@@ -194,6 +228,56 @@ class ApiService {
     }
 
     return response.json();
+  }
+
+  async getComentarios(visitaId: number): Promise<any> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/comentarios/visita/${visitaId}`,
+      token,
+      { method: 'GET' }
+    );
+  }
+
+  async createComentario(visitaId: number, contenido: string): Promise<ComentarioResponse> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/comentarios/visita/${visitaId}`,
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify({ contenido })
+      }
+    );
+  }
+
+  async updateComentario(comentarioId: number, contenido: string): Promise<ComentarioResponse> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/comentarios/${comentarioId}`,
+      token,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ contenido })
+      }
+    );
+  }
+
+  async deleteComentario(comentarioId: number): Promise<{ message: string }> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/comentarios/${comentarioId}`,
+      token,
+      { method: 'DELETE' }
+    );
   }
 }
 

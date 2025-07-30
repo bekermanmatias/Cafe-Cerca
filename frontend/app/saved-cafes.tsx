@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image, TouchableOp
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { Stack, useRouter } from 'expo-router';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Feather } from '@expo/vector-icons';
 
 interface Cafe {
   id: number;
@@ -15,9 +15,24 @@ interface Cafe {
   openingHours: string;
 }
 
+const EmptyState = ({ onExplore }: { onExplore: () => void }) => (
+  <View style={styles.emptyContainer}>
+    <Feather name="bookmark" size={64} color="#E0E0E0" style={styles.emptyIcon} />
+    <Text style={styles.emptyTitle}>No tienes cafeterías guardadas</Text>
+    <Text style={styles.emptyText}>
+      Guarda tus cafeterías favoritas para acceder rápidamente a ellas y no perderte ninguna.
+    </Text>
+    <TouchableOpacity style={styles.exploreButton} onPress={onExplore}>
+      <Feather name="coffee" size={20} color="#FFF" />
+      <Text style={styles.exploreButtonText}>Explorar cafeterías</Text>
+    </TouchableOpacity>
+  </View>
+);
+
 export default function SavedCafesScreen() {
   const [savedCafes, setSavedCafes] = useState<Cafe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
   const router = useRouter();
 
@@ -26,13 +41,19 @@ export default function SavedCafesScreen() {
   }, [token]);
 
   const loadSavedCafes = async () => {
-    if (!token) return;
+    if (!token) {
+      setError('Debes iniciar sesión para ver tus cafeterías guardadas');
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const cafes = await apiService.getSavedCafes(token);
-      setSavedCafes(cafes);
+      setError(null);
+      const response = await apiService.getSavedCafes(token);
+      setSavedCafes(response.cafes || []);
     } catch (error) {
       console.error('Error al cargar cafeterías guardadas:', error);
+      setError('No se pudieron cargar las cafeterías guardadas');
     } finally {
       setLoading(false);
     }
@@ -42,7 +63,6 @@ export default function SavedCafesScreen() {
     if (!token) return;
     try {
       await apiService.toggleSavedCafe(cafeId, token);
-      // Actualizar la lista local
       setSavedCafes(prev => prev.filter(cafe => cafe.id !== cafeId));
     } catch (error) {
       console.error('Error al quitar de guardados:', error);
@@ -104,12 +124,27 @@ export default function SavedCafesScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#A76F4D" />
         </View>
-      ) : savedCafes.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            No tienes cafeterías guardadas
-          </Text>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          {error.includes('iniciar sesión') ? (
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => router.push('/(auth)/signin')}
+            >
+              <Text style={styles.actionButtonText}>Iniciar Sesión</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={loadSavedCafes}
+            >
+              <Text style={styles.actionButtonText}>Reintentar</Text>
+            </TouchableOpacity>
+          )}
         </View>
+      ) : savedCafes.length === 0 ? (
+        <EmptyState onExplore={() => router.push('/(tabs)/explore')} />
       ) : (
         <FlatList
           data={savedCafes}
@@ -136,12 +171,62 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 32,
+    backgroundColor: '#FFF',
+  },
+  emptyIcon: {
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#8D6E63',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptyText: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  exploreButton: {
+    backgroundColor: '#8D6E63',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exploreButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  actionButton: {
+    backgroundColor: '#8D6E63',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+  },
+  actionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
   listContainer: {
     padding: 16,

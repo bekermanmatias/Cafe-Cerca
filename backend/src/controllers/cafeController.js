@@ -60,7 +60,8 @@ export const getCafeById = async (req, res) => {
         {
           model: User,
           as: 'usuario',
-          attributes: ['id', 'name', 'profileImage']
+          attributes: ['id', 'name', 'profileImage'],
+          required: true // Asegura que solo se devuelvan visitas con usuario
         },
         {
           model: VisitaImagen,
@@ -77,13 +78,14 @@ export const getCafeById = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
 
-    // Transformar las reseñas para incluir el conteo de likes
+    // Transformar las reseñas para incluir el conteo de likes y asegurar que la información del usuario esté presente
     const reseñasConLikes = reseñas.map(reseña => {
       const reseñaJSON = reseña.toJSON();
       return {
         ...reseñaJSON,
         likesCount: reseñaJSON.likes.length,
-        likes: undefined // Removemos el array de likes ya que solo necesitamos el conteo
+        likes: undefined, // Removemos el array de likes ya que solo necesitamos el conteo
+        usuario: reseñaJSON.usuario || null // Aseguramos que siempre haya un valor para usuario
       };
     });
 

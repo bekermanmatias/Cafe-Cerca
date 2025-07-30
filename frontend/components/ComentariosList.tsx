@@ -15,10 +15,10 @@ import {
   findNodeHandle,
   Image
 } from 'react-native';
-import { API_ENDPOINTS } from '../constants/Config';
+import { apiService } from '../services/api';
 import { ThemedText } from './ThemedText';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
 
 interface Usuario {
   id: number;
@@ -28,8 +28,8 @@ interface Usuario {
 
 interface Comentario {
   id: number;
-  texto: string;
-  fechaHora: string;
+  contenido: string;
+  createdAt: string;
   usuario: Usuario;
 }
 
@@ -53,6 +53,21 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
   const menuButtonsRefs = useRef<{ [key: number]: View | null }>({});
   const [userData, setUserData] = useState<any>(null);
   const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
+
+  const cargarComentarios = useCallback(async () => {
+    if (!visitaId) return;
+    
+    setIsLoading(true);
+    try {
+      const data = await apiService.getComentarios(visitaId);
+      setComentarios(data.comentarios || []);
+    } catch (error) {
+      console.error('Error al cargar comentarios:', error);
+      Alert.alert('Error', 'No se pudieron cargar los comentarios');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [visitaId]);
 
   useEffect(() => {
     const keyboardWillShow = () => {
@@ -82,61 +97,24 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
   }, []);
 
   useEffect(() => {
-    loadUserData();
     cargarComentarios();
   }, [cargarComentarios]);
 
-  const loadUserData = async () => {
-    try {
-      const userDataStr = await AsyncStorage.getItem('userData');
-      if (userDataStr) {
-        setUserData(JSON.parse(userDataStr));
-      }
-    } catch (error) {
-      console.error('Error cargando datos del usuario:', error);
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    if (user) {
+      setUserData(user);
     }
-  };
-
-  const cargarComentarios = useCallback(async () => {
-    if (!visitaId) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await fetch(API_ENDPOINTS.COMENTARIOS.GET_BY_VISITA(visitaId));
-      if (!response.ok) throw new Error('Error al obtener comentarios');
-      const data = await response.json();
-      setComentarios(data);
-    } catch (error) {
-      console.error('Error al cargar comentarios:', error);
-      Alert.alert('Error', 'No se pudieron cargar los comentarios');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [visitaId]);
+  }, [user]);
 
   const agregarComentario = async () => {
     if (!nuevoComentario.trim() || !visitaId || !userData) return;
 
     setIsSubmitting(true);
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) throw new Error('No se encontró el token de autenticación');
-
-      const response = await fetch(API_ENDPOINTS.COMENTARIOS.CREATE(visitaId), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          texto: nuevoComentario.trim()
-        }),
-      });
-
-      if (!response.ok) throw new Error('Error al crear comentario');
-
-      const comentarioCreado = await response.json();
-      setComentarios(prevComentarios => [...prevComentarios, comentarioCreado]);
+      const response = await apiService.createComentario(visitaId, nuevoComentario.trim());
+      setComentarios(prevComentarios => [...prevComentarios, response.comentario]);
       setNuevoComentario('');
     } catch (error) {
       console.error('Error al agregar comentario:', error);
@@ -148,12 +126,7 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
 
   const eliminarComentario = async (comentarioId: number) => {
     try {
-      const response = await fetch(API_ENDPOINTS.COMENTARIOS.DELETE(comentarioId), {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Error al eliminar comentario');
-
+      await apiService.deleteComentario(comentarioId);
       setComentarios(prevComentarios => 
         prevComentarios.filter(comentario => comentario.id !== comentarioId)
       );
@@ -165,22 +138,10 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
 
   const editarComentario = async (comentarioId: number, nuevoTexto: string) => {
     try {
-      const response = await fetch(API_ENDPOINTS.COMENTARIOS.UPDATE(comentarioId), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          texto: nuevoTexto
-        }),
-      });
-
-      if (!response.ok) throw new Error('Error al actualizar comentario');
-
-      const comentarioActualizado = await response.json();
+      const response = await apiService.updateComentario(comentarioId, nuevoTexto);
       setComentarios(prevComentarios => 
         prevComentarios.map(c => 
-          c.id === comentarioId ? { ...c, texto: nuevoTexto } : c
+          c.id === comentarioId ? response.comentario : c
         )
       );
       setShowEditModal(false);
@@ -193,7 +154,7 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
 
   const handleEditarComentario = (comentario: Comentario) => {
     setComentarioEditando(comentario);
-    setTextoEditado(comentario.texto);
+    setTextoEditado(comentario.contenido);
     setShowEditModal(true);
     setShowOptions(null);
   };
@@ -281,10 +242,10 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
           <View style={styles.comentarioHeader}>
             <ThemedText style={styles.nombreUsuario}>{item.usuario?.name || 'Usuario sin nombre'}</ThemedText>
             <ThemedText style={styles.fecha}>
-              {new Date(item.fechaHora).toLocaleDateString()}
+              {new Date(item.createdAt).toLocaleDateString()}
             </ThemedText>
           </View>
-          <ThemedText style={styles.textoComentario}>{item.texto}</ThemedText>
+          <ThemedText style={styles.textoComentario}>{item.contenido}</ThemedText>
         </View>
         {userData?.id === item.usuario?.id && (
           <TouchableOpacity 

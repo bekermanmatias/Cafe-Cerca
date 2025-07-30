@@ -32,15 +32,20 @@ export const API_ENDPOINTS = {
   VISITAS: `${API_URL}/visitas`,
   ESTADISTICAS: `${API_URL}/estadisticas`,
   COMENTARIOS: {
-    GET_BY_VISITA: (visitaId: number) => `${API_URL}/visita/${visitaId}/comentarios`,
-    CREATE: (visitaId: number) => `${API_URL}/visita/${visitaId}/comentarios`,
+    GET_BY_VISITA: (visitaId: number) => `${API_URL}/comentarios/visita/${visitaId}`,
+    CREATE: (visitaId: number) => `${API_URL}/comentarios/visita/${visitaId}`,
     UPDATE: (comentarioId: number) => `${API_URL}/comentarios/${comentarioId}`,
     DELETE: (comentarioId: number) => `${API_URL}/comentarios/${comentarioId}`,
   },
   LIKES: {
-    TOGGLE: (visitaId: number) => `${API_URL}/visitas/${visitaId}/like`,
-    GET_STATUS: (visitaId: number) => `${API_URL}/visitas/${visitaId}/like`,
+    TOGGLE: (visitaId: number) => `${API_URL}/likes/toggle/${visitaId}`,
+    GET_STATUS: (visitaId: number) => `${API_URL}/likes/status/${visitaId}`,
     GET_LIKED_VISITAS: `${API_URL}/likes`
+  },
+  SAVED_CAFES: {
+    TOGGLE: (cafeId: number) => `${API_URL}/saved-cafes/toggle/${cafeId}`,
+    GET_STATUS: (cafeId: number) => `${API_URL}/saved-cafes/status/${cafeId}`,
+    GET_ALL: `${API_URL}/saved-cafes`
   }
 };
 
