@@ -49,8 +49,8 @@ export default function SavedCafesScreen() {
     try {
       setLoading(true);
       setError(null);
-      const cafes = await apiService.getSavedCafes(token);
-      setSavedCafes(cafes);
+      const response = await apiService.getSavedCafes(token);
+      setSavedCafes(response.cafes || []);
     } catch (error) {
       console.error('Error al cargar cafeterías guardadas:', error);
       setError('No se pudieron cargar las cafeterías guardadas');

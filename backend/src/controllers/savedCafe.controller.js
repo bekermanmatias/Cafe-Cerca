@@ -5,8 +5,6 @@ export const toggleSavedCafe = async (req, res) => {
     const { cafeId } = req.params;
     const userId = req.user.id;
 
-    console.log('Intentando guardar/quitar cafetería:', { cafeId, userId });
-
     // Verificar si la cafetería existe
     const cafe = await Cafe.findByPk(cafeId);
     if (!cafe) {
@@ -35,15 +33,16 @@ export const toggleSavedCafe = async (req, res) => {
       saved = true;
     }
 
-    console.log('Operación completada:', { saved, cafeId, userId });
-
     res.json({ 
       saved,
       message: saved ? 'Cafetería guardada exitosamente' : 'Cafetería removida de guardados' 
     });
   } catch (error) {
-    console.error('Error detallado al procesar guardado:', error);
-    res.status(500).json({ message: 'Error al procesar la solicitud' });
+    console.error('Error al procesar guardado:', error);
+    res.status(500).json({ 
+      message: 'Error al procesar la solicitud',
+      error: error.message 
+    });
   }
 };
 
@@ -52,7 +51,11 @@ export const getSavedStatus = async (req, res) => {
     const { cafeId } = req.params;
     const userId = req.user.id;
 
-    console.log('Verificando estado de guardado:', { cafeId, userId });
+    // Verificar si la cafetería existe
+    const cafe = await Cafe.findByPk(cafeId);
+    if (!cafe) {
+      return res.status(404).json({ message: 'Cafetería no encontrada' });
+    }
 
     const savedCafe = await SavedCafe.findOne({
       where: {
@@ -61,12 +64,13 @@ export const getSavedStatus = async (req, res) => {
       }
     });
 
-    console.log('Estado de guardado:', { saved: !!savedCafe, cafeId, userId });
-
     res.json({ saved: !!savedCafe });
   } catch (error) {
-    console.error('Error detallado al obtener estado de guardado:', error);
-    res.status(500).json({ message: 'Error al obtener estado de guardado' });
+    console.error('Error al obtener estado de guardado:', error);
+    res.status(500).json({ 
+      message: 'Error al obtener estado de guardado',
+      error: error.message 
+    });
   }
 };
 
@@ -74,26 +78,37 @@ export const getSavedCafes = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    console.log('Obteniendo cafeterías guardadas para usuario:', userId);
-
     const savedCafes = await SavedCafe.findAll({
       where: { userId },
       include: [{
         model: Cafe,
         as: 'cafe',
-        attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+        attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours', 'lat', 'lng']
       }],
       order: [['createdAt', 'DESC']]
     });
 
     // Transformar los datos para enviar solo la información de las cafeterías
-    const cafes = savedCafes.map(saved => saved.cafe);
+    const cafes = savedCafes.map(saved => saved.cafe).filter(cafe => cafe !== null);
 
-    console.log('Cafeterías guardadas encontradas:', cafes.length);
+    if (cafes.length === 0) {
+      return res.status(200).json({
+        message: '¡Aún no tienes cafeterías guardadas! 🌟 Explora las cafeterías y guarda tus favoritas.',
+        cafes: [],
+        sugerencia: 'Puedes empezar explorando las cafeterías cercanas y guardar las que te interesen para visitarlas más tarde.'
+      });
+    }
 
-    res.json(cafes);
+    res.json({
+      message: 'Cafeterías guardadas recuperadas exitosamente',
+      totalCafes: cafes.length,
+      cafes
+    });
   } catch (error) {
-    console.error('Error detallado al obtener cafeterías guardadas:', error);
-    res.status(500).json({ message: 'Error al obtener cafeterías guardadas' });
+    console.error('Error al obtener cafeterías guardadas:', error);
+    res.status(500).json({ 
+      message: 'Error al obtener cafeterías guardadas',
+      error: error.message 
+    });
   }
 }; 

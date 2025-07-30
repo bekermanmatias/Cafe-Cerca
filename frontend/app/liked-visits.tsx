@@ -40,8 +40,8 @@ export default function LikedVisitsScreen() {
     try {
       setLoading(true);
       setError(null);
-      const visits = await apiService.getLikedVisitas(token);
-      setLikedVisits(visits);
+      const response = await apiService.getLikedVisitas(token);
+      setLikedVisits(response.visitas || []);
     } catch (error) {
       console.error('Error al cargar visitas con like:', error);
       setError('No se pudieron cargar las visitas favoritas');

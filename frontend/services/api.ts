@@ -53,6 +53,20 @@ interface SaveStatusResponse {
   saved: boolean;
 }
 
+interface LikedVisitasResponse {
+  message: string;
+  totalVisitas: number;
+  visitas: any[];
+  sugerencia?: string;
+}
+
+interface SavedCafesResponse {
+  message: string;
+  totalCafes: number;
+  cafes: any[];
+  sugerencia?: string;
+}
+
 class ApiService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     console.log('Intentando login con URL:', API_ENDPOINTS.AUTH.LOGIN);
@@ -139,7 +153,7 @@ class ApiService {
 
   async toggleLike(visitaId: number, token: string): Promise<LikeResponse> {
     return this.makeAuthenticatedRequest(
-      `/visitas/${visitaId}/like`,
+      `/likes/toggle/${visitaId}`,
       token,
       { method: 'POST' }
     );
@@ -147,13 +161,13 @@ class ApiService {
 
   async getLikeStatus(visitaId: number, token: string): Promise<LikeStatusResponse> {
     return this.makeAuthenticatedRequest(
-      `/visitas/${visitaId}/like`,
+      `/likes/status/${visitaId}`,
       token,
       { method: 'GET' }
     );
   }
 
-  async getLikedVisitas(token: string): Promise<any[]> {
+  async getLikedVisitas(token: string): Promise<LikedVisitasResponse> {
     return this.makeAuthenticatedRequest(
       '/likes',
       token,
@@ -177,7 +191,7 @@ class ApiService {
     );
   }
 
-  async getSavedCafes(token: string): Promise<any[]> {
+  async getSavedCafes(token: string): Promise<SavedCafesResponse> {
     return this.makeAuthenticatedRequest(
       '/saved-cafes',
       token,

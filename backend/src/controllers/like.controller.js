@@ -54,6 +54,12 @@ export const getLikeStatus = async (req, res) => {
     const { visitaId } = req.params;
     const userId = req.user.id;
 
+    // Verificar si la visita existe
+    const visita = await Visita.findByPk(visitaId);
+    if (!visita) {
+      return res.status(404).json({ message: 'Visita no encontrada' });
+    }
+
     const like = await Like.findOne({
       where: {
         userId,
@@ -79,6 +85,19 @@ export const getLikeStatus = async (req, res) => {
 export const getLikedVisitas = async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Primero verificar si el usuario tiene likes
+    const hasLikes = await Like.findOne({
+      where: { userId }
+    });
+
+    if (!hasLikes) {
+      return res.status(200).json({
+        message: '¡Aún no has dado like a ninguna visita! 🌟 Explora las visitas de otros usuarios y marca las que más te gusten.',
+        visitas: [],
+        sugerencia: 'Puedes empezar explorando las visitas más recientes y dar like a las que te interesen.'
+      });
+    }
 
     const likedVisitas = await Visita.findAll({
       include: [
@@ -107,6 +126,14 @@ export const getLikedVisitas = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
 
+    if (likedVisitas.length === 0) {
+      return res.status(200).json({
+        message: '¡Aún no has dado like a ninguna visita! 🌟 Explora las visitas de otros usuarios y marca las que más te gusten.',
+        visitas: [],
+        sugerencia: 'Puedes empezar explorando las visitas más recientes y dar like a las que te interesen.'
+      });
+    }
+
     // Transformar los datos y agregar el conteo de likes
     const formattedVisitas = await Promise.all(likedVisitas.map(async (visita) => {
       const likesCount = await Like.count({
@@ -124,6 +151,7 @@ export const getLikedVisitas = async (req, res) => {
           orden: img.orden
         })),
         cafeteria: visita.cafeteria ? {
+          id: visita.cafeteria.id,
           name: visita.cafeteria.name,
           address: visita.cafeteria.address,
           imageUrl: visita.cafeteria.imageUrl,
@@ -137,9 +165,16 @@ export const getLikedVisitas = async (req, res) => {
       };
     }));
 
-    res.json(formattedVisitas);
+    res.json({
+      message: 'Visitas con like recuperadas exitosamente',
+      totalVisitas: formattedVisitas.length,
+      visitas: formattedVisitas
+    });
   } catch (error) {
     console.error('Error al obtener visitas con like:', error);
-    res.status(500).json({ message: 'Error al obtener visitas con like' });
+    res.status(500).json({ 
+      message: 'Error al obtener visitas con like',
+      error: error.message 
+    });
   }
 }; 
