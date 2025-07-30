@@ -163,7 +163,7 @@ class ApiService {
 
   async toggleSavedCafe(cafeId: number, token: string): Promise<SaveResponse> {
     return this.makeAuthenticatedRequest(
-      `/cafes/${cafeId}/save`,
+      `/saved-cafes/toggle/${cafeId}`,
       token,
       { method: 'POST' }
     );
@@ -171,7 +171,7 @@ class ApiService {
 
   async getSavedStatus(cafeId: number, token: string): Promise<SaveStatusResponse> {
     return this.makeAuthenticatedRequest(
-      `/cafes/${cafeId}/save`,
+      `/saved-cafes/status/${cafeId}`,
       token,
       { method: 'GET' }
     );

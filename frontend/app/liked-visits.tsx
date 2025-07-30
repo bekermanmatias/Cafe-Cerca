@@ -1,13 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { VisitCard } from '../components/VisitCard';
 import { Stack, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+
+const EmptyState = ({ onExplore }: { onExplore: () => void }) => (
+  <View style={styles.emptyContainer}>
+    <Feather name="heart" size={64} color="#E0E0E0" style={styles.emptyIcon} />
+    <Text style={styles.emptyTitle}>No tienes visitas favoritas</Text>
+    <Text style={styles.emptyText}>
+      Dale "Me gusta" a las visitas que más te interesen para guardarlas aquí y encontrarlas fácilmente.
+    </Text>
+    <TouchableOpacity style={styles.exploreButton} onPress={onExplore}>
+      <Feather name="coffee" size={20} color="#FFF" />
+      <Text style={styles.exploreButtonText}>Explorar visitas</Text>
+    </TouchableOpacity>
+  </View>
+);
 
 export default function LikedVisitsScreen() {
   const [likedVisits, setLikedVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
   const router = useRouter();
 
@@ -16,13 +32,19 @@ export default function LikedVisitsScreen() {
   }, [token]);
 
   const loadLikedVisits = async () => {
-    if (!token) return;
+    if (!token) {
+      setError('Debes iniciar sesión para ver tus visitas favoritas');
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
+      setError(null);
       const visits = await apiService.getLikedVisitas(token);
       setLikedVisits(visits);
     } catch (error) {
       console.error('Error al cargar visitas con like:', error);
+      setError('No se pudieron cargar las visitas favoritas');
     } finally {
       setLoading(false);
     }
@@ -30,7 +52,6 @@ export default function LikedVisitsScreen() {
 
   const handleLikeChange = async (visitId: number, liked: boolean) => {
     if (!liked) {
-      // Si se quitó el like, eliminar la visita de la lista
       setLikedVisits(prev => prev.filter(visit => visit.id !== visitId));
     }
   };
@@ -66,12 +87,27 @@ export default function LikedVisitsScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#A76F4D" />
         </View>
-      ) : likedVisits.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            Aún no has dado like a ninguna visita
-          </Text>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          {error.includes('iniciar sesión') ? (
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => router.push('/(auth)/signin')}
+            >
+              <Text style={styles.actionButtonText}>Iniciar Sesión</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={loadLikedVisits}
+            >
+              <Text style={styles.actionButtonText}>Reintentar</Text>
+            </TouchableOpacity>
+          )}
         </View>
+      ) : likedVisits.length === 0 ? (
+        <EmptyState onExplore={() => router.push('/(tabs)/diary')} />
       ) : (
         <FlatList
           data={likedVisits}
@@ -105,12 +141,62 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 32,
+    backgroundColor: '#FFF',
+  },
+  emptyIcon: {
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#8D6E63',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptyText: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  exploreButton: {
+    backgroundColor: '#8D6E63',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exploreButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  actionButton: {
+    backgroundColor: '#8D6E63',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+  },
+  actionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
   listContainer: {
     paddingBottom: 20,

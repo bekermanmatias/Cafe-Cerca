@@ -13,6 +13,23 @@ export const getEstadisticasUsuario = async (req, res) => {
       });
     }
 
+    // Verificar si el usuario tiene visitas
+    const tieneVisitas = await Visita.findOne({
+      where: { usuarioId }
+    });
+
+    // Si no tiene visitas, devolver estadísticas vacías
+    if (!tieneVisitas) {
+      return res.json({
+        totalVisitas: 0,
+        cafeteriasUnicas: 0,
+        promedioCalificaciones: "0.0",
+        distribucionCalificaciones: {},
+        cafeteriasFavoritas: [],
+        progresoMensual: []
+      });
+    }
+
     // Obtener cantidad total de visitas
     const totalVisitas = await Visita.count({
       where: { usuarioId }
@@ -96,7 +113,8 @@ export const getEstadisticasUsuario = async (req, res) => {
     res.json({
       totalVisitas,
       cafeteriasUnicas,
-      promedioCalificaciones: parseFloat(promedioCalificaciones.getDataValue('promedio')).toFixed(1),
+      promedioCalificaciones: promedioCalificaciones ? 
+        parseFloat(promedioCalificaciones.getDataValue('promedio')).toFixed(1) : "0.0",
       distribucionCalificaciones: distribucionCalificaciones.reduce((acc, item) => {
         acc[item.calificacion] = parseInt(item.getDataValue('cantidad'));
         return acc;
@@ -110,6 +128,20 @@ export const getEstadisticasUsuario = async (req, res) => {
 
   } catch (error) {
     console.error('Error al obtener estadísticas:', error);
+    
+    // Si el error es por columna faltante, devolver respuesta vacía
+    if (error.name === 'SequelizeDatabaseError' && 
+        error.parent?.code === 'ER_BAD_FIELD_ERROR') {
+      return res.json({
+        totalVisitas: 0,
+        cafeteriasUnicas: 0,
+        promedioCalificaciones: "0.0",
+        distribucionCalificaciones: {},
+        cafeteriasFavoritas: [],
+        progresoMensual: []
+      });
+    }
+
     res.status(500).json({
       error: 'Error al obtener las estadísticas',
       details: error.message

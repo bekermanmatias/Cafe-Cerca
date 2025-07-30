@@ -92,7 +92,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      userId: {
+      usuarioId: {
         type: Sequelize.INTEGER,
         references: {
           model: 'Users',
@@ -110,11 +110,27 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      rating: {
-        type: Sequelize.INTEGER
+      calificacion: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        validate: {
+          min: 1,
+          max: 5
+        }
       },
       comentario: {
-        type: Sequelize.TEXT
+        type: Sequelize.TEXT,
+        allowNull: true
+      },
+      imagenUrl: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      fecha: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       createdAt: {
         allowNull: false,

@@ -41,6 +41,11 @@ export const API_ENDPOINTS = {
     TOGGLE: (visitaId: number) => `${API_URL}/visitas/${visitaId}/like`,
     GET_STATUS: (visitaId: number) => `${API_URL}/visitas/${visitaId}/like`,
     GET_LIKED_VISITAS: `${API_URL}/likes`
+  },
+  SAVED_CAFES: {
+    TOGGLE: (cafeId: number) => `${API_URL}/saved-cafes/toggle/${cafeId}`,
+    GET_STATUS: (cafeId: number) => `${API_URL}/saved-cafes/status/${cafeId}`,
+    GET_ALL: `${API_URL}/saved-cafes`
   }
 };
 

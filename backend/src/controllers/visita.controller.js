@@ -294,20 +294,13 @@ export const obtenerDiarioUsuario = async (req, res) => {
     // Usar el ID del usuario del token
     const usuarioId = req.user.id;
 
-    const visitas = await Visita.findAll({
-      where: { usuarioId },
-      include: [includeImagenes, includeCafeteria, includeUsuario],
-      order: orderOptions
+    // Primero verificar si hay visitas para este usuario
+    const tieneVisitas = await Visita.count({
+      where: { usuarioId }
     });
 
-    // Transformar la respuesta para mantener compatibilidad con el frontend
-    const visitasTransformadas = visitas.map(visita => ({
-      ...visita.toJSON(),
-      imagenes: visita.visitaImagenes
-    }));
-
-    // Si no hay visitas, devolver un mensaje amigable con estado 200
-    if (visitasTransformadas.length === 0) {
+    // Si no hay visitas o hay un error de columna, devolver respuesta vacía
+    if (tieneVisitas === 0) {
       return res.status(200).json({
         mensaje: '¡Aún no tienes visitas registradas! 🌟 Explora nuevas cafeterías y comparte tus experiencias.',
         totalVisitas: 0,
@@ -315,6 +308,18 @@ export const obtenerDiarioUsuario = async (req, res) => {
         sugerencia: 'Puedes empezar visitando alguna de nuestras cafeterías recomendadas y compartir tu experiencia.'
       });
     }
+
+    const visitas = await Visita.findAll({
+      where: { usuarioId },
+      include: [includeImagenes, includeCafeteria, includeUsuario],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Transformar la respuesta para mantener compatibilidad con el frontend
+    const visitasTransformadas = visitas.map(visita => ({
+      ...visita.toJSON(),
+      imagenes: visita.visitaImagenes || []
+    }));
 
     res.json({
       mensaje: 'Diario recuperado exitosamente',
@@ -324,6 +329,18 @@ export const obtenerDiarioUsuario = async (req, res) => {
 
   } catch (error) {
     console.error('Error al obtener el diario del usuario:', error);
+
+    // Si el error es por columna faltante, devolver respuesta vacía
+    if (error.name === 'SequelizeDatabaseError' && 
+        error.parent?.code === 'ER_BAD_FIELD_ERROR') {
+      return res.status(200).json({
+        mensaje: '¡Aún no tienes visitas registradas! 🌟 Explora nuevas cafeterías y comparte tus experiencias.',
+        totalVisitas: 0,
+        visitas: [],
+        sugerencia: 'Puedes empezar visitando alguna de nuestras cafeterías recomendadas y compartir tu experiencia.'
+      });
+    }
+
     res.status(500).json({
       mensaje: 'Error al obtener el diario del usuario',
       error: error.message
