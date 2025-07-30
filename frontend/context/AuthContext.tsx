@@ -6,12 +6,14 @@ interface User {
   id: number;
   email: string;
   name: string;
+  profileImage?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (token: string, user: User) => Promise<void>;
+  updateUser: (user: User) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
 }
@@ -67,6 +69,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const updateUser = async (updatedUser: User) => {
+    try {
+      await storage.setItem(StorageKeys.USER, JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await storage.removeItem(StorageKeys.TOKEN);
@@ -82,6 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     token,
     login,
+    updateUser,
     logout,
     isLoading,
   };

@@ -1,5 +1,6 @@
 // services/api.ts - Servicio para llamadas a la API
 import { API_URL, API_ENDPOINTS } from '../constants/Config';
+import { storage, StorageKeys } from '../utils/storage';
 
 interface LoginRequest {
   email: string;
@@ -103,9 +104,14 @@ class ApiService {
     }
   }
 
-  async updateProfileImage(imageUri: string, token: string): Promise<ProfileImageResponse> {
+  async updateProfileImage(imageUri: string): Promise<ProfileImageResponse> {
     console.log('Actualizando imagen de perfil...');
     
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) {
+      throw new Error('No se encontró el token de autenticación');
+    }
+
     const formData = new FormData();
     formData.append('profileImage', {
       uri: imageUri,
