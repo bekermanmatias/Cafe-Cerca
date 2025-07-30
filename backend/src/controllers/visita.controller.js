@@ -306,8 +306,18 @@ export const obtenerDiarioUsuario = async (req, res) => {
       imagenes: visita.visitaImagenes
     }));
 
+    // Si no hay visitas, devolver un mensaje amigable con estado 200
+    if (visitasTransformadas.length === 0) {
+      return res.status(200).json({
+        mensaje: '¡Aún no tienes visitas registradas! 🌟 Explora nuevas cafeterías y comparte tus experiencias.',
+        totalVisitas: 0,
+        visitas: [],
+        sugerencia: 'Puedes empezar visitando alguna de nuestras cafeterías recomendadas y compartir tu experiencia.'
+      });
+    }
+
     res.json({
-      mensaje: visitasTransformadas.length > 0 ? 'Diario recuperado exitosamente' : 'No tienes visitas registradas',
+      mensaje: 'Diario recuperado exitosamente',
       totalVisitas: visitas.length,
       visitas: visitasTransformadas
     });

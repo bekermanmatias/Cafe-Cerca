@@ -4,10 +4,11 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import Constants from 'expo-constants';
 import { shareVisit, shareDiary } from '../../constants/Sharing';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign, Feather } from '@expo/vector-icons';
 import { API_URL } from '../../constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
+import EmptyDiary from '../../assets/icons/empty-diary.svg';
 
 interface Imagen {
   imageUrl: string;
@@ -78,11 +79,9 @@ export default function DiaryScreen() {
         throw new Error('No se encontró el token de autenticación');
       }
 
-      // Obtener datos del usuario si no los tenemos
       const user = userData || await loadUserData();
       if (!user) return;
 
-      console.log('Fetching diary for user:', user.id);
       const response = await fetch(`${API_URL}/visitas/usuario/${user.id}`, {
         headers: {
           'Accept': 'application/json',
@@ -91,19 +90,23 @@ export default function DiaryScreen() {
         },
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
       const data: DiarioResponse = await response.json();
-      setVisitas(data.visitas);
+      
+      // Si la respuesta es exitosa pero no hay visitas, simplemente establecemos el array vacío
+      setVisitas(data.visitas || []);
     } catch (error) {
       console.error('Error fetching diario:', error);
-      Alert.alert(
-        'Error',
-        'No se pudo cargar el diario. Por favor, verifica tu conexión a internet.',
-        [{ text: 'OK' }]
-      );
+      // No mostramos alerta si es la primera carga y no hay visitas
+      if (!isLoading) {
+        Alert.alert(
+          'Error de conexión',
+          'No se pudo actualizar el diario. ¿Deseas intentar de nuevo?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Reintentar', onPress: () => fetchDiario() }
+          ]
+        );
+      }
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -174,6 +177,31 @@ export default function DiaryScreen() {
     router.push('/stats');
   };
 
+  const EmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <EmptyDiary 
+        width={200} 
+        height={200} 
+        style={styles.emptyImage}
+        fill="#E0E0E0" // Color gris claro
+      />
+      <Text style={styles.emptyTitle}>¡Tu diario está vacío!</Text>
+      <Text style={styles.emptyText}>
+        Aquí podrás ver todas tus visitas a cafeterías.
+      </Text>
+      <Text style={styles.emptySubtext}>
+        Comienza explorando cafeterías cercanas y comparte tus experiencias.
+      </Text>
+      <TouchableOpacity
+        style={styles.exploreButton}
+        onPress={() => router.push('/(tabs)/explore')}
+      >
+        <Feather name="coffee" size={20} color="#FFF" />
+        <Text style={styles.exploreButtonText}>Explorar cafeterías</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -201,6 +229,7 @@ export default function DiaryScreen() {
       </View>
 
       <ScrollView 
+        contentContainerStyle={visitas.length === 0 ? styles.scrollViewEmpty : undefined}
         nestedScrollEnabled={true}
         refreshControl={
           <RefreshControl
@@ -216,10 +245,7 @@ export default function DiaryScreen() {
             <Text style={styles.loadingText}>Cargando visitas...</Text>
           </View>
         ) : visitas.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No tienes visitas registradas</Text>
-            <Text style={styles.emptySubtext}>¡Comienza agregando tu primera visita!</Text>
-          </View>
+          <EmptyState />
         ) : (
           visitas.map((visit) => (
             <VisitCard
@@ -329,16 +355,47 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 32,
     paddingVertical: 40,
   },
+  emptyImage: {
+    width: 200,
+    height: 200,
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#8D6E63',
+    marginBottom: 12,
+  },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
     color: '#666',
+    textAlign: 'center',
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
     color: '#999',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  exploreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8D6E63',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    gap: 8,
+  },
+  exploreButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  scrollViewEmpty: {
+    flexGrow: 1,
   },
 }); 
