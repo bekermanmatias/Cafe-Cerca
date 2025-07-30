@@ -1,5 +1,5 @@
 import sequelize from './database.js';
-import { Visita, Cafe, VisitaImagen, User, Comentario } from '../models/index.js';
+import { Visita, Cafe, VisitaImagen, User, Comentario, Like, SavedCafe } from '../models/index.js';
 import bcrypt from 'bcrypt';
 import { Sequelize } from 'sequelize';
 import { exec } from 'child_process';
@@ -249,7 +249,9 @@ export async function initDatabase() {
       { model: Cafe, name: 'cafes' },
       { model: Visita, name: 'visitas' },
       { model: VisitaImagen, name: 'visita_imagenes' },
-      { model: Comentario, name: 'comentarios' }
+      { model: Comentario, name: 'comentarios' },
+      { model: Like, name: 'likes' },
+      { model: SavedCafe, name: 'saved_cafes' }
     ];
 
     for (const table of tables) {
@@ -265,6 +267,8 @@ export async function initDatabase() {
     await Visita.sync({ alter: false });
     await VisitaImagen.sync({ alter: false });
     await Comentario.sync({ alter: false });
+    await Like.sync({ alter: false });
+    await SavedCafe.sync({ alter: false });
     
     console.log('✅ Sincronización de tablas completada');
 
