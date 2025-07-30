@@ -32,7 +32,7 @@ console.log('   POST http://localhost:3000/api/visita/:visitaId/comentarios');
 // Rutas API
 app.use('/api/visitas', visitasRoutes);
 app.use('/api/cafes', cafesRoutes);
-app.use('/api/visita', comentariosRoutes);
+app.use('/api/comentarios', comentariosRoutes); // Cambiado de /api/visita a /api/comentarios
 app.use('/api/auth', authRoutes);
 app.use('/api/likes', likesRoutes);
 app.use('/api/saved-cafes', savedCafesRoutes);

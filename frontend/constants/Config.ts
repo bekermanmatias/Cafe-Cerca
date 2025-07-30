@@ -32,8 +32,8 @@ export const API_ENDPOINTS = {
   VISITAS: `${API_URL}/visitas`,
   ESTADISTICAS: `${API_URL}/estadisticas`,
   COMENTARIOS: {
-    GET_BY_VISITA: (visitaId: number) => `${API_URL}/visita/${visitaId}/comentarios`,
-    CREATE: (visitaId: number) => `${API_URL}/visita/${visitaId}/comentarios`,
+    GET_BY_VISITA: (visitaId: number) => `${API_URL}/comentarios/visita/${visitaId}`,
+    CREATE: (visitaId: number) => `${API_URL}/comentarios/visita/${visitaId}`,
     UPDATE: (comentarioId: number) => `${API_URL}/comentarios/${comentarioId}`,
     DELETE: (comentarioId: number) => `${API_URL}/comentarios/${comentarioId}`,
   },

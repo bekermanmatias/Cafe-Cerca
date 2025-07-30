@@ -4,17 +4,15 @@ import {
   createComentario, 
   updateComentario, 
   deleteComentario 
-} from '../controllers/comentarios.controller.js';
+} from '../controllers/comentario.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
-// Rutas públicas
-router.get('/visita/:visitaId/comentarios', getComentariosByVisita);
-
-// Rutas protegidas que requieren autenticación
-router.post('/visita/:visitaId/comentarios', verifyToken, createComentario);
-router.put('/comentarios/:id', verifyToken, updateComentario);
-router.delete('/comentarios/:id', verifyToken, deleteComentario);
+// Todas las rutas requieren autenticación para obtener la información del usuario
+router.get('/visita/:visitaId', verifyToken, getComentariosByVisita);
+router.post('/visita/:visitaId', verifyToken, createComentario);
+router.put('/:id', verifyToken, updateComentario);
+router.delete('/:id', verifyToken, deleteComentario);
 
 export default router; 

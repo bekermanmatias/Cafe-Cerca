@@ -10,10 +10,22 @@ const Visita = sequelize.define('Visita', {
   usuarioId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'Users',
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
+    onDelete: 'CASCADE'
   },
   cafeteriaId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'cafes',
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
+    onDelete: 'CASCADE'
   },
   comentario: {
     type: DataTypes.TEXT,

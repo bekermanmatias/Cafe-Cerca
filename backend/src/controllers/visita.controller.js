@@ -45,12 +45,21 @@ export const crearVisita = async (req, res) => {
       });
     }
 
+    // Verificar que la cafetería existe
+    const cafe = await Cafe.findByPk(cafeteriaId);
+    if (!cafe) {
+      return res.status(404).json({
+        mensaje: 'Cafetería no encontrada'
+      });
+    }
+
     // Crear la visita
     const nuevaVisita = await Visita.create({
       usuarioId,
       cafeteriaId,
       comentario,
-      calificacion
+      calificacion,
+      fecha: new Date()
     }, { transaction: t });
 
     // Si hay imágenes, guardarlas
@@ -66,15 +75,33 @@ export const crearVisita = async (req, res) => {
 
     await t.commit();
 
-    // Obtener la visita con sus imágenes
-    const visitaConImagenes = await Visita.findByPk(nuevaVisita.id, {
-      include: [includeImagenes],
+    // Obtener la visita completa con todas las relaciones
+    const visitaCompleta = await Visita.findByPk(nuevaVisita.id, {
+      include: [
+        includeImagenes,
+        includeCafeteria,
+        {
+          model: User,
+          as: 'usuario',
+          attributes: ['id', 'name', 'profileImage'],
+          required: true
+        }
+      ],
       order: orderOptions
     });
 
+    if (!visitaCompleta) {
+      throw new Error('Error al obtener la visita creada');
+    }
+
+    const visitaTransformada = {
+      ...visitaCompleta.toJSON(),
+      imagenes: visitaCompleta.visitaImagenes || []
+    };
+
     res.status(201).json({
       mensaje: 'Visita creada exitosamente',
-      visita: visitaConImagenes
+      visita: visitaTransformada
     });
 
   } catch (error) {

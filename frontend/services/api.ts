@@ -67,6 +67,20 @@ interface SavedCafesResponse {
   sugerencia?: string;
 }
 
+interface ComentarioResponse {
+  message: string;
+  comentario: {
+    id: number;
+    contenido: string;
+    createdAt: string;
+    usuario: {
+      id: number;
+      name: string;
+      profileImage: string;
+    };
+  };
+}
+
 class ApiService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     console.log('Intentando login con URL:', API_ENDPOINTS.AUTH.LOGIN);
@@ -214,6 +228,56 @@ class ApiService {
     }
 
     return response.json();
+  }
+
+  async getComentarios(visitaId: number): Promise<any> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/comentarios/visita/${visitaId}`,
+      token,
+      { method: 'GET' }
+    );
+  }
+
+  async createComentario(visitaId: number, contenido: string): Promise<ComentarioResponse> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/comentarios/visita/${visitaId}`,
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify({ contenido })
+      }
+    );
+  }
+
+  async updateComentario(comentarioId: number, contenido: string): Promise<ComentarioResponse> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/comentarios/${comentarioId}`,
+      token,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ contenido })
+      }
+    );
+  }
+
+  async deleteComentario(comentarioId: number): Promise<{ message: string }> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/comentarios/${comentarioId}`,
+      token,
+      { method: 'DELETE' }
+    );
   }
 }
 

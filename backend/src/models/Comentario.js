@@ -25,15 +25,11 @@ Comentario.init({
       key: 'id'
     }
   },
-  texto: {
+  contenido: {
     type: DataTypes.TEXT,
     allowNull: false
   },
-  fechaHora: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
-  }
+
 }, {
   sequelize,
   modelName: 'Comentario',
