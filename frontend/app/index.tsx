@@ -1,11 +1,31 @@
 // app/index.tsx
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (user && !isLoading) {
+      router.replace('/(tabs)/explore' as any);
+    }
+  }, [user, isLoading]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#8B4513" />
+      </View>
+    );
+  }
+
+  if (user) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -40,6 +60,12 @@ const BROWN = '#9B6B50'; // Marrón similar a la imagen
 const WHITE = '#FFFFFF';
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: WHITE,
+  },
   container: {
     flex: 1,
     backgroundColor: WHITE,
