@@ -46,9 +46,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const storedToken = await storage.getItem(StorageKeys.TOKEN);
       const storedUser = await storage.getItem(StorageKeys.USER);
 
+      console.log('Stored token:', storedToken ? 'exists' : 'not found');
+      console.log('Stored user:', storedUser ? 'exists' : 'not found');
+
       if (storedToken && storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        console.log('Parsed user:', parsedUser);
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        setUser(parsedUser);
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
@@ -59,10 +64,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (newToken: string, newUser: User) => {
     try {
+      console.log('Login - Token:', newToken ? 'exists' : 'not found');
+      console.log('Login - User:', newUser);
+      
       await storage.setItem(StorageKeys.TOKEN, newToken);
       await storage.setItem(StorageKeys.USER, JSON.stringify(newUser));
       setToken(newToken);
       setUser(newUser);
+      
+      console.log('Login - User set in context:', newUser);
     } catch (error) {
       console.error('Error during login:', error);
       throw error;

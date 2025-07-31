@@ -12,10 +12,11 @@ import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiService } from '../../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../../context/AuthContext';
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { login } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,15 +30,16 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
+      console.log('Iniciando registro con:', { name, email });
+      
       // Registrar al usuario
-      await apiService.register({ name, email, password });
+      const registerResponse = await apiService.register({ name, email, password });
+      console.log('Respuesta del registro:', registerResponse);
       
-      // Hacer login automático
-      const loginResponse = await apiService.login({ email, password });
-      
-      // Guardar el token y la información del usuario
-      await AsyncStorage.setItem('userToken', loginResponse.token);
-      await AsyncStorage.setItem('userData', JSON.stringify(loginResponse.user));
+      // Hacer login automático usando el contexto
+      console.log('Haciendo login automático...');
+      await login(registerResponse.token, registerResponse.user);
+      console.log('Login automático completado');
       
       alert('¡Cuenta creada exitosamente!');
       // Redirigir al usuario a la pestaña explore

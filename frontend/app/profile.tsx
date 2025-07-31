@@ -114,12 +114,15 @@ const ProfileScreen = () => {
   ];
 
   if (!user) {
+    console.log('Usuario no encontrado en el contexto');
     return (
       <View style={[styles.container, styles.centerContent]}>
         <Text>Cargando perfil...</Text>
       </View>
     );
   }
+
+  console.log('Usuario cargado:', user);
 
   return (
     <View style={styles.container}>
@@ -128,9 +131,12 @@ const ProfileScreen = () => {
           <View style={styles.imageContainer}>
             <Image
               source={{ 
-                uri: user.profileImage || 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png'
+                uri: user.profileImage || 'https://via.placeholder.com/150x150/8B4513/FFFFFF?text=U'
               }}
               style={styles.profileImage}
+              onError={(error) => {
+                console.log('Error cargando imagen de perfil:', error);
+              }}
             />
             <TouchableOpacity 
               style={styles.cameraButton}

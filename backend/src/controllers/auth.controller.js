@@ -31,10 +31,17 @@ export const register = async (req, res) => {
       email, 
       password: hashedPassword, 
       name,
-      profileImage: profileImageUrl 
+      profileImage: profileImageUrl || undefined // Si es null, usará el defaultValue del modelo
     });
 
     const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '7d' });
+    
+    console.log('Usuario creado:', {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      profileImage: user.profileImage
+    });
     
     res.status(201).json({ 
       message: 'Usuario creado correctamente.',

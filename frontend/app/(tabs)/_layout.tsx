@@ -48,15 +48,7 @@ export default function TabLayout() {
         headerRight: () => <HeaderRight />,
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Inicio',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home" size={28} color={color} />
-          ),
-        }}
-      />
+
       <Tabs.Screen
         name="explore"
         options={{

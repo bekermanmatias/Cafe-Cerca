@@ -83,6 +83,17 @@ interface ComentarioResponse {
 }
 
 class ApiService {
+  // Función para verificar si el servidor está funcionando
+  async checkServerHealth(): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_URL.replace('/api', '')}/health`);
+      return response.ok;
+    } catch (error) {
+      console.error('Servidor no disponible:', error);
+      return false;
+    }
+  }
+
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
       const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
@@ -109,6 +120,15 @@ class ApiService {
 
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
     try {
+      // Verificar si el servidor está funcionando
+      const serverHealth = await this.checkServerHealth();
+      if (!serverHealth) {
+        throw new Error('El servidor backend no está disponible. Verifica que esté corriendo en el puerto 3000.');
+      }
+
+      console.log('Enviando petición de registro a:', API_ENDPOINTS.AUTH.REGISTER);
+      console.log('Datos del usuario:', userData);
+      
       const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
         method: 'POST',
         headers: {
@@ -118,15 +138,27 @@ class ApiService {
         body: JSON.stringify(userData),
       });
 
-      const data = await response.json();
+      console.log('Respuesta del servidor:', response.status, response.statusText);
+      
+      let data;
+      try {
+        data = await response.json();
+        console.log('Datos de respuesta:', data);
+      } catch (jsonError) {
+        console.error('Error parseando JSON:', jsonError);
+        throw new Error('Error en la respuesta del servidor');
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Error al registrarse');
+        throw new Error(data.error || `Error al registrarse: ${response.status}`);
       }
 
       return data;
     } catch (error) {
       console.error('Error en register:', error);
+      if (error instanceof TypeError && error.message.includes('Network request failed')) {
+        throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté corriendo.');
+      }
       throw error;
     }
   }
