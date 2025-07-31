@@ -194,3 +194,40 @@ export const solicitudesEnviadas = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener solicitudes enviadas.' });
   }
 };
+
+
+//Cancelar la solicitud de amistad
+export const cancelarSolicitudEnviada = async (req, res) => {
+  try {
+    const { solicitudId } = req.params;
+    const userId = req.user.id;
+
+    // Verificar que la solicitud existe y pertenece al usuario
+    const solicitud = await Amigos.findOne({  // <- Aquí estaba el error
+      where: {
+        id: solicitudId,
+        userId: userId,
+        status: 'pending'
+      }
+    });
+
+    if (!solicitud) {
+      return res.status(404).json({
+        error: 'Solicitud no encontrada o no puedes cancelar esta solicitud'
+      });
+    }
+
+    // Eliminar la solicitud
+    await solicitud.destroy();
+
+    res.json({
+      message: 'Solicitud cancelada correctamente'
+    });
+
+  } catch (error) {
+    console.error('Error al cancelar solicitud:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor'
+    });
+  }
+};

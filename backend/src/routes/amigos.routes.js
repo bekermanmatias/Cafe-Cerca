@@ -5,7 +5,8 @@ import {
   eliminarAmistad,
   obtenerAmigos,
   solicitudesRecibidas,
-  solicitudesEnviadas
+  solicitudesEnviadas,
+  cancelarSolicitudEnviada  // <-- Agregar esta importación
 } from '../controllers/amigos.controller.js';
 
 import { autenticarJWT } from '../middlewares/authMiddleware.js';
@@ -21,5 +22,6 @@ router.delete('/eliminar', eliminarAmistad);
 router.get('/lista', obtenerAmigos);
 router.get('/solicitudes/recibidas', solicitudesRecibidas);
 router.get('/solicitudes/enviadas', solicitudesEnviadas);
+router.delete('/solicitud/:solicitudId', cancelarSolicitudEnviada); // <-- Nueva ruta
 
 export default router;
