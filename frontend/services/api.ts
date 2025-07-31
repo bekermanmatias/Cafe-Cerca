@@ -1,4 +1,4 @@
-// services/api.ts - Servicio para llamadas a la API
+// services/api.ts
 import { API_URL, API_ENDPOINTS } from '../constants/Config';
 import { storage, StorageKeys } from '../utils/storage';
 
@@ -13,19 +13,20 @@ interface RegisterRequest {
   password: string;
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
 interface AuthResponse {
   token: string;
-  user: {
-    id: number;
-    email: string;
-    name: string;
-  };
+  user: User;
 }
 
 interface RegisterResponse {
-  id: number;
-  email: string;
-  name: string;
+  token: string;
+  user: User;
 }
 
 interface ProfileImageResponse {
@@ -83,29 +84,30 @@ interface ComentarioResponse {
 
 class ApiService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    console.log('Intentando login con URL:', API_ENDPOINTS.AUTH.LOGIN);
-    
-    const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
+    try {
+      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Error en el inicio de sesión');
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al iniciar sesión');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error en login:', error);
+      throw error;
     }
-
-    return data;
   }
 
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
-    console.log('Intentando registro con URL:', API_ENDPOINTS.AUTH.REGISTER);
-    console.log('Datos de registro:', JSON.stringify(userData, null, 2));
-    
     try {
       const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
         method: 'POST',
@@ -116,18 +118,15 @@ class ApiService {
         body: JSON.stringify(userData),
       });
 
-      console.log('Respuesta del servidor:', response.status);
-      
       const data = await response.json();
-      console.log('Datos de respuesta:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Error en el registro');
+        throw new Error(data.error || 'Error al registrarse');
       }
 
       return data;
     } catch (error) {
-      console.error('Error detallado:', error);
+      console.error('Error en register:', error);
       throw error;
     }
   }
@@ -213,21 +212,27 @@ class ApiService {
     );
   }
 
-  async makeAuthenticatedRequest(endpoint: string, token: string, options: RequestInit = {}) {
+  async makeAuthenticatedRequest(
+    endpoint: string,
+    token: string,
+    options: RequestInit = {}
+  ) {
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
-        ...options.headers,
+        ...(options.headers || {}),
       },
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      throw new Error(data.error || 'Error en la solicitud autenticada');
     }
 
-    return response.json();
+    return data;
   }
 
   async getComentarios(visitaId: number): Promise<any> {

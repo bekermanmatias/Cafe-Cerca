@@ -3,26 +3,16 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/index.js';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 
-const SECRET = process.env.JWT_SECRET || 'supersecreto';
+const SECRET_KEY = process.env.JWT_SECRET || 'cafecercaclave';
 
 export const register = async (req, res) => {
   const { email, password, name } = req.body;
   let profileImageUrl = null;
 
   try {
-    // Validaciones
-    if (!email || !password || !name) {
-      return res.status(400).json({ error: 'Todos los campos son requeridos' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
-    }
-
-    // Verificar si el email ya existe
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ error: 'El correo electrónico ya está registrado' });
+    const existente = await User.findOne({ where: { email } });
+    if (existente) {
+      return res.status(400).json({ error: 'El email ya está registrado.' });
     }
 
     // Si hay una imagen de perfil, subirla a Cloudinary
@@ -36,57 +26,56 @@ export const register = async (req, res) => {
       }
     }
 
-    const hash = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ 
       email, 
-      password: hash, 
+      password: hashedPassword, 
       name,
       profileImage: profileImageUrl 
     });
+
+    const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '7d' });
     
     res.status(201).json({ 
-      id: user.id, 
-      email: user.email, 
-      name: user.name,
-      profileImage: user.profileImage
+      message: 'Usuario creado correctamente.',
+      token,
+      user: {
+        id: user.id, 
+        email: user.email, 
+        name: user.name,
+        profileImage: user.profileImage
+      }
     });
   } catch (err) {
-    console.error('Error en registro:', err);
-    res.status(500).json({ error: 'Error al crear el usuario' });
+    console.error('❌ Error al registrar:', err);
+    res.status(500).json({ error: 'Error al registrar.' });
   }
 };
 
 export const login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    // Validaciones
-    if (!email || !password) {
-      return res.status(400).json({ error: 'El correo y la contraseña son requeridos' });
-    }
+    const usuario = await User.findOne({ where: { email } });
+    if (!usuario) return res.status(401).json({ error: 'Credenciales inválidas.' });
 
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
-    }
+    const valid = await bcrypt.compare(password, usuario.password);
+    if (!valid) return res.status(401).json({ error: 'Credenciales inválidas.' });
 
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      return res.status(401).json({ error: 'Contraseña incorrecta' });
-    }
+    const token = jwt.sign({ id: usuario.id }, SECRET_KEY, { expiresIn: '7d' });
 
-    const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: '1d' });
-    res.json({ 
-      token, 
-      user: { 
-        id: user.id, 
-        email: user.email, 
-        name: user.name,
-        profileImage: user.profileImage
-      } 
+    res.json({
+      message: 'Login exitoso.',
+      token,
+      user: {
+        id: usuario.id,
+        name: usuario.name,
+        email: usuario.email,
+        profileImage: usuario.profileImage
+      }
     });
   } catch (err) {
-    console.error('Error en login:', err);
-    res.status(500).json({ error: 'Error al iniciar sesión' });
+    console.error('❌ Error al iniciar sesión:', err);
+    res.status(500).json({ error: 'Error al iniciar sesión.' });
   }
 };
 
