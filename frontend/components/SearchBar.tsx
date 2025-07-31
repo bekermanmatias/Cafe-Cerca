@@ -11,7 +11,7 @@ type SearchBarProps = {
 export default function SearchBar({ placeholder = "Buscar...", value, onChangeText }: SearchBarProps) {
   return (
     <View style={styles.container}>
-      <Ionicons name="search" size={20} color="#8B4513" style={styles.icon} />
+              <Ionicons name="search" size={20} color="#8D6E63" style={styles.icon} />
       <TextInput
         style={styles.input}
         placeholder={placeholder}

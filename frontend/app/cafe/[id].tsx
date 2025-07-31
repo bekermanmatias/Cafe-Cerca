@@ -252,7 +252,7 @@ const onIrDireccionIconPress = () => {
               <MaterialIcons 
                 name={isSaved ? "bookmark" : "bookmark-outline"} 
                 size={24} 
-                color="#A76F4D" 
+                color="#8D6E63" 
               />
             </Pressable>
           </View>
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 40,
     left: 16,
-    backgroundColor: '#8B4513',
+    backgroundColor: '#8D6E63',
     padding: 8,
     borderRadius: 10,
   },
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#8B4513',
+    color: '#8D6E63',
   },
   tagsWrapper: {
     flexDirection: 'row',
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
   reviewsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#8B4513',
+    color: '#8D6E63',
   },
   ratingValue: {
     color: '#000',
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   visitarButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#8B4513',
+    backgroundColor: '#8D6E63',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,

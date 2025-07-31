@@ -40,7 +40,7 @@ export default function RootLayout() {
             headerStyle: {
               backgroundColor: '#fff',
             },
-            headerTintColor: '#8B4513',
+            headerTintColor: '#8D6E63',
             headerTitleStyle: {
               fontWeight: 'bold',
             },

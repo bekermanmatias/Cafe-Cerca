@@ -353,7 +353,7 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8B4513" />
+        <ActivityIndicator size="large" color="#8D6E63" />
       </View>
     );
   }
@@ -379,7 +379,7 @@ export default function NotificationsScreen() {
         {/* Invitaciones a Visitas */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <Ionicons name="calendar" size={20} color="#4B3A2F" /> Invitaciones a visitas ({invitacionesVisitas.length})
+            <Ionicons name="calendar" size={20} color="#8D6E63" /> Invitaciones a visitas ({invitacionesVisitas.length})
           </Text>
           {invitacionesVisitas.length === 0 ? (
             <Text style={styles.noItemsText}>No tienes invitaciones a visitas pendientes</Text>
@@ -397,7 +397,7 @@ export default function NotificationsScreen() {
         {/* Solicitudes Recibidas */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <Ionicons name="mail" size={20} color="#4B3A2F" /> Solicitudes recibidas ({solicitudesRecibidas.length})
+            <Ionicons name="mail" size={20} color="#8D6E63" /> Solicitudes recibidas ({solicitudesRecibidas.length})
           </Text>
           {solicitudesRecibidas.length === 0 ? (
             <Text style={styles.noItemsText}>No tienes solicitudes pendientes</Text>
@@ -415,7 +415,7 @@ export default function NotificationsScreen() {
         {/* Solicitudes Enviadas */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <Ionicons name="paper-plane" size={20} color="#4B3A2F" /> Solicitudes enviadas ({solicitudesEnviadas.length})
+            <Ionicons name="paper-plane" size={20} color="#8D6E63" /> Solicitudes enviadas ({solicitudesEnviadas.length})
           </Text>
           {solicitudesEnviadas.length === 0 ? (
             <Text style={styles.noItemsText}>No has enviado solicitudes</Text>
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#4B3A2F',
+    color: '#8D6E63',
     marginBottom: 12,
   },
   noItemsText: {
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#8B4513',
+    borderLeftColor: '#8D6E63',
   },
   solicitudHeader: {
     flexDirection: 'row',
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   },
   solicitudStatus: {
     fontSize: 12,
-    color: '#8B4513',
+    color: '#8D6E63',
     fontWeight: '500',
   },
   solicitudActions: {

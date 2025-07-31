@@ -146,7 +146,7 @@ export default function FriendsScreen() {
         {/* Lista de Amigos */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <Ionicons name="people" size={20} color="#4B3A2F" /> Tus amigos ({friends.length})
+            <Ionicons name="people" size={20} color="#8D6E63" /> Tus amigos ({friends.length})
           </Text>
           {friends.length === 0 ? (
             <Text style={styles.noFriendsText}>No tienes amigos todavía. ¡Agrega alguno!</Text>
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#4B3A2F',
+    color: '#8D6E63',
     flexDirection: 'row',
     alignItems: 'center',
   },

@@ -83,7 +83,7 @@ function HeaderRight() {
         style={{ marginRight: 12, position: 'relative' }}
         onPress={() => router.push('/notifications')}
       >
-        <Ionicons name="notifications-outline" size={28} color="#8B4513" />
+        <Ionicons name="notifications-outline" size={28} color="#8D6E63" />
         {pendingInvitations > 0 && (
           <View style={{
             position: 'absolute',
@@ -125,7 +125,7 @@ function HeaderRight() {
       <TouchableOpacity 
         onPress={() => router.push('/profile')}
       >
-        <Ionicons name="person-circle-outline" size={40} color="#8B4513" />
+        <Ionicons name="person-circle-outline" size={40} color="#8D6E63" />
       </TouchableOpacity>
     </View>
   );
@@ -135,8 +135,8 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#8B4513',
-        tabBarInactiveTintColor: '#A0522D',
+        tabBarActiveTintColor: '#8D6E63',
+                  tabBarInactiveTintColor: '#8D6E63',
         tabBarStyle: {
           backgroundColor: '#ffffff',
           height: 65,
@@ -149,7 +149,7 @@ export default function TabLayout() {
           backgroundColor: '#ffffff',
           height: 100,
         },
-        headerTintColor: '#8B4513',
+                  headerTintColor: '#8D6E63',
         headerTitle: 'Café Cerca',
         headerTitleStyle: {
           fontSize: 26,
