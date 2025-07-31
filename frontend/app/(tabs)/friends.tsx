@@ -168,7 +168,7 @@ export default function FriendsScreen() {
             try {
               if (!token) throw new Error('Token no disponible');
 
-              await axios.delete(`${API_ENDPOINTS.AMIGOS.GET_LISTA}/solicitud/${solicitudId}`, {
+              await axios.delete(API_ENDPOINTS.AMIGOS.CANCELAR_SOLICITUD(solicitudId), {
                 headers: { Authorization: `Bearer ${token}` },
               });
 
