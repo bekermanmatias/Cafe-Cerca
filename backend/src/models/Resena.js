@@ -1,17 +1,17 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 
-const Visita = sequelize.define('Visita', {
+const Resena = sequelize.define('Resena', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
     primaryKey: true,
   },
-  cafeteriaId: {
+  visitaId: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'cafes',
+      model: 'visitas',
       key: 'id'
     },
     onUpdate: 'CASCADE',
@@ -27,32 +27,27 @@ const Visita = sequelize.define('Visita', {
     onUpdate: 'CASCADE',
     onDelete: 'CASCADE'
   },
-  fecha: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-  },
-  esCompartida: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  maxParticipantes: {
+  calificacion: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    defaultValue: 10,
     validate: {
       min: 1,
-      max: 10
+      max: 5
     }
   },
-  estado: {
-    type: DataTypes.ENUM('activa', 'completada', 'cancelada'),
-    allowNull: false,
-    defaultValue: 'activa'
+  comentario: {
+    type: DataTypes.TEXT,
+    allowNull: true,
   }
 }, {
-  tableName: 'visitas',
-  timestamps: true
+  tableName: 'resenas',
+  timestamps: true,
+  indexes: [
+    {
+      unique: true,
+      fields: ['visitaId', 'usuarioId']
+    }
+  ]
 });
 
-export default Visita;
+export default Resena; 

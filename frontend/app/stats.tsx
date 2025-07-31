@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AntDesign, Feather } from '@expo/vector-icons';
+import { AntDesign, Feather, Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../constants/Config';
 import { useAuth } from '../context/AuthContext';
 
@@ -29,6 +29,15 @@ interface ProgresoMensual {
   cantidadVisitas: number;
 }
 
+interface CompañeroCafe {
+  usuario: {
+    id: number;
+    name: string;
+    profileImage: string | null;
+  };
+  cantidadVisitas: number;
+}
+
 interface Estadisticas {
   totalVisitas: number;
   cafeteriasUnicas: number;
@@ -36,6 +45,10 @@ interface Estadisticas {
   distribucionCalificaciones: Record<string, number>;
   cafeteriasFavoritas: CafeteriaFavorita[];
   progresoMensual: ProgresoMensual[];
+  visitasIndividuales: number;
+  visitasCompartidasCreador: number;
+  visitasComoInvitado: number;
+  companerosCafe: CompañeroCafe[];
 }
 
 const EmptyStats = ({ onExplore }: { onExplore: () => void }) => (
@@ -83,7 +96,11 @@ export default function StatsScreen() {
             promedioCalificaciones: "0.0",
             distribucionCalificaciones: {},
             cafeteriasFavoritas: [],
-            progresoMensual: []
+            progresoMensual: [],
+            visitasIndividuales: 0,
+            visitasCompartidasCreador: 0,
+            visitasComoInvitado: 0,
+            companerosCafe: []
           });
         } else {
           throw new Error(data.error || 'Error al obtener estadísticas');
@@ -141,16 +158,12 @@ export default function StatsScreen() {
 
   const maxVisitas = Math.max(...stats.progresoMensual.map(mes => mes.cantidadVisitas), 1);
 
+  // URL de la imagen de perfil por defecto
+  const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
+
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <AntDesign name="arrowleft" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mis Estadísticas</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
+      {/* Métricas principales */}
       <View style={styles.metricsContainer}>
         <View style={styles.metricCard}>
           <Text style={styles.metricNumber}>{stats.cafeteriasUnicas}</Text>
@@ -169,7 +182,7 @@ export default function StatsScreen() {
           Progreso Mensual
         </Text>
         {stats.progresoMensual.length > 0 ? (
-          stats.progresoMensual.map((mes, index) => (
+          [...stats.progresoMensual].reverse().map((mes, index) => (
             <View key={index} style={styles.progressItem}>
               <View style={styles.progressHeader}>
                 <Text style={styles.monthLabel}>{mes.mes}</Text>
@@ -179,7 +192,11 @@ export default function StatsScreen() {
                 <View 
                   style={[
                     styles.progressBar, 
-                    { width: `${(mes.cantidadVisitas / maxVisitas) * 100}%` }
+                    { 
+                      width: mes.cantidadVisitas > 0 
+                        ? `${(mes.cantidadVisitas / Math.max(...stats.progresoMensual.map(m => m.cantidadVisitas), 1)) * 100}%` 
+                        : '0%'
+                    }
                   ]} 
                 />
               </View>
@@ -233,6 +250,36 @@ export default function StatsScreen() {
           </Text>
         )}
       </View>
+
+      {/* Compañeros de Café */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          <Ionicons name="people" size={18} color="#8D6E63" style={{ marginRight: 8 }} />
+          Compañeros de Café
+        </Text>
+        {stats.companerosCafe.length > 0 ? (
+          stats.companerosCafe.map((companero, index) => (
+            <View key={companero.usuario.id} style={styles.companeroItem}>
+              <Image
+                source={{ 
+                  uri: companero.usuario.profileImage || defaultProfileImage
+                }}
+                style={styles.companeroPhoto}
+              />
+              <View style={styles.companeroInfo}>
+                <Text style={styles.companeroName}>{companero.usuario.name}</Text>
+              </View>
+              <View style={styles.visitasPill}>
+                <Text style={styles.visitasCount}>{companero.cantidadVisitas} visitas</Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyMessage}>
+            Aún no tienes compañeros de café. ¡Invita amigos a visitar cafeterías!
+          </Text>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -251,22 +298,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
   },
   metricsContainer: {
     flexDirection: 'row',
@@ -305,6 +336,42 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  companeroItem: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  companeroPhoto: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#E0E0E0',
+    marginRight: 12,
+  },
+  companeroInfo: {
+    flex: 1,
+  },
+  companeroName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  visitasPill: {
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  visitasCount: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
   },
   cafeItem: {
     flexDirection: 'row',

@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../constants/Config';
 import { apiService } from '../services/api';
+import ReviewModal from '../components/ReviewModal';
 
 interface InvitacionPendiente {
   id: number;
@@ -35,6 +36,8 @@ export default function SharedVisitsInvitationsScreen() {
   const [invitaciones, setInvitaciones] = useState<InvitacionPendiente[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedVisita, setSelectedVisita] = useState<InvitacionPendiente | null>(null);
   const router = useRouter();
   const { token } = useAuth();
 
@@ -48,7 +51,7 @@ export default function SharedVisitsInvitationsScreen() {
       
       if (!token) throw new Error('Token no disponible');
 
-      const response = await fetch(`${API_URL}/visitas-compartidas/invitaciones-pendientes`, {
+      const response = await fetch(`${API_URL}/visita-participantes/invitaciones-pendientes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -85,7 +88,18 @@ export default function SharedVisitsInvitationsScreen() {
     try {
       if (!token) throw new Error('Token no disponible');
 
-      const response = await fetch(`${API_URL}/visitas-compartidas/${visitaId}/respuesta`, {
+      if (respuesta === 'aceptada') {
+        // Buscar la invitación para mostrar el modal
+        const invitacion = invitaciones.find(inv => inv.visita.id === visitaId);
+        if (invitacion) {
+          setSelectedVisita(invitacion);
+          setShowReviewModal(true);
+        }
+        return;
+      }
+
+      // Si es rechazada, proceder normalmente
+      const response = await fetch(`${API_URL}/visita-participantes/${visitaId}/respuesta`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -104,6 +118,26 @@ export default function SharedVisitsInvitationsScreen() {
     } catch (error: any) {
       console.error(error);
       Alert.alert('Error', error.message || 'No se pudo responder la invitación.');
+    }
+  };
+
+  const handleSubmitReview = async (comentario: string, calificacion: number) => {
+    if (!selectedVisita) return;
+
+    try {
+      await apiService.aceptarInvitacionConResena(
+        selectedVisita.visita.id,
+        comentario,
+        calificacion
+      );
+
+      Alert.alert('Éxito', 'Invitación aceptada y reseña guardada exitosamente');
+      setShowReviewModal(false);
+      setSelectedVisita(null);
+      fetchInvitaciones(); // Refrescar la lista
+    } catch (error: any) {
+      console.error('Error al aceptar invitación con reseña:', error);
+      Alert.alert('Error', error.message || 'No se pudo aceptar la invitación con reseña.');
     }
   };
 
@@ -209,6 +243,17 @@ export default function SharedVisitsInvitationsScreen() {
           />
         )}
       </ScrollView>
+
+      {/* Modal para reseña */}
+      <ReviewModal
+        visible={showReviewModal}
+        onClose={() => {
+          setShowReviewModal(false);
+          setSelectedVisita(null);
+        }}
+        onSubmit={handleSubmitReview}
+        cafeName={selectedVisita?.visita.cafeteria.name || ''}
+      />
     </SafeAreaView>
   );
 }

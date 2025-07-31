@@ -43,16 +43,30 @@ interface Usuario {
   profileImage: string | null;
 }
 
+interface Resena {
+  id: number;
+  calificacion: number;
+  comentario: string;
+  fecha: string;
+  usuario: Usuario;
+}
+
+interface Participante extends Usuario {
+  estado: 'pendiente' | 'aceptada' | 'rechazada';
+  rol: 'creador' | 'participante';
+  fechaRespuesta?: string;
+  resena?: Resena;
+}
+
 interface VisitaDetalle {
   id: number;
-  usuarioId: number;
-  cafeteriaId: number;
-  comentario: string;
-  calificacion: number;
   fecha: string;
+  estado: 'activa' | 'completada' | 'cancelada';
+  esCompartida: boolean;
   imagenes: Imagen[];
   cafeteria: Cafeteria;
-  usuario: Usuario;
+  creador: Participante & { resena: Resena };
+  participantes: Participante[];
   likesCount: number;
 }
 
@@ -74,7 +88,6 @@ export default function VisitDetailsScreen() {
   const { token } = useAuth();
 
   useEffect(() => {
-    console.log('Actualizando detalles de visita...', { visitId: params.visitId, refresh: params.refresh });
     fetchVisitDetails();
   }, [params.visitId, params.refresh]);
 
@@ -94,27 +107,50 @@ export default function VisitDetailsScreen() {
         throw new Error('ID de visita no válido');
       }
 
-      console.log('Obteniendo detalles de visita:', visitId);
       const fullUrl = `${API_URL}/visitas/${visitId}`;
-      console.log('URL completa:', fullUrl);
 
-      const response = await fetch(fullUrl);
+      const response = await fetch(fullUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Error del servidor:', errorData);
         throw new Error(errorData.mensaje || 'Error al obtener los detalles de la visita');
       }
 
-      const data = await response.json();
-      console.log('Datos de visita recibidos:', data);
+      const data: ApiResponse = await response.json();
+      
+
+      
+      // Validar datos críticos
+      if (!data.visita) {
+        throw new Error('No se recibieron datos de la visita');
+      }
+      
+      if (!data.visita.creador) {
+        console.error('❌ Datos de visita incompletos:', data.visita);
+        throw new Error('No se encontró el creador de la visita');
+      }
+
+      if (!data.visita.creador.resena) {
+        console.error('❌ Datos del creador incompletos:', data.visita.creador);
+        throw new Error('No se encontró la reseña del creador');
+      }
+
+
+
       setVisitData(data.visita);
 
       // Si tenemos token, verificar el estado del like
       if (token) {
         checkLikeStatus();
       }
-    } catch (error) {
-      console.error('Error obteniendo detalles:', error);
-      setError('No se pudo cargar la información de la visita');
+    } catch (error: any) {
+      console.error('❌ Error:', error);
+      setError(error.message || 'Error al cargar los detalles de la visita');
     } finally {
       setIsLoading(false);
     }
@@ -219,29 +255,58 @@ export default function VisitDetailsScreen() {
   // URL de la imagen de perfil por defecto
   const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
 
-  const renderHeader = () => {
+  // Calcular promedio de calificaciones entre todos los integrantes
+  const calcularPromedioCalificaciones = () => {
+    if (!visitData) return null;
+    
+    const calificaciones = [];
+    
+    // Agregar calificación del creador si existe
+    if (visitData.creador?.resena?.calificacion) {
+      calificaciones.push(visitData.creador.resena.calificacion);
+    }
+    
+    // Agregar calificaciones de participantes aceptados
+    visitData.participantes.forEach(p => {
+      if (p.estado === 'aceptada' && p.resena?.calificacion) {
+        calificaciones.push(p.resena.calificacion);
+      }
+    });
+    
+    if (calificaciones.length === 0) return null;
+    
+    const promedio = calificaciones.reduce((sum, cal) => sum + cal, 0) / calificaciones.length;
+    return Math.round(promedio * 10) / 10; // Redondear a 1 decimal
+  };
+  
+  const promedioCalificaciones = calcularPromedioCalificaciones();
+
+  const renderContent = () => {
     if (!visitData) return null;
 
     return (
       <>
-        <View style={styles.header}>
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>{visitData.cafeteria.name}</Text>
-            <Text style={styles.headerDate}>
-              {new Date(visitData.fecha).toLocaleDateString()}
+        {/* Información de la visita en la parte superior */}
+        <View style={styles.visitInfoHeader}>
+          <View style={styles.visitInfoLeft}>
+            <Text style={styles.cafeteriaName}>{visitData.cafeteria.name}</Text>
+            <Text style={styles.visitDate}>
+              {new Date(visitData.fecha).toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
             </Text>
           </View>
-          <View style={styles.participantsContainer}>
-            <Image
-              source={{ 
-                uri: visitData.usuario?.profileImage || defaultProfileImage
-              }}
-              style={styles.participantPhoto}
-            />
-          </View>
+          {promedioCalificaciones && (
+            <View style={styles.headerRatingBubble}>
+              <Text style={styles.headerRatingBubbleText}>{promedioCalificaciones} ★</Text>
+            </View>
+          )}
         </View>
 
-        <View style={styles.mainImageContainer}>
+                 <View style={styles.mainImageContainer}>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
@@ -256,9 +321,6 @@ export default function VisitDetailsScreen() {
               </View>
             ))}
           </ScrollView>
-          <View style={styles.ratingBadge}>
-            <Text style={styles.ratingText}>{visitData.calificacion} ★</Text>
-          </View>
         </View>
 
         <View style={styles.actionButtons}>
@@ -296,21 +358,22 @@ export default function VisitDetailsScreen() {
           </View>
         </View>
 
-        <View style={styles.mainReviewContainer}>
+        {/* Reseña del creador */}
+        <View style={styles.reviewContainer}>
           <View style={styles.authorSection}>
             <Image
               source={{ 
-                uri: visitData.usuario?.profileImage || defaultProfileImage
+                uri: visitData.creador.profileImage || defaultProfileImage
               }}
               style={styles.authorPhoto}
             />
             <View style={styles.authorInfo}>
-              <Text style={styles.authorName}>{visitData.usuario?.name || 'Usuario sin nombre'}</Text>
+              <Text style={styles.authorName}>{visitData.creador.name}</Text>
               <View style={styles.starsContainer}>
                 {[...Array(5)].map((_, i) => (
                   <Ionicons
                     key={i}
-                    name={i < visitData.calificacion ? "star" : "star-outline"}
+                    name={i < visitData.creador.resena.calificacion ? "star" : "star-outline"}
                     size={20}
                     color="#FFD700"
                   />
@@ -318,8 +381,44 @@ export default function VisitDetailsScreen() {
               </View>
             </View>
           </View>
-          <Text style={styles.mainReviewText}>{visitData.comentario}</Text>
+          <Text style={styles.reviewText}>{visitData.creador.resena.comentario}</Text>
         </View>
+
+        {/* Reseñas de participantes */}
+        {visitData.participantes.map((participante, index) => (
+          <View key={participante.id} style={styles.reviewContainer}>
+            <View style={styles.authorSection}>
+              <Image
+                source={{ 
+                  uri: participante.profileImage || defaultProfileImage
+                }}
+                style={styles.authorPhoto}
+              />
+              <View style={styles.authorInfo}>
+                <Text style={styles.authorName}>{participante.name}</Text>
+                {participante.resena ? (
+                  <View style={styles.starsContainer}>
+                    {[...Array(5)].map((_, i) => (
+                      <Ionicons
+                        key={i}
+                        name={i < participante.resena!.calificacion ? "star" : "star-outline"}
+                        size={20}
+                        color="#FFD700"
+                      />
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.pendingReview}>
+                    {participante.estado === 'pendiente' ? 'Invitación pendiente' : 'Sin reseña'}
+                  </Text>
+                )}
+              </View>
+            </View>
+            {participante.resena && (
+              <Text style={styles.reviewText}>{participante.resena.comentario}</Text>
+            )}
+          </View>
+        ))}
       </>
     );
   };
@@ -369,7 +468,7 @@ export default function VisitDetailsScreen() {
 
       <ComentariosList 
         visitaId={visitData.id}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={renderContent}
       />
 
       {showOptions && (
@@ -409,6 +508,17 @@ export default function VisitDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
+  pendingReview: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  reviewText: {
+    fontSize: 16,
+    color: '#333',
+    marginTop: 8,
+    lineHeight: 24,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -453,30 +563,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 70,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  headerDate: {
-    fontSize: 14,
-    color: '#666',
-  },
+
   participantsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 8,
   },
   participantPhoto: {
     width: 40,
@@ -485,6 +576,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
     borderWidth: 2,
     borderColor: 'white',
+  },
+  moreParticipants: {
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: -10,
+  },
+  moreParticipantsText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   mainImageContainer: {
     width: '100%',
@@ -575,9 +677,11 @@ const styles = StyleSheet.create({
     color: '#FF4444',
     fontWeight: '500',
   },
-  mainReviewContainer: {
+  reviewContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   authorSection: {
     flexDirection: 'row',
@@ -603,10 +707,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  mainReviewText: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
+
   commentInputContainer: {
     padding: 16,
     borderTopWidth: 1,
@@ -690,5 +791,61 @@ const styles = StyleSheet.create({
   },
   likesCountActive: {
     color: '#FF4B4B',
+  },
+  ratingBubble: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: '#D7CCC8',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    width: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ratingBubbleText: {
+    color: '#5D4037',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  visitInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  visitInfoLeft: {
+    flex: 1,
+  },
+  cafeteriaName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  visitDate: {
+    fontSize: 14,
+    color: '#666',
+  },
+  headerRatingBubble: {
+    backgroundColor: '#D7CCC8',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    width: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerRatingBubbleText: {
+    color: '#5D4037',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 

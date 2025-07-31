@@ -25,16 +25,49 @@ interface Cafeteria {
   openingHours: string;
 }
 
+interface Usuario {
+  id: number;
+  name: string;
+  profileImage: string | null;
+}
+
+interface Resena {
+  id: number;
+  calificacion: number;
+  comentario: string;
+  fecha: string;
+  usuario: Usuario;
+}
+
+interface Participante extends Usuario {
+  estado: 'pendiente' | 'aceptada' | 'rechazada';
+  rol: 'creador' | 'participante';
+  fechaRespuesta?: string;
+  resena?: Resena;
+}
+
 interface Visita {
   id: number;
-  usuarioId: number;
-  cafeteriaId: number;
-  comentario: string;
-  calificacion: number;
   fecha: string;
+  estado: 'activa' | 'completada' | 'cancelada';
+  esCompartida: boolean;
   imagenes: Imagen[];
   cafeteria: Cafeteria;
-  isLiked: boolean; // Added for local state management
+  creador?: {
+    id: number;
+    name: string;
+    profileImage: string | null;
+    resena?: Resena;
+  };
+  participantes?: Participante[];
+  likesCount?: number;
+  // Compatibilidad con estructura antigua
+  usuarioId?: number;
+  cafeteriaId?: number;
+  usuario?: Usuario;
+  comentario?: string;
+  calificacion?: number;
+  isLiked?: boolean; // Added for local state management
 }
 
 interface DiarioResponse {
@@ -92,6 +125,8 @@ export default function DiaryScreen() {
       
       const data: DiarioResponse = await response.json();
       
+
+      
       // Si la respuesta es exitosa pero no hay visitas, simplemente establecemos el array vacío
       setVisitas(data.visitas || []);
     } catch (error) {
@@ -134,7 +169,7 @@ export default function DiaryScreen() {
   };
 
   const handleLike = () => {
-    console.log('Like pressed');
+    // Like pressed
   };
 
   const handleShare = (visitId: number) => {

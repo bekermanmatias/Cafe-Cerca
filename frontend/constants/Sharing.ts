@@ -49,13 +49,9 @@ export const shareVisit = async (visitId: number | string) => {
     });
 
     if (result.action === Share.sharedAction) {
-      if (result.activityType) {
-        console.log('Shared with activity type:', result.activityType);
-      } else {
-        console.log('Shared');
-      }
+      // Shared successfully
     } else if (result.action === Share.dismissedAction) {
-      console.log('Share dismissed');
+      // Share dismissed
     }
   } catch (error) {
     console.error('Error sharing:', error);
@@ -97,13 +93,9 @@ export const shareDiary = async (userId: number | string = 1) => {
     });
 
     if (result.action === Share.sharedAction) {
-      if (result.activityType) {
-        console.log('Shared diary with activity type:', result.activityType);
-      } else {
-        console.log('Shared diary');
-      }
+      // Shared diary successfully
     } else if (result.action === Share.dismissedAction) {
-      console.log('Share diary dismissed');
+      // Share diary dismissed
     }
   } catch (error) {
     console.error('Error sharing diary:', error);

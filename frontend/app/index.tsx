@@ -18,7 +18,7 @@ export default function WelcomeScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8B4513" />
+        <ActivityIndicator size="large" color="#8D6E63" />
       </View>
     );
   }

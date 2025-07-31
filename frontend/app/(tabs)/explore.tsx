@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#8B4513',
+    color: '#8D6E63',
   },
   location: {
     fontSize: 14,

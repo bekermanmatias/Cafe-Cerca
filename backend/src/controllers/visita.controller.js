@@ -1,4 +1,4 @@
-import { Visita, Cafe, User, VisitaImagen, Like, VisitaCompartida } from '../models/index.js';
+import { Visita, Cafe, User, VisitaImagen, Like, VisitaParticipante, Resena } from '../models/index.js';
 import sequelize from '../config/database.js';
 import { Op } from 'sequelize';
 
@@ -16,17 +16,37 @@ const includeCafeteria = {
   attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
 };
 
-// Función helper para incluir el usuario
-const includeUsuario = {
-  model: User,
-  as: 'usuario',
-  attributes: ['id', 'name', 'profileImage']
+// Función helper para incluir el creador de la visita
+const includeCreador = {
+  model: VisitaParticipante,
+  as: 'participantes',
+  where: { rol: 'creador' },
+  include: [
+    {
+      model: User,
+      as: 'usuario',
+      attributes: ['id', 'name', 'profileImage']
+    }
+  ]
 };
 
-// Función helper para incluir participantes (solo para visitas compartidas)
+// Función helper para incluir participantes
 const includeParticipantes = {
-  model: VisitaCompartida,
+  model: VisitaParticipante,
   as: 'participantes',
+  include: [
+    {
+      model: User,
+      as: 'usuario',
+      attributes: ['id', 'name', 'profileImage']
+    }
+  ]
+};
+
+// Función helper para incluir reseñas
+const includeResenas = {
+  model: Resena,
+  as: 'resenas',
   include: [
     {
       model: User,
@@ -43,13 +63,28 @@ const orderOptions = [
 ];
 
 export const crearVisita = async (req, res) => {
-  const t = await sequelize.transaction();
+  let t;
 
   try {
+    t = await sequelize.transaction();
+
     // Usar el ID del usuario del token de autenticación
     const usuarioId = req.user.id;
-    const { cafeteriaId, comentario, calificacion } = req.body;
+    const { 
+      cafeteriaId, 
+      esCompartida: esCompartidaRaw = false, 
+      maxParticipantes = 10, 
+      participantes = [],
+      amigosIds = [], // Compatibilidad con frontend
+      calificacion, // Para crear reseña automáticamente
+      comentario // Para crear reseña automáticamente
+    } = req.body;
+
+    // Normalizar esCompartida a boolean
+    const esCompartida = esCompartidaRaw === 'true' || esCompartidaRaw === true;
     const imagenes = req.files; // Múltiples archivos
+
+
 
     // Validar número máximo de imágenes
     if (imagenes && imagenes.length > 5) {
@@ -68,12 +103,45 @@ export const crearVisita = async (req, res) => {
 
     // Crear la visita
     const nuevaVisita = await Visita.create({
-      usuarioId,
       cafeteriaId,
-      comentario,
-      calificacion,
-      fecha: new Date()
+      usuarioId, // Agregar el ID del usuario creador
+      esCompartida,
+      maxParticipantes,
+      fecha: new Date(),
+      estado: 'activa'
     }, { transaction: t });
+
+
+
+    // Siempre agregar al creador como participante
+    const creadorParticipante = await VisitaParticipante.create({
+      visitaId: nuevaVisita.id,
+      usuarioId,
+      rol: 'creador',
+      estado: 'aceptada',
+      fechaInvitacion: new Date(),
+      fechaRespuesta: new Date()
+    }, { transaction: t });
+
+
+
+    // Asegurar que amigosIds sea siempre un array
+    const amigosIdsArray = Array.isArray(amigosIds) ? amigosIds : [amigosIds].filter(id => id);
+    
+    // Si es una visita compartida y hay participantes, agregarlos
+    const participantesFinales = participantes.length > 0 ? participantes : amigosIdsArray;
+    
+    if (esCompartida && participantesFinales.length > 0) {
+      const participantesParaGuardar = participantesFinales.map(participanteId => ({
+        visitaId: nuevaVisita.id,
+        usuarioId: participanteId,
+        rol: 'participante',
+        estado: 'pendiente',
+        fechaInvitacion: new Date()
+      }));
+
+      await VisitaParticipante.bulkCreate(participantesParaGuardar, { transaction: t });
+    }
 
     // Si hay imágenes, guardarlas
     if (imagenes && imagenes.length > 0) {
@@ -86,33 +154,167 @@ export const crearVisita = async (req, res) => {
       await VisitaImagen.bulkCreate(imagenesParaGuardar, { transaction: t });
     }
 
-    await t.commit();
+        // Si se proporcionan calificación y comentario, crear una reseña automáticamente
+    if (calificacion && comentario) {
+      await Resena.create({
+        visitaId: nuevaVisita.id,
+        usuarioId,
+        calificacion,
+        comentario
+      }, { transaction: t });
+    }
 
-    // Obtener la visita completa con todas las relaciones
-    const visitaCompleta = await Visita.findByPk(nuevaVisita.id, {
+    // Obtener la visita completa con todas las relaciones (dentro de la transacción)
+    const visitaCompleta = await Visita.findOne({
+      where: { id: nuevaVisita.id },
       include: [
-        includeImagenes,
-        includeCafeteria,
+        {
+          model: Cafe,
+          as: 'cafeteria',
+          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+        },
         {
           model: User,
           as: 'usuario',
-          attributes: ['id', 'name', 'profileImage'],
-          required: true
+          attributes: ['id', 'name', 'profileImage']
         },
-        // Incluir participantes solo si es una visita compartida
-        ...(nuevaVisita.esCompartida ? [includeParticipantes] : [])
+        {
+          model: VisitaParticipante,
+          as: 'participantes',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ]
+        },
+        {
+          model: Resena,
+          as: 'resenas',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ],
+          required: false
+        },
+        {
+          model: VisitaImagen,
+          as: 'visitaImagenes',
+          attributes: ['imageUrl', 'orden']
+        },
+        {
+          model: Like,
+          as: 'likes'
+        }
       ],
-      order: orderOptions
+      raw: false,
+      nest: true,
+      transaction: t // Importante: incluir la transacción aquí también
     });
 
     if (!visitaCompleta) {
       throw new Error('Error al obtener la visita creada');
     }
 
+    // Transformar la respuesta
+    const visitaJSON = visitaCompleta.toJSON();
+
+    console.log('🔍 DEBUG - Datos de la visita:', {
+      id: visitaJSON.id,
+      usuario: visitaJSON.usuario,
+      resenas: visitaJSON.resenas?.map(r => ({
+        id: r.id,
+        usuarioId: r.usuarioId,
+        calificacion: r.calificacion,
+        comentario: r.comentario
+      }))
+    });
+
+    // Asegurarnos de que tenemos la información del creador
+    const creador = visitaJSON.usuario;
+    const resenaCreador = visitaJSON.resenas?.find(r => r.usuarioId === creador.id);
+
+    if (!creador) {
+      console.error('❌ No se encontró el creador de la visita:', {
+        visitaId: visitaJSON.id,
+        usuarioId: visitaJSON.usuarioId
+      });
+      throw new Error('No se encontró el creador de la visita');
+    }
+
+    if (!resenaCreador) {
+      console.error('❌ No se encontró la reseña del creador:', {
+        visitaId: visitaJSON.id,
+        usuarioId: visitaJSON.usuarioId,
+        resenas: visitaJSON.resenas?.map(r => ({
+          id: r.id,
+          usuarioId: r.usuarioId,
+          comentario: r.comentario
+        }))
+      });
+      throw new Error('No se encontró la reseña del creador');
+    }
+
+    console.log('✅ Creador y reseña encontrados:', {
+      creador: {
+        id: creador.id,
+        name: creador.name
+      },
+      resena: {
+        id: resenaCreador.id,
+        calificacion: resenaCreador.calificacion
+      }
+    });
+
     const visitaTransformada = {
-      ...visitaCompleta.toJSON(),
-      imagenes: visitaCompleta.visitaImagenes || []
+      id: visitaJSON.id,
+      fecha: visitaJSON.fecha,
+      estado: visitaJSON.estado,
+      esCompartida: visitaJSON.esCompartida,
+      cafeteria: visitaJSON.cafeteria,
+      imagenes: visitaJSON.visitaImagenes || [],
+      likesCount: 0,
+      creador: {
+        id: creador.id,
+        name: creador.name,
+        profileImage: creador.profileImage,
+        resena: {
+          id: resenaCreador.id,
+          calificacion: resenaCreador.calificacion,
+          comentario: resenaCreador.comentario,
+          fecha: resenaCreador.createdAt,
+          usuario: {
+            id: creador.id,
+            name: creador.name,
+            profileImage: creador.profileImage
+          }
+        }
+      },
+      participantes: (visitaJSON.participantes || [])
+        .filter(p => p.rol !== 'creador')
+        .map(p => ({
+          id: p.usuario.id,
+          name: p.usuario.name,
+          profileImage: p.usuario.profileImage,
+          estado: p.estado,
+          rol: p.rol,
+          fechaRespuesta: p.fechaRespuesta,
+          resena: visitaJSON.resenas?.find(r => r.usuarioId === p.usuarioId) ? {
+            id: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).id,
+            calificacion: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).calificacion,
+            comentario: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).comentario,
+            fecha: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).createdAt,
+            usuario: p.usuario
+          } : null
+        })) || []
     };
+
+    // Si todo salió bien, confirmar la transacción
+    await t.commit();
 
     res.status(201).json({
       mensaje: 'Visita creada exitosamente',
@@ -120,11 +322,19 @@ export const crearVisita = async (req, res) => {
     });
 
   } catch (error) {
-    await t.rollback();
-    console.error('Error al crear visita:', error);
+    if (t) {
+      try {
+        await t.rollback();
+      } catch (rollbackError) {
+        console.error('Error al hacer rollback:', rollbackError);
+      }
+    }
+    console.error('💥 ERROR COMPLETO al crear visita:', error);
+    console.error('💥 ERROR STACK:', error.stack);
     res.status(500).json({
       mensaje: 'Error al crear la visita',
-      error: error.message
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
@@ -132,14 +342,125 @@ export const crearVisita = async (req, res) => {
 export const obtenerVisitas = async (req, res) => {
   try {
     const visitas = await Visita.findAll({
-      include: [includeImagenes, includeCafeteria, includeUsuario],
-      order: orderOptions
+      include: [
+        {
+          model: Cafe,
+          as: 'cafeteria',
+          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+        },
+        {
+          model: User,
+          as: 'usuario',
+          attributes: ['id', 'name', 'profileImage']
+        },
+        {
+          model: VisitaParticipante,
+          as: 'participantes',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ]
+        },
+        {
+          model: Resena,
+          as: 'resenas',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ],
+          required: false
+        },
+        {
+          model: VisitaImagen,
+          as: 'visitaImagenes',
+          attributes: ['imageUrl', 'orden']
+        },
+        {
+          model: Like,
+          as: 'likes'
+        }
+      ],
+      order: [['fecha', 'DESC']],
+      raw: false,
+      nest: true
     });
 
-    const visitasTransformadas = visitas.map(visita => ({
-      ...visita.toJSON(),
-      imagenes: visita.visitaImagenes
-    }));
+    const visitasTransformadas = visitas.map(visita => {
+      const visitaJSON = visita.toJSON();
+      const creador = visitaJSON.usuario;
+      const resenaCreador = visitaJSON.resenas?.find(r => r.usuarioId === creador?.id);
+
+      console.log('🔍 TRANSFORMANDO VISITA:', {
+        id: visitaJSON.id,
+        creador: creador ? { id: creador.id, name: creador.name, profileImage: creador.profileImage } : 'NULL',
+        participantes: visitaJSON.participantes?.length || 0,
+        resenas: visitaJSON.resenas?.length || 0
+      });
+
+      return {
+        id: visitaJSON.id,
+        fecha: visitaJSON.fecha,
+        estado: visitaJSON.estado,
+        esCompartida: visitaJSON.esCompartida,
+        cafeteria: visitaJSON.cafeteria,
+        imagenes: visitaJSON.visitaImagenes || [],
+        likesCount: visitaJSON.likes?.length || 0,
+        // Nueva estructura
+        creador: creador ? {
+          id: creador.id,
+          name: creador.name,
+          profileImage: creador.profileImage,
+          resena: resenaCreador ? {
+            id: resenaCreador.id,
+            calificacion: resenaCreador.calificacion,
+            comentario: resenaCreador.comentario,
+            fecha: resenaCreador.createdAt,
+            usuario: {
+              id: creador.id,
+              name: creador.name,
+              profileImage: creador.profileImage
+            }
+          } : null
+        } : null,
+        participantes: (visitaJSON.participantes || [])
+          .filter(p => p.rol !== 'creador')
+          .map(p => ({
+            id: p.usuario.id,
+            name: p.usuario.name,
+            profileImage: p.usuario.profileImage,
+            estado: p.estado,
+            rol: p.rol,
+            fechaRespuesta: p.fechaRespuesta,
+            resena: visitaJSON.resenas?.find(r => r.usuarioId === p.usuarioId) ? {
+              id: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).id,
+              calificacion: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).calificacion,
+              comentario: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).comentario,
+              fecha: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).createdAt,
+              usuario: {
+                id: p.usuario.id,
+                name: p.usuario.name,
+                profileImage: p.usuario.profileImage
+              }
+            } : null
+          })),
+        // Compatibilidad con estructura antigua
+        usuario: creador,
+        comentario: resenaCreador?.comentario,
+        calificacion: resenaCreador?.calificacion
+      };
+    });
+
+    console.log('📤 ENVIANDO VISITAS:', visitasTransformadas.map(v => ({
+      id: v.id,
+      creador: v.creador ? { id: v.creador.id, name: v.creador.name } : 'NULL',
+      participantes: v.participantes?.length || 0
+    })));
 
     res.json({
       mensaje: 'Visitas recuperadas exitosamente',
@@ -158,30 +479,175 @@ export const obtenerVisitas = async (req, res) => {
 export const obtenerVisitaPorId = async (req, res) => {
   try {
     const { id } = req.params;
-    const visita = await Visita.findByPk(id, {
-      include: [includeImagenes, includeCafeteria, includeUsuario],
-      order: orderOptions
+
+    const visita = await Visita.findOne({
+      where: { id },
+      include: [
+        {
+          model: Cafe,
+          as: 'cafeteria',
+          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+        },
+        {
+          model: User,
+          as: 'usuario',
+          attributes: ['id', 'name', 'profileImage']
+        },
+        {
+          model: VisitaParticipante,
+          as: 'participantes',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ]
+        },
+        {
+          model: Resena,
+          as: 'resenas',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ],
+          required: false
+        },
+        {
+          model: VisitaImagen,
+          as: 'visitaImagenes',
+          attributes: ['imageUrl', 'orden']
+        },
+        {
+          model: Like,
+          as: 'likes'
+        }
+      ],
+      raw: false,
+      nest: true
     });
-    
+
     if (!visita) {
       return res.status(404).json({ mensaje: 'Visita no encontrada' });
     }
 
+    // Transformar los datos para la respuesta
+    const visitaJSON = visita.toJSON();
+
+    console.log('🔍 DEBUG - Datos de la visita:', {
+      id: visitaJSON.id,
+      usuario: visitaJSON.usuario,
+      resenas: visitaJSON.resenas?.map(r => ({
+        id: r.id,
+        usuarioId: r.usuarioId,
+        calificacion: r.calificacion,
+        comentario: r.comentario
+      }))
+    });
+
+    // Asegurarnos de que tenemos la información del creador
+    const creador = visitaJSON.usuario;
+    const resenaCreador = visitaJSON.resenas?.find(r => r.usuarioId === creador.id);
+
+    if (!creador) {
+      console.error('❌ No se encontró el creador de la visita:', {
+        visitaId: visitaJSON.id,
+        usuarioId: visitaJSON.usuarioId
+      });
+      throw new Error('No se encontró el creador de la visita');
+    }
+
+    if (!resenaCreador) {
+      console.error('❌ No se encontró la reseña del creador:', {
+        visitaId: visitaJSON.id,
+        usuarioId: visitaJSON.usuarioId,
+        resenas: visitaJSON.resenas?.map(r => ({
+          id: r.id,
+          usuarioId: r.usuarioId,
+          comentario: r.comentario
+        }))
+      });
+      throw new Error('No se encontró la reseña del creador');
+    }
+
+    console.log('✅ Creador y reseña encontrados:', {
+      creador: {
+        id: creador.id,
+        name: creador.name
+      },
+      resena: {
+        id: resenaCreador.id,
+        calificacion: resenaCreador.calificacion
+      }
+    });
+
+    // Construir la respuesta final
     const visitaTransformada = {
-      ...visita.toJSON(),
-      imagenes: visita.visitaImagenes
+      id: visitaJSON.id,
+      fecha: visitaJSON.fecha,
+      estado: visitaJSON.estado,
+      esCompartida: visitaJSON.esCompartida,
+      cafeteria: visitaJSON.cafeteria,
+      imagenes: visitaJSON.visitaImagenes || [],
+      likesCount: visitaJSON.likes?.length || 0,
+      creador: {
+        id: creador.id,
+        name: creador.name,
+        profileImage: creador.profileImage,
+        resena: {
+          id: resenaCreador.id,
+          calificacion: resenaCreador.calificacion,
+          comentario: resenaCreador.comentario,
+          fecha: resenaCreador.createdAt,
+          usuario: {
+            id: creador.id,
+            name: creador.name,
+            profileImage: creador.profileImage
+          }
+        }
+      },
+      participantes: (visitaJSON.participantes || [])
+        .filter(p => p.rol !== 'creador')
+        .map(p => ({
+          id: p.usuario.id,
+          name: p.usuario.name,
+          profileImage: p.usuario.profileImage,
+          estado: p.estado,
+          rol: p.rol,
+          fechaRespuesta: p.fechaRespuesta,
+          resena: visitaJSON.resenas?.find(r => r.usuarioId === p.usuarioId) ? {
+            id: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).id,
+            calificacion: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).calificacion,
+            comentario: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).comentario,
+            fecha: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).createdAt,
+            usuario: {
+              id: p.usuario.id,
+              name: p.usuario.name,
+              profileImage: p.usuario.profileImage
+            }
+          } : null
+        }))
     };
-    
-    res.json({
-      mensaje: 'Visita recuperada exitosamente',
-      visita: visitaTransformada
-    });
+
+    console.log('📤 ENVIANDO RESPUESTA:', JSON.stringify({
+      mensaje: 'Visita encontrada',
+      visita: {
+        id: visitaTransformada.id,
+        creador: visitaTransformada.creador ? {
+          id: visitaTransformada.creador.id,
+          name: visitaTransformada.creador.name,
+          resena: visitaTransformada.creador.resena ? 'SI' : 'NO'
+        } : 'NULL'
+      }
+    }, null, 2));
+
+    res.json({ mensaje: 'Visita encontrada', visita: visitaTransformada });
   } catch (error) {
-    console.error('Error al obtener la visita:', error);
-    res.status(500).json({ 
-      mensaje: 'Error al obtener la visita',
-      error: error.message 
-    });
+    console.error('Error al obtener visita:', error);
+    res.status(500).json({ mensaje: 'Error al obtener la visita' });
   }
 };
 
@@ -190,15 +656,12 @@ export const actualizarVisita = async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { usuarioId, cafeteriaId, comentario, calificacion, imagenesExistentes } = req.body;
+    const { cafeteriaId, imagenesExistentes } = req.body;
     const imagenes = req.files;
 
     console.log('Datos recibidos:', {
       id,
-      usuarioId,
       cafeteriaId,
-      comentario,
-      calificacion,
       imagenesExistentes,
       'Número de imágenes nuevas': imagenes?.length || 0
     });
@@ -212,13 +675,12 @@ export const actualizarVisita = async (req, res) => {
       return res.status(404).json({ mensaje: 'Visita no encontrada' });
     }
 
-    // Actualizar datos básicos de la visita
-    await visita.update({
-      usuarioId,
-      cafeteriaId,
-      comentario,
-      calificacion
-    }, { transaction: t });
+    // Actualizar datos básicos de la visita (solo cafeteriaId si se proporciona)
+    if (cafeteriaId) {
+      await visita.update({
+        cafeteriaId
+      }, { transaction: t });
+    }
 
     // Procesar las imágenes existentes
     let imagenesExistentesArray = [];
@@ -336,13 +798,67 @@ export const obtenerDiarioUsuario = async (req, res) => {
     // Usar el ID del usuario del token
     const usuarioId = req.user.id;
 
-    // Primero verificar si hay visitas para este usuario
-    const tieneVisitas = await Visita.count({
-      where: { usuarioId }
+    // Obtener todas las visitas donde el usuario participó
+    const participaciones = await VisitaParticipante.findAll({
+      where: { 
+        usuarioId,
+        estado: 'aceptada'
+      },
+      include: [
+        {
+          model: Visita,
+          as: 'visita',
+          include: [
+            {
+              model: Cafe,
+              as: 'cafeteria',
+              attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+            },
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            },
+            {
+              model: VisitaParticipante,
+              as: 'participantes',
+              include: [
+                {
+                  model: User,
+                  as: 'usuario',
+                  attributes: ['id', 'name', 'profileImage']
+                }
+              ]
+            },
+            {
+              model: Resena,
+              as: 'resenas',
+              include: [
+                {
+                  model: User,
+                  as: 'usuario',
+                  attributes: ['id', 'name', 'profileImage']
+                }
+              ],
+              required: false
+            },
+            {
+              model: VisitaImagen,
+              as: 'visitaImagenes',
+              attributes: ['imageUrl', 'orden']
+            },
+            {
+              model: Like,
+              as: 'likes'
+            }
+          ]
+        }
+      ],
+      order: [['createdAt', 'DESC']]
     });
 
-    // Si no hay visitas o hay un error de columna, devolver respuesta vacía
-    if (tieneVisitas === 0) {
+    // Si no hay participaciones, devolver respuesta vacía
+    if (participaciones.length === 0) {
       return res.status(200).json({
         mensaje: '¡Aún no tienes visitas registradas! 🌟 Explora nuevas cafeterías y comparte tus experiencias.',
         totalVisitas: 0,
@@ -351,38 +867,86 @@ export const obtenerDiarioUsuario = async (req, res) => {
       });
     }
 
-    const visitas = await Visita.findAll({
-      where: { usuarioId },
-      include: [includeImagenes, includeCafeteria, includeUsuario],
-      order: [['createdAt', 'DESC']]
+    // Transformar la respuesta para mantener compatibilidad con el frontend
+    const visitasTransformadas = participaciones.map(participacion => {
+      const visitaJSON = participacion.visita.toJSON();
+      const creador = visitaJSON.usuario;
+      const resenaCreador = visitaJSON.resenas?.find(r => r.usuarioId === creador?.id);
+
+      console.log('🔍 TRANSFORMANDO VISITA DIARIO:', {
+        id: visitaJSON.id,
+        creador: creador ? { id: creador.id, name: creador.name, profileImage: creador.profileImage } : 'NULL',
+        participantes: visitaJSON.participantes?.length || 0,
+        resenas: visitaJSON.resenas?.length || 0
+      });
+
+      return {
+        id: visitaJSON.id,
+        fecha: visitaJSON.fecha,
+        estado: visitaJSON.estado,
+        esCompartida: visitaJSON.esCompartida,
+        cafeteria: visitaJSON.cafeteria,
+        imagenes: visitaJSON.visitaImagenes || [],
+        likesCount: visitaJSON.likes?.length || 0,
+        // Nueva estructura
+        creador: creador ? {
+          id: creador.id,
+          name: creador.name,
+          profileImage: creador.profileImage,
+          resena: resenaCreador ? {
+            id: resenaCreador.id,
+            calificacion: resenaCreador.calificacion,
+            comentario: resenaCreador.comentario,
+            fecha: resenaCreador.createdAt,
+            usuario: {
+              id: creador.id,
+              name: creador.name,
+              profileImage: creador.profileImage
+            }
+          } : null
+        } : null,
+        participantes: (visitaJSON.participantes || [])
+          .filter(p => p.rol !== 'creador')
+          .map(p => ({
+            id: p.usuario.id,
+            name: p.usuario.name,
+            profileImage: p.usuario.profileImage,
+            estado: p.estado,
+            rol: p.rol,
+            fechaRespuesta: p.fechaRespuesta,
+            resena: visitaJSON.resenas?.find(r => r.usuarioId === p.usuarioId) ? {
+              id: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).id,
+              calificacion: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).calificacion,
+              comentario: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).comentario,
+              fecha: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).createdAt,
+              usuario: {
+                id: p.usuario.id,
+                name: p.usuario.name,
+                profileImage: p.usuario.profileImage
+              }
+            } : null
+          })),
+        // Compatibilidad con estructura antigua
+        usuario: creador,
+        comentario: resenaCreador?.comentario,
+        calificacion: resenaCreador?.calificacion
+      };
     });
 
-    // Transformar la respuesta para mantener compatibilidad con el frontend
-    const visitasTransformadas = visitas.map(visita => ({
-      ...visita.toJSON(),
-      imagenes: visita.visitaImagenes || []
-    }));
+    console.log('📤 ENVIANDO DIARIO USUARIO:', visitasTransformadas.map(v => ({
+      id: v.id,
+      creador: v.creador ? { id: v.creador.id, name: v.creador.name } : 'NULL',
+      participantes: v.participantes?.length || 0
+    })));
 
     res.json({
       mensaje: 'Diario recuperado exitosamente',
-      totalVisitas: visitas.length,
+      totalVisitas: visitasTransformadas.length,
       visitas: visitasTransformadas
     });
 
   } catch (error) {
     console.error('Error al obtener el diario del usuario:', error);
-
-    // Si el error es por columna faltante, devolver respuesta vacía
-    if (error.name === 'SequelizeDatabaseError' && 
-        error.parent?.code === 'ER_BAD_FIELD_ERROR') {
-      return res.status(200).json({
-        mensaje: '¡Aún no tienes visitas registradas! 🌟 Explora nuevas cafeterías y comparte tus experiencias.',
-        totalVisitas: 0,
-        visitas: [],
-        sugerencia: 'Puedes empezar visitando alguna de nuestras cafeterías recomendadas y compartir tu experiencia.'
-      });
-    }
-
     res.status(500).json({
       mensaje: 'Error al obtener el diario del usuario',
       error: error.message
@@ -393,34 +957,41 @@ export const obtenerDiarioUsuario = async (req, res) => {
 export const getVisitasByUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const visitas = await Visita.findAll({
-      where: { usuarioId: userId },
+    
+    // Obtener las participaciones del usuario
+    const participaciones = await VisitaParticipante.findAll({
+      where: { 
+        usuarioId: userId,
+        estado: 'aceptada'
+      },
       include: [
         {
-          model: Cafe,
-          as: 'cafeteria',
-          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
-        },
-        {
-          model: User,
-          as: 'usuario',
-          attributes: ['id', 'name', 'profileImage']
-        },
-        {
-          model: VisitaImagen,
-          as: 'visitaImagenes',
-          attributes: ['imageUrl', 'orden']
-        },
-        {
-          model: Like,
-          as: 'likes'
+          model: Visita,
+          as: 'visita',
+          include: [
+            {
+              model: Cafe,
+              as: 'cafeteria',
+              attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+            },
+            {
+              model: VisitaImagen,
+              as: 'visitaImagenes',
+              attributes: ['imageUrl', 'orden']
+            },
+            {
+              model: Like,
+              as: 'likes'
+            }
+          ]
         }
       ],
       order: [['createdAt', 'DESC']]
     });
 
     // Transformar los datos y agregar el conteo de likes
-    const visitasConLikes = visitas.map(visita => {
+    const visitasConLikes = participaciones.map(participacion => {
+      const visita = participacion.visita;
       const visitaJSON = visita.toJSON();
       return {
         ...visitaJSON,
@@ -431,7 +1002,7 @@ export const getVisitasByUser = async (req, res) => {
 
     res.json({
       mensaje: 'Visitas encontradas',
-      totalVisitas: visitas.length,
+      totalVisitas: visitasConLikes.length,
       visitas: visitasConLikes
     });
   } catch (error) {
@@ -458,6 +1029,29 @@ export const getVisitaById = async (req, res) => {
           attributes: ['id', 'name', 'profileImage']
         },
         {
+          model: VisitaParticipante,
+          as: 'participantes',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ]
+        },
+        {
+          model: Resena,
+          as: 'resenas',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ],
+          required: false
+        },
+        {
           model: VisitaImagen,
           as: 'visitaImagenes',
           attributes: ['imageUrl', 'orden']
@@ -466,28 +1060,116 @@ export const getVisitaById = async (req, res) => {
           model: Like,
           as: 'likes'
         }
-      ]
+      ],
+      raw: false,
+      nest: true
     });
 
     if (!visita) {
       return res.status(404).json({ mensaje: 'Visita no encontrada' });
     }
 
-    // Agregar el conteo de likes a la respuesta
+    // Transformar los datos para la respuesta
     const visitaJSON = visita.toJSON();
-    const visitaConLikes = {
-      ...visitaJSON,
-      likesCount: visitaJSON.likes.length,
-      likes: undefined // Removemos el array de likes ya que solo necesitamos el conteo
-    };
-
-    // Log para debug
-    console.log('Enviando visita con likes:', {
-      id: visitaConLikes.id,
-      likesCount: visitaConLikes.likesCount
+    
+    console.log('🔍 DEBUG - Datos de la visita:', {
+      id: visitaJSON.id,
+      usuario: visitaJSON.usuario,
+      resenas: visitaJSON.resenas?.map(r => ({
+        id: r.id,
+        usuarioId: r.usuarioId,
+        calificacion: r.calificacion,
+        comentario: r.comentario
+      }))
     });
 
-    res.json({ mensaje: 'Visita encontrada', visita: visitaConLikes });
+    // Asegurarnos de que tenemos la información del creador
+    const creador = visitaJSON.usuario;
+    const resenaCreador = visitaJSON.resenas?.find(r => r.usuarioId === creador.id);
+
+    if (!creador) {
+      console.error('❌ No se encontró el creador de la visita:', {
+        visitaId: visitaJSON.id,
+        usuarioId: visitaJSON.usuarioId
+      });
+      throw new Error('No se encontró el creador de la visita');
+    }
+
+    if (!resenaCreador) {
+      console.error('❌ No se encontró la reseña del creador:', {
+        visitaId: visitaJSON.id,
+        usuarioId: visitaJSON.usuarioId,
+        resenas: visitaJSON.resenas?.map(r => ({
+          id: r.id,
+          usuarioId: r.usuarioId,
+          comentario: r.comentario
+        }))
+      });
+      throw new Error('No se encontró la reseña del creador');
+    }
+
+    console.log('✅ Creador y reseña encontrados:', {
+      creador: {
+        id: creador.id,
+        name: creador.name
+      },
+      resena: {
+        id: resenaCreador.id,
+        calificacion: resenaCreador.calificacion
+      }
+    });
+
+    // Construir la respuesta final
+    const visitaTransformada = {
+      id: visitaJSON.id,
+      fecha: visitaJSON.fecha,
+      estado: visitaJSON.estado,
+      esCompartida: visitaJSON.esCompartida,
+      cafeteria: visitaJSON.cafeteria,
+      imagenes: visitaJSON.visitaImagenes || [],
+      likesCount: visitaJSON.likes?.length || 0,
+      creador: {
+        id: creador.id,
+        name: creador.name,
+        profileImage: creador.profileImage,
+        resena: {
+          id: resenaCreador.id,
+          calificacion: resenaCreador.calificacion,
+          comentario: resenaCreador.comentario,
+          fecha: resenaCreador.createdAt,
+          usuario: {
+            id: creador.id,
+            name: creador.name,
+            profileImage: creador.profileImage
+          }
+        }
+      },
+      participantes: (visitaJSON.participantes || [])
+        .filter(p => p.rol !== 'creador')
+        .map(p => ({
+          id: p.usuario.id,
+          name: p.usuario.name,
+          profileImage: p.usuario.profileImage,
+          estado: p.estado,
+          rol: p.rol,
+          fechaRespuesta: p.fechaRespuesta,
+          resena: visitaJSON.resenas?.find(r => r.usuarioId === p.usuarioId) ? {
+            id: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).id,
+            calificacion: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).calificacion,
+            comentario: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).comentario,
+            fecha: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).createdAt,
+            usuario: {
+              id: p.usuario.id,
+              name: p.usuario.name,
+              profileImage: p.usuario.profileImage
+            }
+          } : null
+        }))
+    };
+
+
+
+    res.json({ mensaje: 'Visita encontrada', visita: visitaTransformada });
   } catch (error) {
     console.error('Error al obtener visita:', error);
     res.status(500).json({ mensaje: 'Error al obtener la visita' });

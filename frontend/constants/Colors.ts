@@ -3,7 +3,7 @@
  * Sistema de colores combinado
  */
 
-const tintColorLight = '#8B4513';  // Cambiar al color café
+const tintColorLight = '#8D6E63';  // Color café unificado
 const tintColorDark = '#D2691E';
 
 // Sistema original de tu compañero (actualizado con colores café)
@@ -32,7 +32,7 @@ export const Colors = {
   },
   
   // Sistema nuevo para Cafe Cerca
-  primary: '#8B4513',
+  primary: '#8D6E63',
   secondary: '#D2691E',
   background: '#F5F5F5',
   white: '#FFFFFF',

@@ -7,6 +7,7 @@ const router = express.Router();
 
 // Rutas protegidas que requieren autenticación
 router.post('/', verifyToken, upload.array('imagenes', 5), crearVisita);
+router.post('/compartida', verifyToken, upload.array('imagenes', 5), crearVisita); // Ruta específica para visitas compartidas
 router.put('/:id', verifyToken, upload.array('imagenes', 5), actualizarVisita);
 router.delete('/:id', verifyToken, eliminarVisita);
 router.get('/usuario/:usuarioId', verifyToken, obtenerDiarioUsuario);

@@ -213,10 +213,11 @@ export default function AddVisitScreen() {
 
       // Agregar amigos seleccionados si hay alguno
       if (selectedFriends.length > 0) {
+        formData.append('esCompartida', 'true');
+        formData.append('maxParticipantes', '10');
         selectedFriends.forEach(friend => {
           formData.append('amigosIds', friend.id.toString());
         });
-        formData.append('maxParticipantes', '10');
       }
 
       // Agregar imágenes si las hay
@@ -240,14 +241,7 @@ export default function AddVisitScreen() {
 
       // Si hay amigos seleccionados, crear visita compartida
       if (selectedFriends.length > 0) {
-        console.log('Creando visita compartida con:', {
-          cafeteriaId: selectedCafe.id,
-          comentario: comment,
-          calificacion: rating,
-          amigosIds: selectedFriends.map(f => f.id),
-          maxParticipantes: 10,
-          imagenes: images.length
-        });
+
         
 
 
@@ -264,12 +258,6 @@ export default function AddVisitScreen() {
         }
       } else {
         // Crear visita normal
-        console.log('Creando visita normal con:', {
-          cafeteriaId: selectedCafe.id,
-          comentario: comment,
-          calificacion: rating,
-          imagenes: images.length
-        });
 
         response = await fetch(`${API_URL}/visitas`, {
           method: 'POST',
@@ -434,17 +422,6 @@ export default function AddVisitScreen() {
   return (
     <>
       <ScrollView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={handleBack}
-            style={styles.backButton}
-          >
-            <AntDesign name="arrowleft" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Nueva Visita</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
         <View style={styles.content}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Amigos</Text>
@@ -642,26 +619,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    flex: 1,
-    textAlign: 'center',
-    marginRight: 24, // Para compensar el botón de retroceso
-  },
+
   content: {
     flex: 1,
     paddingHorizontal: 16,

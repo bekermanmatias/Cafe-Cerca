@@ -14,36 +14,8 @@ interface Friend {
   profileImage: string;
 }
 
-interface Solicitud {
-  id: number;
-  userId: number;
-  friendId: number;
-  status: string;
-  solicitante: {
-    id: number;
-    name: string;
-    email: string;
-    profileImage?: string;
-  };
-}
-
-interface SolicitudEnviada {
-  id: number;
-  userId: number;
-  friendId: number;
-  status: string;
-  destinatario: {
-    id: number;
-    name: string;
-    email: string;
-    profileImage?: string;
-  };
-}
-
 export default function FriendsScreen() {
   const [friends, setFriends] = useState<Friend[]>([]);
-  const [solicitudesRecibidas, setSolicitudesRecibidas] = useState<Solicitud[]>([]);
-  const [solicitudesEnviadas, setSolicitudesEnviadas] = useState<SolicitudEnviada[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
@@ -59,31 +31,15 @@ export default function FriendsScreen() {
       
       if (!token) throw new Error('Token no disponible');
 
-      const [friendsRes, solicitudesRecRes, solicitudesEnvRes] = await Promise.all([
-        axios.get<Friend[]>(API_ENDPOINTS.AMIGOS.GET_LISTA, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get<Solicitud[]>(API_ENDPOINTS.AMIGOS.GET_SOLICITUDES_RECIBIDAS, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get<SolicitudEnviada[]>(API_ENDPOINTS.AMIGOS.GET_SOLICITUDES_ENVIADAS, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+      const friendsRes = await axios.get<Friend[]>(API_ENDPOINTS.AMIGOS.GET_LISTA, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      console.log('=== DEBUG INFO ===');
-      console.log('Solicitudes recibidas:', solicitudesRecRes.data);
-      console.log('Cantidad solicitudes recibidas:', solicitudesRecRes.data?.length || 0);
-      console.log('Solicitudes enviadas:', solicitudesEnvRes.data);
-      console.log('Cantidad solicitudes enviadas:', solicitudesEnvRes.data?.length || 0);
-      console.log('Friends:', friendsRes.data);
-      console.log('==================');
+
 
       setFriends(friendsRes.data || []);
-      setSolicitudesRecibidas(solicitudesRecRes.data || []);
-      setSolicitudesEnviadas(solicitudesEnvRes.data || []);
     } catch (error) {
-      console.error('Error fetching friends or solicitudes:', error);
+      console.error('Error fetching friends:', error);
       Alert.alert('Error', 'No se pudo cargar la información.');
     } finally {
       setLoading(false);
@@ -100,38 +56,22 @@ export default function FriendsScreen() {
     fetchFriends();
   }, []);
 
-  // Auto-refresh cuando la pantalla se enfoca
+  // Refrescar cuando la pantalla se enfoca
   useFocusEffect(
     useCallback(() => {
       fetchFriends();
     }, [])
   );
 
-  // Función para aceptar o rechazar solicitud recibida
-  const responderSolicitud = async (solicitudId: number, status: 'accepted' | 'rejected') => {
-    try {
-      if (!token) throw new Error('Token no disponible');
-
-      const response = await axios.patch(API_ENDPOINTS.AMIGOS.RESPONDER_SOLICITUD(solicitudId), { status }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      Alert.alert('Éxito', response.data.message);
-      // Refrescar toda la lista para obtener datos actualizados
-      fetchFriends();
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert('Error', error.response?.data?.error || 'No se pudo responder la solicitud.');
-    }
-  };
-
-  // Función para eliminar amigo
   const eliminarAmigo = async (friendId: number, friendName: string) => {
     Alert.alert(
       'Eliminar amigo',
-      `¿Estás seguro de que quieres eliminar a ${friendName} de tu lista de amigos?`,
+      `¿Estás seguro que deseas eliminar a ${friendName} de tu lista de amigos?`,
       [
-        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
         {
           text: 'Eliminar',
           style: 'destructive',
@@ -139,104 +79,43 @@ export default function FriendsScreen() {
             try {
               if (!token) throw new Error('Token no disponible');
 
-              await axios.delete(API_ENDPOINTS.AMIGOS.ELIMINAR_AMIGO, {
-                headers: { Authorization: `Bearer ${token}` },
-                data: { friendId }
-              });
-
-              Alert.alert('Éxito', 'Amigo eliminado correctamente.');
-              fetchFriends(); // Refrescar la lista
-            } catch (error: any) {
-              console.error(error);
-              Alert.alert('Error', error.response?.data?.error || 'No se pudo eliminar el amigo.');
-            }
-          }
-        }
-      ]
-    );
-  };
-  const cancelarSolicitudEnviada = async (solicitudId: number) => {
-    Alert.alert(
-      'Cancelar solicitud',
-      '¿Estás seguro de que quieres cancelar esta solicitud de amistad?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              if (!token) throw new Error('Token no disponible');
-
-              await axios.delete(API_ENDPOINTS.AMIGOS.CANCELAR_SOLICITUD(solicitudId), {
+              await axios.delete(`${API_ENDPOINTS.AMIGOS.ELIMINAR_AMIGO}/${friendId}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
 
-              Alert.alert('Éxito', 'Solicitud cancelada correctamente.');
-              // Refrescar toda la lista para obtener datos actualizados
+              // Refrescar la lista después de eliminar
               fetchFriends();
-            } catch (error: any) {
-              console.error(error);
-              Alert.alert('Error', error.response?.data?.error || 'No se pudo cancelar la solicitud.');
+              
+              Alert.alert('Éxito', 'Amigo eliminado correctamente');
+            } catch (error) {
+              console.error('Error eliminating friend:', error);
+              Alert.alert('Error', 'No se pudo eliminar al amigo.');
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   const renderFriend = ({ item }: { item: Friend }) => (
     <View style={styles.friendCard}>
-      <Image source={{ uri: item.profileImage || 'https://via.placeholder.com/50' }} style={styles.avatar} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.name}>{item.name}</Text>
-      </View>
-      <TouchableOpacity
-        style={styles.menuButton}
-        onPress={() => eliminarAmigo(item.id, item.name)}
-      >
-        <Ionicons name="ellipsis-vertical" size={20} color="#666" />
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderSolicitudRecibida = ({ item }: { item: Solicitud }) => (
-    <View style={styles.solicitudRecibidaCard}>
-      <Image source={{ uri: item.solicitante.profileImage || 'https://via.placeholder.com/50' }} style={styles.avatar} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.name}>{item.solicitante.name}</Text>
-        <Text style={styles.solicitudLabel}>Te envió una solicitud</Text>
-        <View style={styles.buttonsRow}>
-          <TouchableOpacity
-            style={[styles.btn, styles.acceptBtn]}
-            onPress={() => responderSolicitud(item.id, 'accepted')}
-          >
-            <Text style={styles.btnText}>Aceptar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.btn, styles.rejectBtn]}
-            onPress={() => responderSolicitud(item.id, 'rejected')}
-          >
-            <Text style={styles.btnText}>Rechazar</Text>
-          </TouchableOpacity>
+      <View style={styles.friendHeader}>
+        <Image
+          source={{ 
+            uri: item.profileImage || 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png'
+          }}
+          style={styles.profileImage}
+        />
+        <View style={styles.friendInfo}>
+          <Text style={styles.friendName}>{item.name}</Text>
         </View>
       </View>
-    </View>
-  );
-
-  const renderSolicitudEnviada = ({ item }: { item: SolicitudEnviada }) => (
-    <View style={styles.solicitudEnviadaCard}>
-      <Image source={{ uri: item.destinatario.profileImage || 'https://via.placeholder.com/50' }} style={styles.avatar} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.name}>{item.destinatario.name}</Text>
-        <Text style={styles.solicitudLabel}>Solicitud enviada - Pendiente</Text>
-        <TouchableOpacity
-          style={[styles.btn, styles.cancelBtn]}
-          onPress={() => cancelarSolicitudEnviada(item.id)}
-        >
-          <Text style={styles.btnText}>Cancelar solicitud</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={() => eliminarAmigo(item.id, item.name)}
+      >
+        <Ionicons name="trash-outline" size={20} color="#dc3545" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -255,60 +134,16 @@ export default function FriendsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.addButton} onPress={navigateToAddFriends}>
-            <Ionicons name="person-add" size={28} color="#333" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.invitationsButton} 
-            onPress={() => router.push('/shared-visits-invitations')}
-          >
-            <Ionicons name="mail" size={24} color="#333" />
-            <Text style={styles.invitationsButtonText}>Invitaciones</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Solicitudes Recibidas */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="mail" size={20} color="#4B3A2F" /> Solicitudes recibidas ({solicitudesRecibidas.length})
-          </Text>
-          {solicitudesRecibidas.length === 0 ? (
-            <Text style={styles.noFriendsText}>No tienes solicitudes pendientes</Text>
-          ) : (
-            <FlatList
-              data={solicitudesRecibidas}
-              keyExtractor={(item) => `recibida-${item.id}`}
-              renderItem={renderSolicitudRecibida}
-              contentContainerStyle={{ paddingBottom: 16 }}
-              scrollEnabled={false}
-            />
-          )}
-        </View>
-
-        {/* Solicitudes Enviadas */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="paper-plane" size={20} color="#4B3A2F" /> Solicitudes enviadas ({solicitudesEnviadas.length})
-          </Text>
-          {solicitudesEnviadas.length === 0 ? (
-            <Text style={styles.noFriendsText}>No has enviado solicitudes</Text>
-          ) : (
-            <FlatList
-              data={solicitudesEnviadas}
-              keyExtractor={(item) => `enviada-${item.id}`}
-              renderItem={renderSolicitudEnviada}
-              contentContainerStyle={{ paddingBottom: 16 }}
-              scrollEnabled={false}
-            />
-          )}
-        </View>
-
         {/* Lista de Amigos */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="people" size={20} color="#4B3A2F" /> Tus amigos ({friends.length})
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="people" size={20} color="#8D6E63" /> Amigos ({friends.length})
+            </Text>
+            <TouchableOpacity style={styles.addButton} onPress={navigateToAddFriends}>
+              <Ionicons name="person-add" size={20} color="#000" />
+            </TouchableOpacity>
+          </View>
           {friends.length === 0 ? (
             <Text style={styles.noFriendsText}>No tienes amigos todavía. ¡Agrega alguno!</Text>
           ) : (
@@ -328,16 +163,8 @@ export default function FriendsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
-  },
   addButton: {
-    padding: 12,
+    padding: 8,
   },
   invitationsButton: {
     flexDirection: 'row',
@@ -355,12 +182,18 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 16,
     marginBottom: 20,
+    paddingTop: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#4B3A2F',
+    color: '#8D6E63',
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -377,71 +210,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 12,
   },
-  menuButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#e0e0e0',
-  },
-  solicitudRecibidaCard: {
+  friendHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    marginBottom: 12,
-    backgroundColor: '#E8F5E8', // Verde claro para recibidas
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    flex: 1,
   },
-  solicitudEnviadaCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    marginBottom: 12,
-    backgroundColor: '#FFF0E6', // Naranja claro para enviadas
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
-  },
-  avatar: {
+  profileImage: {
     width: 50,
     height: 50,
     borderRadius: 25,
     marginRight: 16,
     backgroundColor: '#ccc',
   },
-  name: {
+  friendInfo: {
+    flex: 1,
+  },
+  friendName: {
     fontSize: 16,
     fontWeight: 'bold',
   },
-  solicitudLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-    marginBottom: 8,
-  },
-  buttonsRow: {
-    flexDirection: 'row',
-    marginTop: 8,
-    gap: 12,
-  },
-  btn: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  acceptBtn: {
-    backgroundColor: '#4CAF50',
-  },
-  rejectBtn: {
-    backgroundColor: '#E53935',
-  },
-  cancelBtn: {
-    backgroundColor: '#FF9800',
-    marginTop: 4,
-  },
-  btnText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 12,
+  deleteButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#ffebee',
   },
 });

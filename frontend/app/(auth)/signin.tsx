@@ -51,7 +51,7 @@ export default function SignInScreen() {
 
       <View style={styles.form}>
         <View style={styles.inputContainer}>
-          <MaterialIcons name="email" size={20} color="#A76F4D" style={styles.icon} />
+          <MaterialIcons name="email" size={20} color="#8D6E63" style={styles.icon} />
           <TextInput
             placeholder="Email address"
             style={styles.input}
@@ -63,7 +63,7 @@ export default function SignInScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <MaterialIcons name="lock" size={20} color="#A76F4D" style={styles.icon} />
+          <MaterialIcons name="lock" size={20} color="#8D6E63" style={styles.icon} />
           <TextInput
             placeholder="Password"
             style={styles.input}
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#4B3A2F',
+    color: '#8D6E63',
     marginBottom: 4,
   },
   subtitle: {
@@ -132,9 +132,9 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   forgotLink: { alignSelf: 'flex-end' },
-  forgotText: { fontSize: 12, color: '#A76F4D', marginTop: 8 },
+      forgotText: { fontSize: 12, color: '#8D6E63', marginTop: 8 },
   button: {
-    backgroundColor: '#A76F4D',
+    backgroundColor: '#8D6E63',
     height: 48,
     borderRadius: 8,
     justifyContent: 'center',
@@ -147,5 +147,5 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   footerText: { fontSize: 13, color: '#999' },
-  footerLink: { fontSize: 13, color: '#A76F4D', fontWeight: '500' },
+      footerLink: { fontSize: 13, color: '#8D6E63', fontWeight: '500' },
 });

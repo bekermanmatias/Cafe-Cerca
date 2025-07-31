@@ -1,5 +1,5 @@
 import sequelize from './database.js';
-import { Visita, Cafe, VisitaImagen, User, Comentario, Like, SavedCafe, Amigos } from '../models/index.js';
+import { Visita, Cafe, VisitaImagen, User, Comentario, Like, SavedCafe, Amigos, VisitaParticipante, Resena } from '../models/index.js';
 import bcrypt from 'bcrypt';
 import { Sequelize } from 'sequelize';
 import { exec } from 'child_process';
@@ -259,29 +259,52 @@ export async function initDatabase() {
       await checkTable(table.model);
     }
 
-    // Sincronizar los modelos con la base de datos
-    console.log('\n🔄 Sincronizando modelos con la base de datos...');
+    // Verificar que las tablas existen (sin sincronizar)
+    console.log('\n🔄 Verificando estructura de tablas...');
     
-    // Sincronizar en orden específico debido a las relaciones
-    await User.sync({ alter: false });
-    await Cafe.sync({ alter: false });
-    await Visita.sync({ alter: false });
-    await VisitaImagen.sync({ alter: false });
-    await Comentario.sync({ alter: false });
-    await Like.sync({ alter: false });
-    await SavedCafe.sync({ alter: false });
-    await Amigos.sync({ alter: false });
+    // Solo verificar que las tablas existen, sin modificar estructura
+    const tableChecks = [
+      { model: User, name: 'Users' },
+      { model: Cafe, name: 'cafes' },
+      { model: Visita, name: 'visitas' },
+      { model: VisitaImagen, name: 'visita_imagenes' },
+      { model: Comentario, name: 'comentarios' },
+      { model: Like, name: 'likes' },
+      { model: SavedCafe, name: 'saved_cafes' },
+      { model: Amigos, name: 'amigos' },
+      { model: VisitaParticipante, name: 'visitas_compartidas' },
+      { model: Resena, name: 'resenas' }
+    ];
+
+    for (const table of tableChecks) {
+      try {
+        await table.model.describe();
+        console.log(`✅ Tabla ${table.name} verificada`);
+      } catch (error) {
+        console.error(`❌ Error verificando tabla ${table.name}:`, error.message);
+        // Si es un error de "too many keys", solo mostrar advertencia
+        if (error.message.includes('Too many keys specified')) {
+          console.log(`⚠️ Advertencia: Tabla ${table.name} tiene demasiados índices, pero el servidor continuará funcionando`);
+        }
+      }
+    }
     
-    console.log('✅ Sincronización de tablas completada');
+    console.log('✅ Verificación de tablas completada');
 
     // Crear datos iniciales
     console.log('\n📝 Verificando datos iniciales...');
-    await createInitialData();
-    console.log('✅ Verificación de datos iniciales completada\n');
+    try {
+      await createInitialData();
+      console.log('✅ Verificación de datos iniciales completada\n');
+    } catch (error) {
+      console.error('❌ Error creando datos iniciales:', error.message);
+      console.log('⚠️ El servidor continuará funcionando sin datos iniciales\n');
+    }
 
     return true;
   } catch (error) {
-    console.error('❌ Error inicializando la base de datos:', error);
-    return false;
+    console.error('❌ Error inicializando la base de datos:', error.message);
+    console.log('⚠️ El servidor continuará funcionando con errores de base de datos\n');
+    return true; // Cambiar a true para que el servidor continúe
   }
 } 

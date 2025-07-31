@@ -40,7 +40,7 @@ export default function RootLayout() {
             headerStyle: {
               backgroundColor: '#fff',
             },
-            headerTintColor: '#8B4513',
+            headerTintColor: '#8D6E63',
             headerTitleStyle: {
               fontWeight: 'bold',
             },
@@ -52,41 +52,88 @@ export default function RootLayout() {
           {/* Pantalla de autenticación */}
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
 
-          {/* Grupo de tabs */}
+          {/* Grupo de tabs - header completo */}
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
+          {/* Pantallas no-tab con header simple y flecha de volver */}
           <Stack.Screen
             name="add-visit"
             options={{
-              headerShown: false,
+              headerShown: true,
+              headerTitle: '',
+              headerBackTitle: '',
               animation: 'slide_from_right',
             }}
           />
           <Stack.Screen
             name="edit-visit"
             options={{
-              headerShown: false,
+              headerShown: true,
+              headerTitle: '',
+              headerBackTitle: '',
               animation: 'slide_from_right',
             }}
           />
           <Stack.Screen
             name="visit-details"
             options={{
-              headerShown: false,
+              headerShown: true,
+              headerTitle: '',
+              headerBackTitle: '',
               animation: 'slide_from_right',
             }}
           />
           <Stack.Screen
             name="stats"
             options={{
-              headerShown: false,
+              headerShown: true,
+              headerTitle: '',
+              headerBackTitle: '',
               animation: 'slide_from_bottom',
             }}
           />
           <Stack.Screen
             name="cafe/[id]"
             options={{
-              headerShown: false,
+              headerShown: true,
+              headerTitle: '',
+              headerBackTitle: '',
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="notifications"
+            options={{
+              headerShown: true,
+              headerTitle: 'Notificaciones',
+              headerBackTitle: '',
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="profile"
+            options={{
+              headerShown: true,
+              headerTitle: 'Perfil',
+              headerBackTitle: '',
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="liked-visits"
+            options={{
+              headerShown: true,
+              headerTitle: 'Visitas Me Gusta',
+              headerBackTitle: '',
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="saved-cafes"
+            options={{
+              headerShown: true,
+              headerTitle: 'Cafeterías Guardadas',
+              headerBackTitle: '',
               animation: 'slide_from_right',
             }}
           />

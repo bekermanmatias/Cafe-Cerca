@@ -6,12 +6,33 @@ import { useAuth } from '../context/AuthContext';
 
 const windowWidth = Dimensions.get('window').width;
 
+interface Usuario {
+  id: number;
+  name: string;
+  profileImage: string | null;
+}
+
+interface Resena {
+  id: number;
+  calificacion: number;
+  comentario: string;
+  fecha: string;
+  usuario: Usuario;
+}
+
+interface Participante extends Usuario {
+  estado: 'pendiente' | 'aceptada' | 'rechazada';
+  rol: 'creador' | 'participante';
+  fechaRespuesta?: string;
+  resena?: Resena;
+}
+
 export interface VisitCardProps {
   visit: {
     id: number;
-    comentario: string;
-    calificacion: number;
     fecha: string;
+    estado: 'activa' | 'completada' | 'cancelada';
+    esCompartida: boolean;
     imagenes: Array<{
       imageUrl: string;
       orden: number;
@@ -22,12 +43,18 @@ export interface VisitCardProps {
       imageUrl: string | null;
       rating: number;
     } | null;
-    usuario?: {
+    creador?: {
       id: number;
       name: string;
       profileImage: string | null;
+      resena?: Resena;
     };
+    participantes?: Participante[];
     likesCount?: number;
+    // Compatibilidad con estructura antigua
+    usuario?: Usuario;
+    comentario?: string;
+    calificacion?: number;
   };
   onShare?: () => void;
   onDetails?: () => void;
@@ -111,34 +138,123 @@ export const VisitCard = ({
     itemVisiblePercentThreshold: 50
   }).current;
 
+  // Obtener datos del creador y participantes (nueva estructura vs antigua)
+  const creador = visit.creador || visit.usuario;
+  const participantes = visit.participantes || [];
+  
+  // Calcular promedio de calificaciones entre todos los integrantes
+  const calcularPromedioCalificaciones = () => {
+    const calificaciones = [];
+    
+    // Agregar calificación del creador si existe
+    if (visit.creador?.resena?.calificacion) {
+      calificaciones.push(visit.creador.resena.calificacion);
+    } else if (visit.calificacion) {
+      calificaciones.push(visit.calificacion);
+    }
+    
+    // Agregar calificaciones de participantes aceptados
+    participantes.forEach(p => {
+      if (p.estado === 'aceptada' && p.resena?.calificacion) {
+        calificaciones.push(p.resena.calificacion);
+      }
+    });
+    
+    if (calificaciones.length === 0) return null;
+    
+    const promedio = calificaciones.reduce((sum, cal) => sum + cal, 0) / calificaciones.length;
+    return Math.round(promedio * 10) / 10; // Redondear a 1 decimal
+  };
+  
+  const promedioCalificaciones = calcularPromedioCalificaciones();
+  
   // Obtener el nombre de la cafetería de forma segura
   const cafeteriaName = visit.cafeteria?.name || 'Cafetería no disponible';
   
   // URL de la imagen de perfil por defecto
   const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
 
+  // Función para renderizar fotos de participantes
+  const renderParticipants = () => {
+    const allParticipants = [];
+    
+    // Agregar el creador
+    if (creador) {
+      allParticipants.push({
+        id: creador.id,
+        name: creador.name,
+        profileImage: creador.profileImage,
+        isCreator: true
+      });
+    }
+    
+    // Agregar participantes aceptados
+    participantes.forEach(p => {
+      if (p.estado === 'aceptada') {
+        allParticipants.push({
+          id: p.id,
+          name: p.name,
+          profileImage: p.profileImage,
+          isCreator: false
+        });
+      }
+    });
+
+    return (
+      <View style={styles.participantsContainer}>
+        <View style={styles.participantsPhotos}>
+          {allParticipants.slice(0, 3).map((participant, index) => (
+            <Image
+              key={participant.id}
+              source={{ 
+                uri: participant.profileImage || defaultProfileImage
+              }}
+              style={[
+                styles.participantPhoto,
+                index > 0 && { marginLeft: -10 } // Efecto de superposición
+              ]}
+            />
+          ))}
+          {allParticipants.length > 3 && (
+            <View style={[styles.participantPhoto, styles.moreParticipants, { marginLeft: -10 }]}>
+              <Text style={styles.moreParticipantsText}>+{allParticipants.length - 3}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.participantsNames}>
+          <Text style={styles.participantNames} numberOfLines={1}>
+            {allParticipants.length > 2 
+              ? `${allParticipants.slice(0, 2).map(p => p.name).join(', ')} y ${allParticipants.length - 2} más`
+              : allParticipants.map(p => p.name).join(', ')
+            }
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.place}>{cafeteriaName}</Text>
-          <Text style={styles.date}>{new Date(visit.fecha).toLocaleDateString()}</Text>
+          <Text style={styles.date}>
+            {new Date(visit.fecha).toLocaleDateString('es-ES', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
+          </Text>
         </View>
-        <View style={styles.headerRight}>
-          <View style={styles.participantsContainer}>
-            <Image
-              source={{ 
-                uri: visit.usuario?.profileImage || defaultProfileImage
-              }}
-              style={styles.participantPhoto}
-            />
+        {/* Burbuja flotante con puntuación arriba a la derecha */}
+        {promedioCalificaciones && (
+          <View style={styles.ratingBubble}>
+            <Text style={styles.ratingBubbleText}>{promedioCalificaciones} ★</Text>
           </View>
-        </View>
+        )}
       </View>
       <View style={styles.imageSection}>
-        <View style={styles.ratingBubble}>
-          <Text style={styles.rating}>{visit.calificacion} ★</Text>
-        </View>
         <FlatList
           ref={flatListRef}
           data={visit.imagenes}
@@ -194,7 +310,8 @@ export const VisitCard = ({
             <Ionicons name="book-outline" size={24} color="#666" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.description}>{visit.comentario}</Text>
+        {/* Fotos de participantes debajo de los botones */}
+        {renderParticipants()}
       </View>
     </View>
   );
@@ -227,10 +344,6 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   place: {
     fontSize: 22,
     fontWeight: 'bold',
@@ -240,18 +353,6 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 14,
     color: '#666',
-  },
-  participantsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  participantPhoto: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
-    borderWidth: 2.5,
-    borderColor: 'white',
-    backgroundColor: '#E0E0E0',
   },
   imageSection: {
     height: 400,
@@ -273,17 +374,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     right: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
+    backgroundColor: '#D7CCC8',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    width: 80,
     flexDirection: 'row',
     alignItems: 'center',
-    zIndex: 10,
+    justifyContent: 'center',
   },
-  rating: {
+  ratingBubbleText: {
+    color: '#5D4037',
     fontSize: 16,
-    color: '#000',
     fontWeight: 'bold',
   },
   paginationDots: {
@@ -304,7 +406,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     paddingTop: 8,
-    gap: 6,
+    gap: 12,
   },
   actions: {
     flexDirection: 'row',
@@ -320,11 +422,6 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: 6,
   },
-  description: {
-    fontSize: 16,
-    color: '#333',
-    lineHeight: 22,
-  },
   likeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -337,5 +434,40 @@ const styles = StyleSheet.create({
   },
   likesCountActive: {
     color: '#FF4B4B',
+  },
+  participantsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  participantsPhotos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  participantsNames: {
+    flex: 1,
+  },
+  participantPhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2.5,
+    borderColor: 'white',
+    backgroundColor: '#E0E0E0',
+  },
+  participantNames: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  moreParticipants: {
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moreParticipantsText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
   },
 }); 

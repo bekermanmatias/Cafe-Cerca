@@ -94,7 +94,7 @@ export default function SavedCafesScreen() {
             onPress={() => handleUnsave(cafe.id)}
             style={styles.unsaveButton}
           >
-            <MaterialIcons name="bookmark" size={24} color="#A76F4D" />
+            <MaterialIcons name="bookmark" size={24} color="#8D6E63" />
           </TouchableOpacity>
         </View>
         <Text style={styles.cafeAddress}>{cafe.address}</Text>
@@ -113,7 +113,7 @@ export default function SavedCafesScreen() {
           headerStyle: {
             backgroundColor: '#fff',
           },
-          headerTintColor: '#A76F4D',
+          headerTintColor: '#8D6E63',
           headerTitleStyle: {
             fontWeight: 'bold',
           },
@@ -122,7 +122,7 @@ export default function SavedCafesScreen() {
       
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#A76F4D" />
+          <ActivityIndicator size="large" color="#8D6E63" />
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
   rating: {
     fontSize: 14,
-    color: '#A76F4D',
+    color: '#8D6E63',
     fontWeight: '600',
   },
 }); 

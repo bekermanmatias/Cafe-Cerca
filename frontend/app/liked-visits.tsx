@@ -65,7 +65,7 @@ export default function LikedVisitsScreen() {
 
   const handleShare = (visitId: number) => {
     // Implementar compartir si es necesario
-    console.log('Compartir visita:', visitId);
+
   };
 
   return (
@@ -76,7 +76,7 @@ export default function LikedVisitsScreen() {
           headerStyle: {
             backgroundColor: '#fff',
           },
-          headerTintColor: '#A76F4D',
+          headerTintColor: '#8D6E63',
           headerTitleStyle: {
             fontWeight: 'bold',
           },
@@ -85,7 +85,7 @@ export default function LikedVisitsScreen() {
       
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#A76F4D" />
+          <ActivityIndicator size="large" color="#8D6E63" />
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>

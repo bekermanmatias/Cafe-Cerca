@@ -159,9 +159,6 @@ class ApiService {
         throw new Error('El servidor backend no está disponible. Verifica que esté corriendo en el puerto 3000.');
       }
 
-      console.log('Enviando petición de registro a:', API_ENDPOINTS.AUTH.REGISTER);
-      console.log('Datos del usuario:', userData);
-      
       const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
         method: 'POST',
         headers: {
@@ -170,13 +167,10 @@ class ApiService {
         },
         body: JSON.stringify(userData),
       });
-
-      console.log('Respuesta del servidor:', response.status, response.statusText);
       
       let data;
       try {
         data = await response.json();
-        console.log('Datos de respuesta:', data);
       } catch (jsonError) {
         console.error('Error parseando JSON:', jsonError);
         throw new Error('Error en la respuesta del servidor');
@@ -197,8 +191,6 @@ class ApiService {
   }
 
   async updateProfileImage(imageUri: string): Promise<ProfileImageResponse> {
-    console.log('Actualizando imagen de perfil...');
-    
     const token = await storage.getItem(StorageKeys.TOKEN);
     if (!token) {
       throw new Error('No se encontró el token de autenticación');
@@ -355,10 +347,11 @@ class ApiService {
     const token = await storage.getItem(StorageKeys.TOKEN);
     if (!token) throw new Error('No se encontró el token de autenticación');
 
-
+    // Asegurar que esCompartida está en true
+    formData.set('esCompartida', 'true');
 
     try {
-      const response = await fetch(`${API_URL}/visitas-compartidas`, {
+      const response = await fetch(`${API_URL}/visitas`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -387,6 +380,82 @@ class ApiService {
       }
       throw error;
     }
+  }
+
+  // Funciones para reseñas
+  async crearResena(visitaId: number, calificacion: number, comentario: string): Promise<any> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      '/resenas',
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          visitaId,
+          calificacion,
+          comentario
+        })
+      }
+    );
+  }
+
+  async obtenerResenas(visitaId: number): Promise<any> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/resenas/visita/${visitaId}`,
+      token,
+      { method: 'GET' }
+    );
+  }
+
+  async actualizarResena(resenaId: number, calificacion: number, comentario: string): Promise<any> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/resenas/${resenaId}`,
+      token,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          calificacion,
+          comentario
+        })
+      }
+    );
+  }
+
+  async eliminarResena(resenaId: number): Promise<any> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/resenas/${resenaId}`,
+      token,
+      { method: 'DELETE' }
+    );
+  }
+
+  // Aceptar invitación con reseña
+  async aceptarInvitacionConResena(visitaId: number, comentario: string, calificacion: number): Promise<any> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      `/visita-participantes/${visitaId}/aceptar-con-resena`,
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          comentario,
+          calificacion
+        })
+      }
+    );
   }
 
   async obtenerListaAmigos(): Promise<Friend[]> {

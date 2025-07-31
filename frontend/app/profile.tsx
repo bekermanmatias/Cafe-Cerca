@@ -158,10 +158,10 @@ const ProfileScreen = () => {
               onPress={() => handleMenuPress(item.title)}
             >
               <View style={styles.menuItemContent}>
-                <MaterialIcons name={item.icon} size={24} color="#A76F4D" />
+                <MaterialIcons name={item.icon} size={24} color="#8D6E63" />
                 <Text style={styles.menuItemText}>{item.title}</Text>
               </View>
-              <MaterialIcons name="chevron-right" size={24} color="#A76F4D" />
+              <MaterialIcons name="chevron-right" size={24} color="#8D6E63" />
             </TouchableOpacity>
           ))}
         </View>
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     bottom: 0,
-    backgroundColor: '#A76F4D',
+    backgroundColor: '#8D6E63',
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#4B3A2F',
+    color: '#8D6E63',
     marginBottom: 4,
   },
   userHandle: {
@@ -243,13 +243,13 @@ const styles = StyleSheet.create({
   menuItemText: {
     marginLeft: 16,
     fontSize: 16,
-    color: '#4B3A2F',
+    color: '#8D6E63',
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#A76F4D',
+    backgroundColor: '#8D6E63',
     padding: 16,
     margin: 20,
     borderRadius: 12,

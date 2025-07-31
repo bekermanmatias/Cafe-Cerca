@@ -30,16 +30,11 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
-      console.log('Iniciando registro con:', { name, email });
-      
       // Registrar al usuario
       const registerResponse = await apiService.register({ name, email, password });
-      console.log('Respuesta del registro:', registerResponse);
       
       // Hacer login automático usando el contexto
-      console.log('Haciendo login automático...');
       await login(registerResponse.token, registerResponse.user);
-      console.log('Login automático completado');
       
       alert('¡Cuenta creada exitosamente!');
       // Redirigir al usuario a la pestaña explore
@@ -55,7 +50,7 @@ export default function SignUpScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <MaterialIcons name="arrow-back" size={24} color="#A76F4D" />
+        <MaterialIcons name="arrow-back" size={24} color="#8D6E63" />
       </TouchableOpacity>
 
       <Text style={styles.title}>Registro</Text>
@@ -63,7 +58,7 @@ export default function SignUpScreen() {
 
       <View style={styles.form}>
         <View style={styles.inputContainer}>
-          <MaterialIcons name="person" size={20} color="#A76F4D" style={styles.icon} />
+          <MaterialIcons name="person" size={20} color="#8D6E63" style={styles.icon} />
           <TextInput
             placeholder="Nombre completo"
             style={styles.input}
@@ -73,7 +68,7 @@ export default function SignUpScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <MaterialIcons name="email" size={20} color="#A76F4D" style={styles.icon} />
+          <MaterialIcons name="email" size={20} color="#8D6E63" style={styles.icon} />
           <TextInput
             placeholder="Correo electrónico"
             style={styles.input}
@@ -85,7 +80,7 @@ export default function SignUpScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <MaterialIcons name="lock" size={20} color="#A76F4D" style={styles.icon} />
+          <MaterialIcons name="lock" size={20} color="#8D6E63" style={styles.icon} />
           <TextInput
             placeholder="Contraseña"
             style={styles.input}
@@ -129,7 +124,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#4B3A2F',
+    color: '#8D6E63',
     marginBottom: 4,
   },
   subtitle: {
@@ -157,9 +152,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
   },
-  link: { color: '#A76F4D', fontWeight: '500' },
+      link: { color: '#8D6E63', fontWeight: '500' },
   button: {
-    backgroundColor: '#A76F4D',
+    backgroundColor: '#8D6E63',
     height: 48,
     borderRadius: 8,
     justifyContent: 'center',
@@ -172,5 +167,5 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   footerText: { fontSize: 13, color: '#999' },
-  footerLink: { fontSize: 13, color: '#A76F4D', fontWeight: '500' },
+      footerLink: { fontSize: 13, color: '#8D6E63', fontWeight: '500' },
 });
