@@ -36,6 +36,9 @@ interface Estadisticas {
   distribucionCalificaciones: Record<string, number>;
   cafeteriasFavoritas: CafeteriaFavorita[];
   progresoMensual: ProgresoMensual[];
+  visitasIndividuales: number;
+  visitasCompartidasCreador: number;
+  visitasComoInvitado: number;
 }
 
 const EmptyStats = ({ onExplore }: { onExplore: () => void }) => (
@@ -83,7 +86,10 @@ export default function StatsScreen() {
             promedioCalificaciones: "0.0",
             distribucionCalificaciones: {},
             cafeteriasFavoritas: [],
-            progresoMensual: []
+            progresoMensual: [],
+            visitasIndividuales: 0,
+            visitasCompartidasCreador: 0,
+            visitasComoInvitado: 0
           });
         } else {
           throw new Error(data.error || 'Error al obtener estadísticas');
@@ -143,14 +149,7 @@ export default function StatsScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <AntDesign name="arrowleft" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mis Estadísticas</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
+      {/* Métricas principales */}
       <View style={styles.metricsContainer}>
         <View style={styles.metricCard}>
           <Text style={styles.metricNumber}>{stats.cafeteriasUnicas}</Text>
@@ -251,22 +250,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
   },
   metricsContainer: {
     flexDirection: 'row',
