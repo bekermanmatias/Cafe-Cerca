@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { AntDesign } from '@expo/vector-icons';
 import ImageEditor from '../components/ImageEditor';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { API_URL } from '../constants/Config';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
@@ -42,6 +43,7 @@ export default function AddVisitScreen() {
   const [selectedFriends, setSelectedFriends] = useState<Friend[]>([]);
   const [showFriendsSelector, setShowFriendsSelector] = useState(false);
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const { user, token } = useAuth();
 
   useEffect(() => {
@@ -205,6 +207,8 @@ export default function AddVisitScreen() {
       return;
     }
 
+    setIsPublishing(true);
+
     try {
       const formData = new FormData();
       formData.append('cafeteriaId', selectedCafe.id.toString());
@@ -241,24 +245,18 @@ export default function AddVisitScreen() {
 
       // Si hay amigos seleccionados, crear visita compartida
       if (selectedFriends.length > 0) {
-
-        
-
-
         try {
           response = await apiService.crearVisitaCompartida(formData);
           successMessage = `Visita compartida creada correctamente. Se han enviado invitaciones a ${selectedFriends.length} amigo${selectedFriends.length > 1 ? 's' : ''}.`;
         } catch (error) {
           console.error('Error específico al crear visita compartida:', error);
           if (error instanceof Error && error.message.includes('Error al crear la visita compartida')) {
-            // Intentar obtener más detalles del error
             throw new Error(`Error al crear la visita compartida: ${error.message}`);
           }
           throw error;
         }
       } else {
         // Crear visita normal
-
         response = await fetch(`${API_URL}/visitas`, {
           method: 'POST',
           body: formData,
@@ -301,6 +299,8 @@ export default function AddVisitScreen() {
       }
       
       Alert.alert('Error', errorMessage);
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -610,6 +610,11 @@ export default function AddVisitScreen() {
           </Modal>
         </View>
       </ScrollView>
+      
+      <LoadingSpinner 
+        visible={isPublishing} 
+        message="Publicando visita..."
+      />
     </>
   );
 }

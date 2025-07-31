@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -48,73 +49,80 @@ export default function SignUpScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <MaterialIcons name="arrow-back" size={24} color="#8D6E63" />
-      </TouchableOpacity>
-
-      <Text style={styles.title}>Registro</Text>
-      <Text style={styles.subtitle}>Crea tu cuenta aquí</Text>
-
-      <View style={styles.form}>
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="person" size={20} color="#8D6E63" style={styles.icon} />
-          <TextInput
-            placeholder="Nombre completo"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="email" size={20} color="#8D6E63" style={styles.icon} />
-          <TextInput
-            placeholder="Correo electrónico"
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="lock" size={20} color="#8D6E63" style={styles.icon} />
-          <TextInput
-            placeholder="Contraseña"
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
-
-        <Text style={styles.terms}>
-          Al registrarte aceptas nuestros{' '}
-          <Text style={styles.link}>Términos de Uso</Text>
-        </Text>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleSignUp}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <MaterialIcons name="arrow-forward" size={24} color="white" />
-          )}
+    <>
+      <SafeAreaView style={styles.container}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <MaterialIcons name="arrow-back" size={24} color="#8D6E63" />
         </TouchableOpacity>
-      </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>¿Ya tienes cuenta?</Text>
-        <TouchableOpacity onPress={() => router.push('./signin')}>
-          <Text style={styles.footerLink}> Inicia sesión</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+        <Text style={styles.title}>Registro</Text>
+        <Text style={styles.subtitle}>Crea tu cuenta aquí</Text>
+
+        <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="person" size={20} color="#8D6E63" style={styles.icon} />
+            <TextInput
+              placeholder="Nombre completo"
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="email" size={20} color="#8D6E63" style={styles.icon} />
+            <TextInput
+              placeholder="Correo electrónico"
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="lock" size={20} color="#8D6E63" style={styles.icon} />
+            <TextInput
+              placeholder="Contraseña"
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
+
+          <Text style={styles.terms}>
+            Al registrarte aceptas nuestros{' '}
+            <Text style={styles.link}>Términos de Uso</Text>
+          </Text>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleSignUp}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <MaterialIcons name="arrow-forward" size={24} color="white" />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>¿Ya tienes cuenta?</Text>
+          <TouchableOpacity onPress={() => router.push('./signin')}>
+            <Text style={styles.footerLink}> Inicia sesión</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+      
+      <LoadingSpinner 
+        visible={loading} 
+        message="Creando cuenta..."
+      />
+    </>
   );
 }
 

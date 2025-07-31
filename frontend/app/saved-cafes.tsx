@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image, TouchableOpacity, RefreshControl } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { Stack, useRouter } from 'expo-router';
@@ -33,6 +33,7 @@ export default function SavedCafesScreen() {
   const [savedCafes, setSavedCafes] = useState<Cafe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const { token } = useAuth();
   const router = useRouter();
 
@@ -56,8 +57,14 @@ export default function SavedCafesScreen() {
       setError('No se pudieron cargar las cafeterías guardadas');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadSavedCafes();
+  }, []);
 
   const handleUnsave = async (cafeId: number) => {
     if (!token) return;
@@ -109,7 +116,7 @@ export default function SavedCafesScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: 'Cafeterías Guardadas',
+          title: 'Mis Cafeterías Guardadas',
           headerStyle: {
             backgroundColor: '#fff',
           },
@@ -144,13 +151,23 @@ export default function SavedCafesScreen() {
           )}
         </View>
       ) : savedCafes.length === 0 ? (
-        <EmptyState onExplore={() => router.push('/(tabs)/explore')} />
+        <View style={styles.emptyContainer}>
+          <EmptyState onExplore={() => router.push('/(tabs)/explore')} />
+        </View>
       ) : (
         <FlatList
           data={savedCafes}
           renderItem={renderCafeItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#8D6E63']}
+              tintColor="#8D6E63"
+            />
+          }
         />
       )}
     </View>

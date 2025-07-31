@@ -13,7 +13,8 @@ import {
   KeyboardAvoidingView,
   Modal,
   findNodeHandle,
-  Image
+  Image,
+  RefreshControl
 } from 'react-native';
 import { apiService } from '../services/api';
 import { ThemedText } from './ThemedText';
@@ -49,15 +50,21 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
   const [showOptions, setShowOptions] = useState<number | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [refreshing, setRefreshing] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const menuButtonsRefs = useRef<{ [key: number]: View | null }>({});
   const [userData, setUserData] = useState<any>(null);
   const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
 
-  const cargarComentarios = useCallback(async () => {
+  const cargarComentarios = useCallback(async (isRefreshing = false) => {
     if (!visitaId) return;
     
-    setIsLoading(true);
+    if (isRefreshing) {
+      setRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    
     try {
       const data = await apiService.getComentarios(visitaId);
       setComentarios(data.comentarios || []);
@@ -66,8 +73,13 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
       Alert.alert('Error', 'No se pudieron cargar los comentarios');
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
   }, [visitaId]);
+
+  const onRefresh = useCallback(() => {
+    cargarComentarios(true);
+  }, [cargarComentarios]);
 
   useEffect(() => {
     const keyboardWillShow = () => {
@@ -321,6 +333,14 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
         contentContainerStyle={styles.flatListContent}
         ListEmptyComponent={EmptyListComponent}
         ListHeaderComponentStyle={styles.listHeader}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#8D6E63']}
+            tintColor="#8D6E63"
+          />
+        }
       />
       
       {showOptions !== null && (

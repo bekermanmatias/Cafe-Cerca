@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AntDesign, Feather, Ionicons } from '@expo/vector-icons';
@@ -70,6 +71,7 @@ export default function StatsScreen() {
   const [stats, setStats] = useState<Estadisticas | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (user && token) {
@@ -100,21 +102,27 @@ export default function StatsScreen() {
             visitasIndividuales: 0,
             visitasCompartidasCreador: 0,
             visitasComoInvitado: 0,
-            companerosCafe: []
+            companerosCafe: [],
           });
         } else {
-          throw new Error(data.error || 'Error al obtener estadísticas');
+          throw new Error(data.error || 'Error al cargar estadísticas');
         }
       } else {
         setStats(data);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching stats:', error);
       setError('No se pudieron cargar las estadísticas');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchStats();
+  }, []);
 
   if (!user || !token) {
     return (
@@ -162,7 +170,17 @@ export default function StatsScreen() {
   const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#8D6E63']}
+          tintColor="#8D6E63"
+        />
+      }
+    >
       {/* Métricas principales */}
       <View style={styles.metricsContainer}>
         <View style={styles.metricCard}>

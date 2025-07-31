@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { AntDesign } from '@expo/vector-icons';
 import ImageEditor from '../components/ImageEditor';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { API_URL } from '../constants/Config';
 
 const STANDARD_SIZE = 1080;
@@ -47,6 +48,7 @@ export default function EditVisitScreen() {
   const [selectedCafe, setSelectedCafe] = useState<Cafe | null>(null);
   const [showCafeSelector, setShowCafeSelector] = useState(false);
   const [isLoadingCafes, setIsLoadingCafes] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Primero cargamos las cafeterías
   useEffect(() => {
@@ -212,6 +214,8 @@ export default function EditVisitScreen() {
       return;
     }
 
+    setIsUpdating(true);
+
     try {
       const formData = new FormData();
       
@@ -263,6 +267,8 @@ export default function EditVisitScreen() {
     } catch (error) {
       console.error('Error al actualizar:', error);
       Alert.alert('Error', 'No se pudo actualizar la visita. Por favor, intenta de nuevo.');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -280,150 +286,157 @@ export default function EditVisitScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#8D6E63" />
-          <Text style={styles.loadingText}>Guardando cambios...</Text>
-        </View>
-      )}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={handleBack}
-          style={styles.backButton}
-        >
-          <AntDesign name="arrowleft" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Editar Visita</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Amigos</Text>
-          <TouchableOpacity style={styles.friendsButton}>
-            <Text style={styles.friendsButtonText}>Agregar amigo a la visita</Text>
-            <AntDesign name="right" size={20} color="#8D6E63" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cafetería</Text>
-          <TouchableOpacity 
-            style={styles.cafeSelector}
-            onPress={() => setShowCafeSelector(true)}
-          >
-            <Text style={styles.cafeSelectorText}>
-              {selectedCafe ? selectedCafe.name : 'Seleccionar cafetería'}
-            </Text>
-            <AntDesign name="down" size={20} color="#8D6E63" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Puntuación</Text>
-          <View style={styles.starsContainer}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity
-                key={star}
-                onPress={() => setRating(star)}
-              >
-                <AntDesign
-                  name={star <= rating ? "star" : "staro"}
-                  size={30}
-                  color={star <= rating ? "#FFD700" : "#8D6E63"}
-                />
-              </TouchableOpacity>
-            ))}
+    <>
+      <ScrollView style={styles.container}>
+        {isLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#8D6E63" />
+            <Text style={styles.loadingText}>Guardando cambios...</Text>
           </View>
+        )}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={handleBack}
+            style={styles.backButton}
+          >
+            <AntDesign name="arrowleft" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Editar Visita</Text>
+          <View style={{ width: 24 }} />
         </View>
 
-        <View style={styles.section}>
-          <TextInput
-            style={styles.commentInput}
-            placeholder="Comenta tu experiencia..."
-            placeholderTextColor="#999"
-            multiline
-            maxLength={500}
-            value={comment}
-            onChangeText={setComment}
-          />
-        </View>
-
-        <View style={styles.imagesGrid}>
-          {images.map((uri, index) => (
-            <View key={index} style={styles.imageContainer}>
-              <Image source={{ uri }} style={styles.image} />
-              <TouchableOpacity
-                style={styles.removeImage}
-                onPress={() => setImages(images.filter((_, i) => i !== index))}
-              >
-                <AntDesign name="close" size={20} color="white" />
-              </TouchableOpacity>
-            </View>
-          ))}
-          {images.length < 5 && (
-            <TouchableOpacity
-              style={styles.addImageButton}
-              onPress={handleSelectImages}
-            >
-              <AntDesign name="plus" size={30} color="#8D6E63" />
-              <Text style={styles.addImageText}>Agregar imágenes</Text>
+        <View style={styles.content}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Amigos</Text>
+            <TouchableOpacity style={styles.friendsButton}>
+              <Text style={styles.friendsButtonText}>Agregar amigo a la visita</Text>
+              <AntDesign name="right" size={20} color="#8D6E63" />
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Cafetería</Text>
+            <TouchableOpacity 
+              style={styles.cafeSelector}
+              onPress={() => setShowCafeSelector(true)}
+            >
+              <Text style={styles.cafeSelectorText}>
+                {selectedCafe ? selectedCafe.name : 'Seleccionar cafetería'}
+              </Text>
+              <AntDesign name="down" size={20} color="#8D6E63" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Puntuación</Text>
+            <View style={styles.starsContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setRating(star)}
+                >
+                  <AntDesign
+                    name={star <= rating ? "star" : "staro"}
+                    size={30}
+                    color={star <= rating ? "#FFD700" : "#8D6E63"}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Comenta tu experiencia..."
+              placeholderTextColor="#999"
+              multiline
+              maxLength={500}
+              value={comment}
+              onChangeText={setComment}
+            />
+          </View>
+
+          <View style={styles.imagesGrid}>
+            {images.map((uri, index) => (
+              <View key={index} style={styles.imageContainer}>
+                <Image source={{ uri }} style={styles.image} />
+                <TouchableOpacity
+                  style={styles.removeImage}
+                  onPress={() => setImages(images.filter((_, i) => i !== index))}
+                >
+                  <AntDesign name="close" size={20} color="white" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {images.length < 5 && (
+              <TouchableOpacity
+                style={styles.addImageButton}
+                onPress={handleSelectImages}
+              >
+                <AntDesign name="plus" size={30} color="#8D6E63" />
+                <Text style={styles.addImageText}>Agregar imágenes</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.publishButton, isLoading && styles.disabledButton]}
+            onPress={handleUpdate}
+            disabled={isLoading}
+          >
+            <Text style={styles.publishButtonText}>
+              {isLoading ? 'Guardando...' : 'Guardar Cambios'}
+            </Text>
+          </TouchableOpacity>
+
+          {editingImage && (
+            <ImageEditor
+              uri={editingImage}
+              visible={true}
+              onSave={handleSaveEditedImage}
+              onCancel={() => setEditingImage(null)}
+            />
           )}
         </View>
 
-        <TouchableOpacity
-          style={[styles.publishButton, isLoading && styles.disabledButton]}
-          onPress={handleUpdate}
-          disabled={isLoading}
+        <Modal
+          visible={showCafeSelector}
+          animationType="slide"
+          transparent={true}
         >
-          <Text style={styles.publishButtonText}>
-            {isLoading ? 'Guardando...' : 'Guardar Cambios'}
-          </Text>
-        </TouchableOpacity>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Seleccionar Cafetería</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowCafeSelector(false)}
+                  style={styles.closeButton}
+                >
+                  <AntDesign name="close" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
 
-        {editingImage && (
-          <ImageEditor
-            uri={editingImage}
-            visible={true}
-            onSave={handleSaveEditedImage}
-            onCancel={() => setEditingImage(null)}
-          />
-        )}
-      </View>
-
-      <Modal
-        visible={showCafeSelector}
-        animationType="slide"
-        transparent={true}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Seleccionar Cafetería</Text>
-              <TouchableOpacity 
-                onPress={() => setShowCafeSelector(false)}
-                style={styles.closeButton}
-              >
-                <AntDesign name="close" size={24} color="#000" />
-              </TouchableOpacity>
+              {isLoadingCafes ? (
+                <ActivityIndicator size="large" color="#8D6E63" />
+              ) : (
+                <FlatList
+                  data={cafes}
+                  renderItem={renderCafeItem}
+                  keyExtractor={item => item.id.toString()}
+                  contentContainerStyle={styles.cafeList}
+                />
+              )}
             </View>
-
-            {isLoadingCafes ? (
-              <ActivityIndicator size="large" color="#8D6E63" />
-            ) : (
-              <FlatList
-                data={cafes}
-                renderItem={renderCafeItem}
-                keyExtractor={item => item.id.toString()}
-                contentContainerStyle={styles.cafeList}
-              />
-            )}
           </View>
-        </View>
-      </Modal>
-    </ScrollView>
+        </Modal>
+      </ScrollView>
+      
+      <LoadingSpinner 
+        visible={isUpdating} 
+        message="Actualizando visita..."
+      />
+    </>
   );
 }
 

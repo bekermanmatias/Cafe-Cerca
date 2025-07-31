@@ -1,5 +1,5 @@
-import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useEffect, useState } from 'react';
+import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import SearchBar from '../../components/SearchBar';
 import FilterChips from '../../components/FilterChips';
@@ -28,6 +28,7 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const router = useRouter();
 
@@ -87,8 +88,35 @@ export default function ExploreScreen() {
       setError('No se pudieron cargar las cafeterías');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    const fetchData = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.warn('Permiso de ubicación denegado');
+          fetchCafes(); // aún así se cargan los cafés sin ubicación
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({});
+        const coords = {
+          lat: location.coords.latitude,
+          lng: location.coords.longitude,
+        };
+        setUserLocation(coords);
+        fetchCafes(coords.lat, coords.lng);
+      } catch (error) {
+        console.error('Error obteniendo ubicación:', error);
+        fetchCafes();
+      }
+    };
+    fetchData();
+  }, []);
 
   const filteredCafes = cafes.filter(cafe =>
     cafe.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -113,7 +141,17 @@ export default function ExploreScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#8D6E63']}
+          tintColor="#8D6E63"
+        />
+      }
+    >
       <SearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
