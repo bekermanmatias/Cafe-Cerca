@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AntDesign, Feather } from '@expo/vector-icons';
+import { AntDesign, Feather, Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../constants/Config';
 import { useAuth } from '../context/AuthContext';
 
@@ -29,6 +29,15 @@ interface ProgresoMensual {
   cantidadVisitas: number;
 }
 
+interface CompañeroCafe {
+  usuario: {
+    id: number;
+    name: string;
+    profileImage: string | null;
+  };
+  cantidadVisitas: number;
+}
+
 interface Estadisticas {
   totalVisitas: number;
   cafeteriasUnicas: number;
@@ -39,6 +48,7 @@ interface Estadisticas {
   visitasIndividuales: number;
   visitasCompartidasCreador: number;
   visitasComoInvitado: number;
+  companerosCafe: CompañeroCafe[];
 }
 
 const EmptyStats = ({ onExplore }: { onExplore: () => void }) => (
@@ -89,7 +99,8 @@ export default function StatsScreen() {
             progresoMensual: [],
             visitasIndividuales: 0,
             visitasCompartidasCreador: 0,
-            visitasComoInvitado: 0
+            visitasComoInvitado: 0,
+            companerosCafe: []
           });
         } else {
           throw new Error(data.error || 'Error al obtener estadísticas');
@@ -147,6 +158,9 @@ export default function StatsScreen() {
 
   const maxVisitas = Math.max(...stats.progresoMensual.map(mes => mes.cantidadVisitas), 1);
 
+  // URL de la imagen de perfil por defecto
+  const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
+
   return (
     <ScrollView style={styles.container}>
       {/* Métricas principales */}
@@ -168,7 +182,7 @@ export default function StatsScreen() {
           Progreso Mensual
         </Text>
         {stats.progresoMensual.length > 0 ? (
-          stats.progresoMensual.map((mes, index) => (
+          [...stats.progresoMensual].reverse().map((mes, index) => (
             <View key={index} style={styles.progressItem}>
               <View style={styles.progressHeader}>
                 <Text style={styles.monthLabel}>{mes.mes}</Text>
@@ -178,7 +192,11 @@ export default function StatsScreen() {
                 <View 
                   style={[
                     styles.progressBar, 
-                    { width: `${(mes.cantidadVisitas / maxVisitas) * 100}%` }
+                    { 
+                      width: mes.cantidadVisitas > 0 
+                        ? `${(mes.cantidadVisitas / Math.max(...stats.progresoMensual.map(m => m.cantidadVisitas), 1)) * 100}%` 
+                        : '0%'
+                    }
                   ]} 
                 />
               </View>
@@ -229,6 +247,36 @@ export default function StatsScreen() {
         ) : (
           <Text style={styles.emptyMessage}>
             Visita más cafeterías para ver tus favoritas aquí
+          </Text>
+        )}
+      </View>
+
+      {/* Compañeros de Café */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          <Ionicons name="people" size={18} color="#8D6E63" style={{ marginRight: 8 }} />
+          Compañeros de Café
+        </Text>
+        {stats.companerosCafe.length > 0 ? (
+          stats.companerosCafe.map((companero, index) => (
+            <View key={companero.usuario.id} style={styles.companeroItem}>
+              <Image
+                source={{ 
+                  uri: companero.usuario.profileImage || defaultProfileImage
+                }}
+                style={styles.companeroPhoto}
+              />
+              <View style={styles.companeroInfo}>
+                <Text style={styles.companeroName}>{companero.usuario.name}</Text>
+              </View>
+              <View style={styles.visitasPill}>
+                <Text style={styles.visitasCount}>{companero.cantidadVisitas} visitas</Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyMessage}>
+            Aún no tienes compañeros de café. ¡Invita amigos a visitar cafeterías!
           </Text>
         )}
       </View>
@@ -288,6 +336,42 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  companeroItem: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  companeroPhoto: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#E0E0E0',
+    marginRight: 12,
+  },
+  companeroInfo: {
+    flex: 1,
+  },
+  companeroName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  visitasPill: {
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  visitasCount: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
   },
   cafeItem: {
     flexDirection: 'row',

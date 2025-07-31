@@ -3,6 +3,7 @@ import Visita from '../models/Visita.js';
 import Cafe from '../models/Cafe.js';
 import VisitaParticipante from '../models/VisitaParticipante.js';
 import Resena from '../models/Resena.js';
+import { User } from '../models/index.js';
 
 export const getEstadisticasUsuario = async (req, res) => {
   try {
@@ -43,7 +44,8 @@ export const getEstadisticasUsuario = async (req, res) => {
         progresoMensual: [],
         visitasIndividuales: 0,
         visitasCompartidasCreador: 0,
-        visitasComoInvitado: 0
+        visitasComoInvitado: 0,
+        companerosCafe: []
       });
     }
 
@@ -114,20 +116,36 @@ export const getEstadisticasUsuario = async (req, res) => {
       limit: 4
     });
 
-    // Formatear el progreso mensual
+    // Formatear el progreso mensual y generar los últimos 4 meses completos
     const mesesEnEspanol = {
       '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr',
       '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago',
       '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic'
     };
 
-    const progresoFormateado = progresoMensual.map(registro => {
+    // Crear un mapa de los meses con datos
+    const mesesConDatos = {};
+    progresoMensual.forEach(registro => {
       const [año, mes] = registro.getDataValue('mes').split('-');
-      return {
-        mes: mesesEnEspanol[mes],
-        cantidadVisitas: parseInt(registro.getDataValue('cantidadVisitas'))
-      };
+      const mesKey = `${año}-${mes}`;
+      mesesConDatos[mesKey] = parseInt(registro.getDataValue('cantidadVisitas'));
     });
+
+    // Generar los últimos 4 meses (incluyendo los vacíos)
+    const progresoFormateado = [];
+    const fechaActual = new Date();
+    
+    for (let i = 3; i >= 0; i--) {
+      const fecha = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - i, 1);
+      const año = fecha.getFullYear();
+      const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+      const mesKey = `${año}-${mes}`;
+      
+      progresoFormateado.push({
+        mes: mesesEnEspanol[mes],
+        cantidadVisitas: mesesConDatos[mesKey] || 0
+      });
+    }
 
     // Calcular promedio de calificaciones dadas por el usuario
     const resenasUsuario = await Resena.findAll({
@@ -167,6 +185,40 @@ export const getEstadisticasUsuario = async (req, res) => {
       return acc;
     }, {});
 
+    // Obtener compañeros de café (amigos con más visitas compartidas)
+    const companerosCafe = await VisitaParticipante.findAll({
+      where: {
+        visitaId: {
+          [Sequelize.Op.in]: visitasIds
+        },
+        usuarioId: {
+          [Sequelize.Op.ne]: usuarioId // Excluir al usuario actual
+        },
+        estado: 'aceptada'
+      },
+      include: [{
+        model: User,
+        as: 'usuario',
+        attributes: ['id', 'name', 'profileImage']
+      }],
+      attributes: [
+        'usuarioId',
+        [Sequelize.fn('COUNT', Sequelize.col('usuarioId')), 'cantidadVisitas']
+      ],
+      group: ['usuarioId', 'usuario.id'],
+      order: [[Sequelize.fn('COUNT', Sequelize.col('usuarioId')), 'DESC']],
+      limit: 5
+    });
+
+    const companerosFormateados = companerosCafe.map(companero => ({
+      usuario: {
+        id: companero.usuario.id,
+        name: companero.usuario.name,
+        profileImage: companero.usuario.profileImage
+      },
+      cantidadVisitas: parseInt(companero.getDataValue('cantidadVisitas'))
+    }));
+
     res.json({
       totalVisitas,
       cafeteriasUnicas,
@@ -176,7 +228,8 @@ export const getEstadisticasUsuario = async (req, res) => {
       progresoMensual: progresoFormateado,
       visitasIndividuales,
       visitasCompartidasCreador,
-      visitasComoInvitado
+      visitasComoInvitado,
+      companerosCafe: companerosFormateados
     });
 
   } catch (error) {
@@ -194,7 +247,8 @@ export const getEstadisticasUsuario = async (req, res) => {
         progresoMensual: [],
         visitasIndividuales: 0,
         visitasCompartidasCreador: 0,
-        visitasComoInvitado: 0
+        visitasComoInvitado: 0,
+        companerosCafe: []
       });
     }
 
