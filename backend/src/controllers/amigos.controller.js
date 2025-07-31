@@ -145,7 +145,7 @@ export const obtenerAmigos = async (req, res) => {
 
     const amigos = await User.findAll({
       where: { id: amigosIds },
-      attributes: ['id', 'name', 'email', 'avatar'] // 👈 incluye avatar
+      attributes: ['id', 'name', 'email', 'profileImage'] // 👈 incluye profileImage
     });
 
     res.json(amigos);
@@ -165,7 +165,7 @@ export const solicitudesRecibidas = async (req, res) => {
         friendId: userId,
         status: 'pending'
       },
-      include: [{ model: User, as: 'solicitante', attributes: ['id', 'name', 'email'] }]
+      include: [{ model: User, as: 'solicitante', attributes: ['id', 'name', 'email', 'profileImage'] }]
     });
 
     res.json(solicitudes);
@@ -185,7 +185,7 @@ export const solicitudesEnviadas = async (req, res) => {
         userId,
         status: 'pending'
       },
-      include: [{ model: User, as: 'destinatario', attributes: ['id', 'name', 'email'] }]
+      include: [{ model: User, as: 'destinatario', attributes: ['id', 'name', 'email', 'profileImage'] }]
     });
 
     res.json(solicitudes);

@@ -21,5 +21,22 @@ export default (sequelize, DataTypes) => {
     }
   });
 
+  // Asociaciones para el sistema de amigos
+  User.associate = (models) => {
+    User.belongsToMany(models.User, {
+      through: 'UserFriends',
+      as: 'friends',
+      foreignKey: 'userId',
+      otherKey: 'friendId'
+    });
+
+    User.belongsToMany(models.User, {
+      through: 'UserFriends',
+      as: 'friendOf',
+      foreignKey: 'friendId',
+      otherKey: 'userId'
+    });
+  };
+
   return User;
 };

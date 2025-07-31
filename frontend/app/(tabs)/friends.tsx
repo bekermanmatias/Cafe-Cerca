@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, FlatList, ActivityIndicator, TouchableOpacity, Alert, RefreshControl, ScrollView } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
+import { API_ENDPOINTS } from '../../constants/Config';
+import axios from 'axios';
 
 interface Friend {
   id: number;
   name: string;
-  avatar: string;
+  profileImage: string;
 }
 
 interface Solicitud {
@@ -22,7 +23,7 @@ interface Solicitud {
     id: number;
     name: string;
     email: string;
-    avatar?: string;
+    profileImage?: string;
   };
 }
 
@@ -35,7 +36,7 @@ interface SolicitudEnviada {
     id: number;
     name: string;
     email: string;
-    avatar?: string;
+    profileImage?: string;
   };
 }
 
@@ -46,6 +47,7 @@ export default function FriendsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+  const { token } = useAuth();
 
   const fetchFriends = async (isRefreshing = false) => {
     try {
@@ -55,17 +57,16 @@ export default function FriendsScreen() {
         setLoading(true);
       }
       
-      const token = await AsyncStorage.getItem('token');
       if (!token) throw new Error('Token no disponible');
 
       const [friendsRes, solicitudesRecRes, solicitudesEnvRes] = await Promise.all([
-        axios.get<Friend[]>('http://192.168.0.124:3000/api/amigos/lista', {
+        axios.get<Friend[]>(API_ENDPOINTS.AMIGOS.GET_LISTA, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get<Solicitud[]>('http://192.168.0.124:3000/api/amigos/solicitudes/recibidas', {
+        axios.get<Solicitud[]>(API_ENDPOINTS.AMIGOS.GET_SOLICITUDES_RECIBIDAS, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get<SolicitudEnviada[]>('http://192.168.0.124:3000/api/amigos/solicitudes/enviadas', {
+        axios.get<SolicitudEnviada[]>(API_ENDPOINTS.AMIGOS.GET_SOLICITUDES_ENVIADAS, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -109,10 +110,9 @@ export default function FriendsScreen() {
   // Función para aceptar o rechazar solicitud recibida
   const responderSolicitud = async (solicitudId: number, status: 'accepted' | 'rejected') => {
     try {
-      const token = await AsyncStorage.getItem('token');
       if (!token) throw new Error('Token no disponible');
 
-      const response = await axios.patch(`http://192.168.0.124:3000/api/amigos/responder/${solicitudId}`, { status }, {
+      const response = await axios.patch(API_ENDPOINTS.AMIGOS.RESPONDER_SOLICITUD(solicitudId), { status }, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -137,10 +137,9 @@ export default function FriendsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem('token');
               if (!token) throw new Error('Token no disponible');
 
-              await axios.delete('http://192.168.0.124:3000/api/amigos/eliminar', {
+              await axios.delete(API_ENDPOINTS.AMIGOS.ELIMINAR_AMIGO, {
                 headers: { Authorization: `Bearer ${token}` },
                 data: { friendId }
               });
@@ -167,10 +166,9 @@ export default function FriendsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem('token');
               if (!token) throw new Error('Token no disponible');
 
-              await axios.delete(`http://192.168.0.124:3000/api/amigos/solicitud/${solicitudId}`, {
+              await axios.delete(`${API_ENDPOINTS.AMIGOS.GET_LISTA}/solicitud/${solicitudId}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
 
@@ -189,7 +187,7 @@ export default function FriendsScreen() {
 
   const renderFriend = ({ item }: { item: Friend }) => (
     <View style={styles.friendCard}>
-      <Image source={{ uri: item.avatar || 'https://via.placeholder.com/50' }} style={styles.avatar} />
+      <Image source={{ uri: item.profileImage || 'https://via.placeholder.com/50' }} style={styles.avatar} />
       <View style={{ flex: 1 }}>
         <Text style={styles.name}>{item.name}</Text>
       </View>
@@ -204,7 +202,7 @@ export default function FriendsScreen() {
 
   const renderSolicitudRecibida = ({ item }: { item: Solicitud }) => (
     <View style={styles.solicitudRecibidaCard}>
-      <Image source={{ uri: item.solicitante.avatar || 'https://via.placeholder.com/50' }} style={styles.avatar} />
+      <Image source={{ uri: item.solicitante.profileImage || 'https://via.placeholder.com/50' }} style={styles.avatar} />
       <View style={{ flex: 1 }}>
         <Text style={styles.name}>{item.solicitante.name}</Text>
         <Text style={styles.solicitudLabel}>Te envió una solicitud</Text>
@@ -228,7 +226,7 @@ export default function FriendsScreen() {
 
   const renderSolicitudEnviada = ({ item }: { item: SolicitudEnviada }) => (
     <View style={styles.solicitudEnviadaCard}>
-      <Image source={{ uri: item.destinatario.avatar || 'https://via.placeholder.com/50' }} style={styles.avatar} />
+      <Image source={{ uri: item.destinatario.profileImage || 'https://via.placeholder.com/50' }} style={styles.avatar} />
       <View style={{ flex: 1 }}>
         <Text style={styles.name}>{item.destinatario.name}</Text>
         <Text style={styles.solicitudLabel}>Solicitud enviada - Pendiente</Text>

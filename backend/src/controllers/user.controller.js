@@ -24,7 +24,7 @@ export const buscarUsuarios = async (req, res) => {
           { id: { [Op.ne]: userId } }
         ]
       },
-      attributes: ['id', 'name', 'email', 'avatar']
+      attributes: ['id', 'name', 'email', 'profileImage']
     });
 
     res.json(usuarios);
@@ -39,7 +39,7 @@ export const obtenerUsuario = async (req, res) => {
   const { id } = req.params;
   try {
     const usuario = await User.findByPk(id, {
-      attributes: ['id', 'name', 'email', 'avatar']
+      attributes: ['id', 'name', 'email', 'profileImage']
     });
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado.' });
     res.json(usuario);
@@ -53,7 +53,7 @@ export const obtenerUsuario = async (req, res) => {
 export const actualizarUsuario = async (req, res) => {
   const { id } = req.params;
   const userId = parseInt(req.user?.id, 10);
-  const { name, email, avatar } = req.body;
+  const { name, email, profileImage } = req.body;
 
   if (parseInt(id, 10) !== userId) {
     return res.status(403).json({ error: 'No tienes permiso para modificar este usuario.' });
@@ -70,7 +70,7 @@ export const actualizarUsuario = async (req, res) => {
     }
 
     if (name) usuario.name = name;
-    if (avatar) usuario.avatar = avatar;
+    if (profileImage) usuario.profileImage = profileImage;
 
     await usuario.save();
 
@@ -80,7 +80,7 @@ export const actualizarUsuario = async (req, res) => {
         id: usuario.id,
         name: usuario.name,
         email: usuario.email,
-        avatar: usuario.avatar
+        profileImage: usuario.profileImage
       }
     });
   } catch (error) {

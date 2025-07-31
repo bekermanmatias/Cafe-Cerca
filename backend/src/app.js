@@ -10,6 +10,7 @@ import savedCafesRoutes from './routes/savedCafes.routes.js';
 import estadisticasRoutes from './routes/estadisticas.routes.js';
 import amigosRoutes from './routes/amigos.routes.js';
 import userRoutes from './routes/user.routes.js';
+import { testConnection } from './config/database.js';
 
 // Importar modelos y sus relaciones
 import './models/index.js';

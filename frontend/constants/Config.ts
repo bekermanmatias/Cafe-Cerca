@@ -46,6 +46,19 @@ export const API_ENDPOINTS = {
     TOGGLE: (cafeId: number) => `${API_URL}/saved-cafes/toggle/${cafeId}`,
     GET_STATUS: (cafeId: number) => `${API_URL}/saved-cafes/status/${cafeId}`,
     GET_ALL: `${API_URL}/saved-cafes`
+  },
+  AMIGOS: {
+    ENVIAR_SOLICITUD: `${API_URL}/amigos/enviar`,
+    RESPONDER_SOLICITUD: (solicitudId: number) => `${API_URL}/amigos/responder/${solicitudId}`,
+    ELIMINAR_AMIGO: `${API_URL}/amigos/eliminar`,
+    GET_LISTA: `${API_URL}/amigos/lista`,
+    GET_SOLICITUDES_RECIBIDAS: `${API_URL}/amigos/solicitudes/recibidas`,
+    GET_SOLICITUDES_ENVIADAS: `${API_URL}/amigos/solicitudes/enviadas`
+  },
+  USERS: {
+    GET_PROFILE: `${API_URL}/users/profile`,
+    UPDATE_PROFILE: `${API_URL}/users/profile`,
+    SEARCH: `${API_URL}/users/search`
   }
 };
 

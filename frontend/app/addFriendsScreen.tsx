@@ -10,7 +10,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
+import { API_ENDPOINTS } from '../constants/Config';
+import axios from 'axios';
 
 import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Fonts';
@@ -19,17 +21,14 @@ interface Usuario {
   id: string;
   name: string;
   email: string;
-  avatar?: string;
+  profileImage?: string;
 }
 
 export default function AddFriendsScreen() {
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const fetchToken = async (): Promise<string | null> => {
-    return await AsyncStorage.getItem('userToken');
-  };
+  const { token } = useAuth();
 
   const handleSearch = useCallback(async (text: string) => {
     setSearch(text);
@@ -41,11 +40,10 @@ export default function AddFriendsScreen() {
     setLoading(true);
 
     try {
-      const token = await fetchToken();
       if (!token) throw new Error('Token no disponible');
 
-      const response = await fetch(
-        `http://192.168.0.124:3000/api/users/search?query=${encodeURIComponent(text)}`,
+      const response = await axios.get(
+        `${API_ENDPOINTS.USERS.SEARCH}?query=${encodeURIComponent(text)}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -53,43 +51,33 @@ export default function AddFriendsScreen() {
         }
       );
 
-      if (!response.ok) {
-        throw new Error('Error al buscar usuarios');
-      }
-
-      const data = await response.json();
-      setUsers(data);
+      setUsers(response.data);
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'No se pudieron obtener los usuarios.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   const handleAddFriend = async (friendId: string, friendName: string) => {
     try {
-      const token = await fetchToken();
       if (!token) throw new Error('Token no disponible');
 
-      const response = await fetch(`http://192.168.0.124:3000/api/amigos/enviar`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ friendId }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'No se pudo enviar la solicitud.');
-      }
+      const response = await axios.post(API_ENDPOINTS.AMIGOS.ENVIAR_SOLICITUD, 
+        { friendId },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       Alert.alert('Solicitud enviada', `Has enviado una solicitud a ${friendName}`);
     } catch (error: any) {
       console.error(error);
-      Alert.alert('Error', error.message || 'No se pudo enviar la solicitud.');
+      Alert.alert('Error', error.response?.data?.error || error.message || 'No se pudo enviar la solicitud.');
     }
   };
 
