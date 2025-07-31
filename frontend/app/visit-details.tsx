@@ -43,16 +43,30 @@ interface Usuario {
   profileImage: string | null;
 }
 
+interface Resena {
+  id: number;
+  calificacion: number;
+  comentario: string;
+  fecha: string;
+  usuario: Usuario;
+}
+
+interface Participante extends Usuario {
+  estado: 'pendiente' | 'aceptada' | 'rechazada';
+  rol: 'creador' | 'participante';
+  fechaRespuesta?: string;
+  resena?: Resena;
+}
+
 interface VisitaDetalle {
   id: number;
-  usuarioId: number;
-  cafeteriaId: number;
-  comentario: string;
-  calificacion: number;
   fecha: string;
+  estado: 'activa' | 'completada' | 'cancelada';
+  esCompartida: boolean;
   imagenes: Imagen[];
   cafeteria: Cafeteria;
-  usuario: Usuario;
+  creador: Participante & { resena: Resena };
+  participantes: Participante[];
   likesCount: number;
 }
 
@@ -94,27 +108,71 @@ export default function VisitDetailsScreen() {
         throw new Error('ID de visita no válido');
       }
 
-      console.log('Obteniendo detalles de visita:', visitId);
+      console.log('🔍 DEBUG - Obteniendo detalles de visita:', visitId);
       const fullUrl = `${API_URL}/visitas/${visitId}`;
-      console.log('URL completa:', fullUrl);
+      console.log('🔍 DEBUG - URL completa:', fullUrl);
 
-      const response = await fetch(fullUrl);
+      const response = await fetch(fullUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Error del servidor:', errorData);
         throw new Error(errorData.mensaje || 'Error al obtener los detalles de la visita');
       }
 
-      const data = await response.json();
-      console.log('Datos de visita recibidos:', data);
+      const data: ApiResponse = await response.json();
+      
+      console.log('📥 DATOS RECIBIDOS EN FRONTEND:', JSON.stringify({
+        mensaje: data.mensaje,
+        visita: {
+          id: data.visita?.id,
+          creador: data.visita?.creador ? {
+            id: data.visita.creador.id,
+            name: data.visita.creador.name,
+            resena: data.visita.creador.resena ? 'SI' : 'NO'
+          } : 'NULL'
+        }
+      }, null, 2));
+      
+      // Validar datos críticos
+      if (!data.visita) {
+        throw new Error('No se recibieron datos de la visita');
+      }
+      
+      if (!data.visita.creador) {
+        console.error('❌ Datos de visita incompletos:', data.visita);
+        throw new Error('No se encontró el creador de la visita');
+      }
+
+      if (!data.visita.creador.resena) {
+        console.error('❌ Datos del creador incompletos:', data.visita.creador);
+        throw new Error('No se encontró la reseña del creador');
+      }
+
+      // Log de datos recibidos
+      console.log('✅ Datos de visita recibidos:', {
+        id: data.visita.id,
+        creador: {
+          id: data.visita.creador.id,
+          name: data.visita.creador.name,
+          tieneResena: !!data.visita.creador.resena
+        },
+        participantes: data.visita.participantes.length
+      });
+
       setVisitData(data.visita);
 
       // Si tenemos token, verificar el estado del like
       if (token) {
         checkLikeStatus();
       }
-    } catch (error) {
-      console.error('Error obteniendo detalles:', error);
-      setError('No se pudo cargar la información de la visita');
+    } catch (error: any) {
+      console.error('❌ Error:', error);
+      setError(error.message || 'Error al cargar los detalles de la visita');
     } finally {
       setIsLoading(false);
     }
@@ -234,10 +292,31 @@ export default function VisitDetailsScreen() {
           <View style={styles.participantsContainer}>
             <Image
               source={{ 
-                uri: visitData.usuario?.profileImage || defaultProfileImage
+                uri: visitData.creador.profileImage || defaultProfileImage
               }}
               style={styles.participantPhoto}
             />
+            {visitData.participantes.map((participante, index) => (
+              index < 3 && (
+                <Image
+                  key={participante.id}
+                  source={{ 
+                    uri: participante.profileImage || defaultProfileImage
+                  }}
+                  style={[
+                    styles.participantPhoto,
+                    { marginLeft: -10 }
+                  ]}
+                />
+              )
+            ))}
+            {visitData.participantes.length > 3 && (
+              <View style={[styles.participantPhoto, styles.moreParticipants]}>
+                <Text style={styles.moreParticipantsText}>
+                  +{visitData.participantes.length - 3}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -257,7 +336,7 @@ export default function VisitDetailsScreen() {
             ))}
           </ScrollView>
           <View style={styles.ratingBadge}>
-            <Text style={styles.ratingText}>{visitData.calificacion} ★</Text>
+            <Text style={styles.ratingText}>{visitData.creador.resena.calificacion} ★</Text>
           </View>
         </View>
 
@@ -296,21 +375,22 @@ export default function VisitDetailsScreen() {
           </View>
         </View>
 
+        {/* Reseña del creador */}
         <View style={styles.mainReviewContainer}>
           <View style={styles.authorSection}>
             <Image
               source={{ 
-                uri: visitData.usuario?.profileImage || defaultProfileImage
+                uri: visitData.creador.profileImage || defaultProfileImage
               }}
               style={styles.authorPhoto}
             />
             <View style={styles.authorInfo}>
-              <Text style={styles.authorName}>{visitData.usuario?.name || 'Usuario sin nombre'}</Text>
+              <Text style={styles.authorName}>{visitData.creador.name}</Text>
               <View style={styles.starsContainer}>
                 {[...Array(5)].map((_, i) => (
                   <Ionicons
                     key={i}
-                    name={i < visitData.calificacion ? "star" : "star-outline"}
+                    name={i < visitData.creador.resena.calificacion ? "star" : "star-outline"}
                     size={20}
                     color="#FFD700"
                   />
@@ -318,8 +398,49 @@ export default function VisitDetailsScreen() {
               </View>
             </View>
           </View>
-          <Text style={styles.mainReviewText}>{visitData.comentario}</Text>
+          <Text style={styles.mainReviewText}>{visitData.creador.resena.comentario}</Text>
         </View>
+
+        {/* Reseñas de participantes */}
+        {visitData.participantes.length > 0 && (
+          <View style={styles.participantsReviewsContainer}>
+            <Text style={styles.sectionTitle}>Opiniones de participantes</Text>
+            {visitData.participantes.map((participante, index) => (
+              <View key={participante.id} style={styles.participantReviewCard}>
+                <View style={styles.authorSection}>
+                  <Image
+                    source={{ 
+                      uri: participante.profileImage || defaultProfileImage
+                    }}
+                    style={styles.authorPhoto}
+                  />
+                  <View style={styles.authorInfo}>
+                    <Text style={styles.authorName}>{participante.name}</Text>
+                    {participante.resena ? (
+                      <View style={styles.starsContainer}>
+                        {[...Array(5)].map((_, i) => (
+                          <Ionicons
+                            key={i}
+                            name={i < participante.resena!.calificacion ? "star" : "star-outline"}
+                            size={20}
+                            color="#FFD700"
+                          />
+                        ))}
+                      </View>
+                    ) : (
+                      <Text style={styles.pendingReview}>
+                        {participante.estado === 'pendiente' ? 'Invitación pendiente' : 'Sin reseña'}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                {participante.resena && (
+                  <Text style={styles.reviewText}>{participante.resena.comentario}</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
       </>
     );
   };
@@ -409,6 +530,35 @@ export default function VisitDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
+  participantsReviewsContainer: {
+    marginTop: 24,
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  participantReviewCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  pendingReview: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  reviewText: {
+    fontSize: 14,
+    color: '#333',
+    marginTop: 8,
+    lineHeight: 20,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -477,6 +627,7 @@ const styles = StyleSheet.create({
   participantsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 8,
   },
   participantPhoto: {
     width: 40,
@@ -485,6 +636,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
     borderWidth: 2,
     borderColor: 'white',
+  },
+  moreParticipants: {
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: -10,
+  },
+  moreParticipantsText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   mainImageContainer: {
     width: '100%',

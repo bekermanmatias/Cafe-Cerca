@@ -57,11 +57,17 @@ export const API_ENDPOINTS = {
     GET_SOLICITUDES_ENVIADAS: `${API_URL}/amigos/solicitudes/enviadas`
   },
   VISITAS_COMPARTIDAS: {
-    CREATE: `${API_URL}/visitas-compartidas`,
-    RESPONDER_INVITACION: (visitaId: number) => `${API_URL}/visitas-compartidas/${visitaId}/respuesta`,
-    GET_INVITACIONES_PENDIENTES: `${API_URL}/visitas-compartidas/invitaciones-pendientes`,
-    GET_MIS_VISITAS_COMPARTIDAS: `${API_URL}/visitas-compartidas/mis-visitas-compartidas`,
-    GET_VISITA_COMPARTIDA: (visitaId: number) => `${API_URL}/visitas-compartidas/${visitaId}`
+    CREATE: `${API_URL}/visitas/compartida`,
+    RESPONDER_INVITACION: (visitaId: number) => `${API_URL}/visita-participantes/${visitaId}/respuesta`,
+    GET_INVITACIONES_PENDIENTES: `${API_URL}/visita-participantes/invitaciones-pendientes`,
+    GET_MIS_VISITAS_COMPARTIDAS: `${API_URL}/visitas/compartidas`,
+    GET_VISITA_COMPARTIDA: (visitaId: number) => `${API_URL}/visitas/${visitaId}`
+  },
+  RESENAS: {
+    CREATE: `${API_URL}/resenas`,
+    GET_BY_VISITA: (visitaId: number) => `${API_URL}/resenas/visita/${visitaId}`,
+    UPDATE: (resenaId: number) => `${API_URL}/resenas/${resenaId}`,
+    DELETE: (resenaId: number) => `${API_URL}/resenas/${resenaId}`,
   },
   USERS: {
     GET_PROFILE: `${API_URL}/users/profile`,

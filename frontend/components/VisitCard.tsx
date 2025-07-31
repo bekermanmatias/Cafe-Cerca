@@ -6,12 +6,33 @@ import { useAuth } from '../context/AuthContext';
 
 const windowWidth = Dimensions.get('window').width;
 
+interface Usuario {
+  id: number;
+  name: string;
+  profileImage: string | null;
+}
+
+interface Resena {
+  id: number;
+  calificacion: number;
+  comentario: string;
+  fecha: string;
+  usuario: Usuario;
+}
+
+interface Participante extends Usuario {
+  estado: 'pendiente' | 'aceptada' | 'rechazada';
+  rol: 'creador' | 'participante';
+  fechaRespuesta?: string;
+  resena?: Resena;
+}
+
 export interface VisitCardProps {
   visit: {
     id: number;
-    comentario: string;
-    calificacion: number;
     fecha: string;
+    estado: 'activa' | 'completada' | 'cancelada';
+    esCompartida: boolean;
     imagenes: Array<{
       imageUrl: string;
       orden: number;
@@ -22,12 +43,18 @@ export interface VisitCardProps {
       imageUrl: string | null;
       rating: number;
     } | null;
-    usuario?: {
+    creador?: {
       id: number;
       name: string;
       profileImage: string | null;
+      resena?: Resena;
     };
+    participantes?: Participante[];
     likesCount?: number;
+    // Compatibilidad con estructura antigua
+    usuario?: Usuario;
+    comentario?: string;
+    calificacion?: number;
   };
   onShare?: () => void;
   onDetails?: () => void;
@@ -111,11 +138,93 @@ export const VisitCard = ({
     itemVisiblePercentThreshold: 50
   }).current;
 
+  // Obtener datos del creador y participantes (nueva estructura vs antigua)
+  const creador = visit.creador || visit.usuario;
+  const participantes = visit.participantes || [];
+  const calificacion = visit.creador?.resena?.calificacion || visit.calificacion;
+  const comentario = visit.creador?.resena?.comentario || visit.comentario;
+  
   // Obtener el nombre de la cafetería de forma segura
   const cafeteriaName = visit.cafeteria?.name || 'Cafetería no disponible';
   
   // URL de la imagen de perfil por defecto
   const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
+
+  // Función para renderizar fotos de participantes
+  const renderParticipants = () => {
+    const allParticipants = [];
+    
+    // Agregar el creador
+    if (creador) {
+      allParticipants.push({
+        id: creador.id,
+        name: creador.name,
+        profileImage: creador.profileImage,
+        isCreator: true
+      });
+    }
+    
+    // Agregar participantes aceptados
+    participantes.forEach(p => {
+      if (p.estado === 'aceptada') {
+        allParticipants.push({
+          id: p.id,
+          name: p.name,
+          profileImage: p.profileImage,
+          isCreator: false
+        });
+      }
+    });
+
+    return (
+      <View style={styles.participantsContainer}>
+        {allParticipants.slice(0, 3).map((participant, index) => (
+          <Image
+            key={participant.id}
+            source={{ 
+              uri: participant.profileImage || defaultProfileImage
+            }}
+            style={[
+              styles.participantPhoto,
+              index > 0 && { marginLeft: -10 } // Efecto de superposición
+            ]}
+          />
+        ))}
+        {allParticipants.length > 3 && (
+          <View style={[styles.participantPhoto, styles.moreParticipants, { marginLeft: -10 }]}>
+            <Text style={styles.moreParticipantsText}>+{allParticipants.length - 3}</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Función para renderizar nombres de participantes
+  const renderParticipantNames = () => {
+    const names = [];
+    
+    if (creador) {
+      names.push(creador.name);
+    }
+    
+    participantes.forEach(p => {
+      if (p.estado === 'aceptada') {
+        names.push(p.name);
+      }
+    });
+
+    if (names.length === 0) return null;
+
+    const displayNames = names.length > 2 
+      ? `${names.slice(0, 2).join(', ')} y ${names.length - 2} más`
+      : names.join(', ');
+
+    return (
+      <Text style={styles.participantNames} numberOfLines={1}>
+        {displayNames}
+      </Text>
+    );
+  };
 
   return (
     <View style={styles.card}>
@@ -123,21 +232,15 @@ export const VisitCard = ({
         <View style={styles.headerLeft}>
           <Text style={styles.place}>{cafeteriaName}</Text>
           <Text style={styles.date}>{new Date(visit.fecha).toLocaleDateString()}</Text>
+          {renderParticipantNames()}
         </View>
         <View style={styles.headerRight}>
-          <View style={styles.participantsContainer}>
-            <Image
-              source={{ 
-                uri: visit.usuario?.profileImage || defaultProfileImage
-              }}
-              style={styles.participantPhoto}
-            />
-          </View>
+          {renderParticipants()}
         </View>
       </View>
       <View style={styles.imageSection}>
         <View style={styles.ratingBubble}>
-          <Text style={styles.rating}>{visit.calificacion} ★</Text>
+          <Text style={styles.rating}>{calificacion} ★</Text>
         </View>
         <FlatList
           ref={flatListRef}
@@ -194,7 +297,7 @@ export const VisitCard = ({
             <Ionicons name="book-outline" size={24} color="#666" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.description}>{visit.comentario}</Text>
+        <Text style={styles.description}>{comentario}</Text>
       </View>
     </View>
   );
@@ -246,9 +349,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   participantPhoto: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 2.5,
     borderColor: 'white',
     backgroundColor: '#E0E0E0',
@@ -337,5 +440,21 @@ const styles = StyleSheet.create({
   },
   likesCountActive: {
     color: '#FF4B4B',
+  },
+  participantNames: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  moreParticipants: {
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moreParticipantsText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
   },
 }); 

@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 
-const VisitaCompartida = sequelize.define('VisitaCompartida', {
+const VisitaParticipante = sequelize.define('VisitaParticipante', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -35,7 +35,7 @@ const VisitaCompartida = sequelize.define('VisitaCompartida', {
   estado: {
     type: DataTypes.ENUM('pendiente', 'aceptada', 'rechazada'),
     allowNull: false,
-    defaultValue: 'pendiente'
+    defaultValue: 'aceptada'
   },
   fechaInvitacion: {
     type: DataTypes.DATE,
@@ -56,4 +56,4 @@ const VisitaCompartida = sequelize.define('VisitaCompartida', {
   ]
 });
 
-export default VisitaCompartida; 
+export default VisitaParticipante; 

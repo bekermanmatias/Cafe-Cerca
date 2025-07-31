@@ -2,7 +2,8 @@
 import Visita from './Visita.js';
 import Cafe from './Cafe.js';
 import VisitaImagen from './VisitaImagen.js';
-import VisitaCompartida from './VisitaCompartida.js';
+import VisitaParticipante from './VisitaParticipante.js';
+import Resena from './Resena.js';
 import sequelize from '../config/database.js';
 import { DataTypes } from 'sequelize';
 import userModel from './user.model.js';
@@ -37,6 +38,16 @@ Cafe.hasMany(Visita, {
   as: 'visitas'
 });
 
+// Visita - User (creador)
+Visita.belongsTo(User, {
+  foreignKey: 'usuarioId',
+  as: 'usuario'
+});
+User.hasMany(Visita, {
+  foreignKey: 'usuarioId',
+  as: 'visitasCreadas'
+});
+
 // Visita - VisitaImagen
 Visita.hasMany(VisitaImagen, {
   foreignKey: 'visitaId',
@@ -47,14 +58,24 @@ VisitaImagen.belongsTo(Visita, {
   as: 'visita'
 });
 
-// User - Visita
-User.hasMany(Visita, {
+// User - VisitaParticipante (nueva relación)
+User.hasMany(VisitaParticipante, {
   foreignKey: 'usuarioId',
-  as: 'visitas'
+  as: 'participaciones'
 });
-Visita.belongsTo(User, {
+VisitaParticipante.belongsTo(User, {
   foreignKey: 'usuarioId',
   as: 'usuario'
+});
+
+// Visita - VisitaParticipante
+Visita.hasMany(VisitaParticipante, {
+  foreignKey: 'visitaId',
+  as: 'participantes'
+});
+VisitaParticipante.belongsTo(Visita, {
+  foreignKey: 'visitaId',
+  as: 'visita'
 });
 
 // Visita - Comentario
@@ -121,38 +142,37 @@ SavedCafe.belongsTo(Cafe, {
   as: 'cafe'
 });
 
-// Relaciones para Visitas Compartidas
-Visita.hasMany(VisitaCompartida, {
+// Relaciones para Resenas
+Visita.hasMany(Resena, {
   foreignKey: 'visitaId',
-  as: 'participantes'
+  as: 'resenas'
 });
 
-VisitaCompartida.belongsTo(Visita, {
+Resena.belongsTo(Visita, {
   foreignKey: 'visitaId',
   as: 'visita'
 });
 
-User.hasMany(VisitaCompartida, {
+User.hasMany(Resena, {
   foreignKey: 'usuarioId',
-  as: 'visitasCompartidas'
+  as: 'resenas'
 });
 
-VisitaCompartida.belongsTo(User, {
+Resena.belongsTo(User, {
   foreignKey: 'usuarioId',
   as: 'usuario'
 });
 
-// Sincronizar tablas en la base de datos
-sequelize.sync({ alter: true })
-  .then(() => console.log('✅ Tablas sincronizadas correctamente'))
-  .catch((err) => console.error('❌ Error sincronizando tablas:', err));
+// Nota: La sincronización de tablas se maneja en initDatabase.js
+// para evitar conflictos con migraciones existentes
 
 // Exportar todos los modelos
 export { 
   Visita, 
   Cafe, 
   VisitaImagen, 
-  VisitaCompartida,
+  VisitaParticipante,
+  Resena,
   User, 
   Comentario,
   Like,

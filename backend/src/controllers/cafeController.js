@@ -1,4 +1,4 @@
-import { Cafe, Visita, User, VisitaImagen, Like } from '../models/index.js';
+import { Cafe, Visita, User, VisitaImagen, Like, VisitaParticipante } from '../models/index.js';
 import { Op } from 'sequelize';
 
 export const getAllCafes = async (req, res) => {
@@ -58,10 +58,17 @@ export const getCafeById = async (req, res) => {
       where: { cafeteriaId: id },
       include: [
         {
-          model: User,
-          as: 'usuario',
-          attributes: ['id', 'name', 'profileImage'],
-          required: true // Asegura que solo se devuelvan visitas con usuario
+          model: VisitaParticipante,
+          as: 'participantes',
+          where: { rol: 'creador' },
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ],
+          required: true // Asegura que solo se devuelvan visitas con creador
         },
         {
           model: VisitaImagen,
@@ -81,11 +88,13 @@ export const getCafeById = async (req, res) => {
     // Transformar las reseñas para incluir el conteo de likes y asegurar que la información del usuario esté presente
     const reseñasConLikes = reseñas.map(reseña => {
       const reseñaJSON = reseña.toJSON();
+      const creador = reseñaJSON.participantes?.[0]?.usuario || null;
       return {
         ...reseñaJSON,
         likesCount: reseñaJSON.likes.length,
         likes: undefined, // Removemos el array de likes ya que solo necesitamos el conteo
-        usuario: reseñaJSON.usuario || null // Aseguramos que siempre haya un valor para usuario
+        usuario: creador, // Usuario creador de la visita
+        participantes: undefined // Removemos el array de participantes ya que solo necesitamos el usuario
       };
     });
 

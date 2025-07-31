@@ -213,10 +213,11 @@ export default function AddVisitScreen() {
 
       // Agregar amigos seleccionados si hay alguno
       if (selectedFriends.length > 0) {
+        formData.append('esCompartida', 'true');
+        formData.append('maxParticipantes', '10');
         selectedFriends.forEach(friend => {
           formData.append('amigosIds', friend.id.toString());
         });
-        formData.append('maxParticipantes', '10');
       }
 
       // Agregar imágenes si las hay
