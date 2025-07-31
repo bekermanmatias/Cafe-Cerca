@@ -35,10 +35,7 @@ export default function FriendsScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log('=== DEBUG INFO ===');
-      console.log('Friends:', friendsRes.data);
-      console.log('Cantidad amigos:', friendsRes.data?.length || 0);
-      console.log('==================');
+
 
       setFriends(friendsRes.data || []);
     } catch (error) {

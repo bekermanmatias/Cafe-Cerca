@@ -30,16 +30,11 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
-      console.log('Iniciando registro con:', { name, email });
-      
       // Registrar al usuario
       const registerResponse = await apiService.register({ name, email, password });
-      console.log('Respuesta del registro:', registerResponse);
       
       // Hacer login automático usando el contexto
-      console.log('Haciendo login automático...');
       await login(registerResponse.token, registerResponse.user);
-      console.log('Login automático completado');
       
       alert('¡Cuenta creada exitosamente!');
       // Redirigir al usuario a la pestaña explore

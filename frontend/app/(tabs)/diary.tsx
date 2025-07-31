@@ -125,15 +125,7 @@ export default function DiaryScreen() {
       
       const data: DiarioResponse = await response.json();
       
-      console.log('📥 DATOS RECIBIDOS EN DIARY:', {
-        totalVisitas: data.totalVisitas,
-        primeraVisita: data.visitas?.[0] ? {
-          id: data.visitas[0].id,
-          creador: data.visitas[0].creador ? { id: data.visitas[0].creador.id, name: data.visitas[0].creador.name } : 'NULL',
-          participantes: data.visitas[0].participantes?.length || 0,
-          usuario: data.visitas[0].usuario ? { id: data.visitas[0].usuario.id, name: data.visitas[0].usuario.name } : 'NULL'
-        } : 'NO_HAY_VISITAS'
-      });
+
       
       // Si la respuesta es exitosa pero no hay visitas, simplemente establecemos el array vacío
       setVisitas(data.visitas || []);
@@ -177,7 +169,7 @@ export default function DiaryScreen() {
   };
 
   const handleLike = () => {
-    console.log('Like pressed');
+    // Like pressed
   };
 
   const handleShare = (visitId: number) => {

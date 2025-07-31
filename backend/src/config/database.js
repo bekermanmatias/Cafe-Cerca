@@ -51,7 +51,7 @@ if (useRailway) {
 export const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log(`✅ Conexión a la base de datos exitosa (${useRailway ? 'Railway' : 'Local'})`);
+    // Database connection successful
   } catch (error) {
     console.error('❌ Error conectando a la base de datos:', error);
     throw error; // Propaga error para que pueda manejarse afuera

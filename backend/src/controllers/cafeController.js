@@ -49,14 +49,14 @@ export const getCafeById = async (req, res) => {
     const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
 
-    console.log('🔍 DEBUG - Obteniendo cafetería:', { id, page, limit, offset });
+
 
     const cafe = await Cafe.findByPk(id);
     if (!cafe) {
       return res.status(404).json({ mensaje: 'Cafetería no encontrada' });
     }
 
-    console.log('✅ Cafetería encontrada:', cafe.name);
+
 
     // Obtener todas las visitas de la cafetería con toda la información necesaria
     const { count, rows: visitas } = await Visita.findAndCountAll({
@@ -172,12 +172,7 @@ export const getCafeById = async (req, res) => {
     const totalPages = Math.ceil(count / limit);
     const hasMore = page < totalPages;
 
-    console.log('📤 ENVIANDO RESPUESTA:', {
-      cafe: cafe.name,
-      visitasCount: visitasTransformadas.length,
-      total: count,
-      hasMore
-    });
+
 
     res.json({
       cafe,

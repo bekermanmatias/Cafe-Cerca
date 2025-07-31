@@ -91,14 +91,7 @@ export default function NotificationsScreen() {
         }),
       ]);
 
-      console.log('=== DEBUG INFO ===');
-      console.log('Solicitudes recibidas:', solicitudesRecRes.data);
-      console.log('Cantidad solicitudes recibidas:', solicitudesRecRes.data?.length || 0);
-      console.log('Solicitudes enviadas:', solicitudesEnvRes.data);
-      console.log('Cantidad solicitudes enviadas:', solicitudesEnvRes.data?.length || 0);
-      console.log('Invitaciones a visitas:', invitacionesRes.data);
-      console.log('Cantidad invitaciones visitas:', invitacionesRes.data?.length || 0);
-      console.log('==================');
+
 
       setSolicitudesRecibidas(solicitudesRecRes.data || []);
       setSolicitudesEnviadas(solicitudesEnvRes.data || []);
@@ -178,11 +171,8 @@ export default function NotificationsScreen() {
         // Buscar la invitación para mostrar el modal
         const invitacion = invitacionesVisitas.find(inv => inv.visita.id === visitaId);
         if (invitacion) {
-          console.log('🔍 DEBUG - Abriendo modal para:', invitacion.visita.cafeteria.name);
           setSelectedVisita(invitacion);
           setShowReviewModal(true);
-        } else {
-          console.log('❌ DEBUG - No se encontró la invitación para ID:', visitaId);
         }
       } else {
         // Si rechaza, procesar directamente
@@ -207,12 +197,6 @@ export default function NotificationsScreen() {
     try {
       if (!token || !selectedVisita) throw new Error('Token o visita no disponible');
 
-      console.log('📝 DEBUG - Enviando reseña:', {
-        visitaId: selectedVisita.visita.id,
-        comentario,
-        calificacion
-      });
-
       // Primero aceptar la invitación
       await axios.put(
         `${API_URL}/visita-participantes/${selectedVisita.visita.id}/respuesta`,
@@ -230,8 +214,6 @@ export default function NotificationsScreen() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      console.log('✅ DEBUG - Reseña creada:', resenaResponse.data);
 
       // Cerrar modal y refrescar
       setShowReviewModal(false);

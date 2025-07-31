@@ -203,7 +203,7 @@ export const cancelarSolicitudEnviada = async (req, res) => {
     const userId = req.user.id;
 
     // Verificar que la solicitud existe y pertenece al usuario
-    const solicitud = await Amigos.findOne({  // <- Aquí estaba el error
+    const solicitud = await Amigos.findOne({
       where: {
         id: solicitudId,
         userId: userId,

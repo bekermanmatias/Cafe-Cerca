@@ -21,13 +21,10 @@ function HeaderRight() {
 
   const fetchPendingInvitations = async () => {
     if (!token) {
-      console.log('🔔 No hay token disponible');
       return;
     }
     
     try {
-      console.log('🔔 Obteniendo notificaciones pendientes...');
-      
       const [solicitudesRes, invitacionesRes] = await Promise.all([
         axios.get(API_ENDPOINTS.AMIGOS.GET_SOLICITUDES_RECIBIDAS, {
           headers: { Authorization: `Bearer ${token}` },
@@ -36,9 +33,6 @@ function HeaderRight() {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
-      
-      console.log('🔔 Respuesta solicitudes:', solicitudesRes.data);
-      console.log('🔔 Respuesta invitaciones:', invitacionesRes.data);
       
       // Filtrar solo las solicitudes con status 'pending'
       const pendingSolicitudes = solicitudesRes.data?.filter((solicitud: any) => 
@@ -49,10 +43,6 @@ function HeaderRight() {
       const pendingInvitaciones = invitacionesRes.data?.length || 0;
       
       const totalPending = pendingSolicitudes + pendingInvitaciones;
-      
-      console.log('🔔 Solicitudes pendientes:', pendingSolicitudes);
-      console.log('🔔 Invitaciones pendientes:', pendingInvitaciones);
-      console.log('🔔 Total notificaciones pendientes:', totalPending);
       
       setPendingInvitations(totalPending);
     } catch (error) {
@@ -72,7 +62,6 @@ function HeaderRight() {
   // Refrescar cuando la pantalla se enfoca
   useFocusEffect(
     useCallback(() => {
-      console.log('🔔 Pantalla enfocada, refrescando contador...');
       fetchPendingInvitations();
     }, [token])
   );

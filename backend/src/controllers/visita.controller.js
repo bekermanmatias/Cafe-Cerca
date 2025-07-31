@@ -84,17 +84,7 @@ export const crearVisita = async (req, res) => {
     const esCompartida = esCompartidaRaw === 'true' || esCompartidaRaw === true;
     const imagenes = req.files; // Múltiples archivos
 
-    // Debug: Log de los datos recibidos
-    console.log('🔍 DEBUG - Datos recibidos en crearVisita:');
-    console.log('  - usuarioId:', usuarioId);
-    console.log('  - cafeteriaId:', cafeteriaId);
-    console.log('  - esCompartida:', esCompartida, '(tipo:', typeof esCompartida, ')');
-    console.log('  - maxParticipantes:', maxParticipantes);
-    console.log('  - participantes:', participantes);
-    console.log('  - amigosIds:', amigosIds, '(tipo:', typeof amigosIds, ')');
-    console.log('  - calificacion:', calificacion);
-    console.log('  - comentario:', comentario);
-    console.log('  - imagenes:', imagenes ? imagenes.length : 0);
+
 
     // Validar número máximo de imágenes
     if (imagenes && imagenes.length > 5) {
@@ -121,11 +111,7 @@ export const crearVisita = async (req, res) => {
       estado: 'activa'
     }, { transaction: t });
 
-    console.log('✅ Visita creada:', {
-      id: nuevaVisita.id,
-      esCompartida,
-      maxParticipantes
-    });
+
 
     // Siempre agregar al creador como participante
     const creadorParticipante = await VisitaParticipante.create({
@@ -137,19 +123,13 @@ export const crearVisita = async (req, res) => {
       fechaRespuesta: new Date()
     }, { transaction: t });
 
-    console.log('✅ Creador agregado como participante:', {
-      visitaId: nuevaVisita.id,
-      usuarioId,
-      participanteId: creadorParticipante.id
-    });
+
 
     // Asegurar que amigosIds sea siempre un array
     const amigosIdsArray = Array.isArray(amigosIds) ? amigosIds : [amigosIds].filter(id => id);
     
     // Si es una visita compartida y hay participantes, agregarlos
     const participantesFinales = participantes.length > 0 ? participantes : amigosIdsArray;
-    
-    console.log('🔍 DEBUG - Participantes finales:', participantesFinales);
     
     if (esCompartida && participantesFinales.length > 0) {
       const participantesParaGuardar = participantesFinales.map(participanteId => ({
@@ -160,13 +140,7 @@ export const crearVisita = async (req, res) => {
         fechaInvitacion: new Date()
       }));
 
-      console.log('🔍 DEBUG - Participantes para guardar:', participantesParaGuardar);
       await VisitaParticipante.bulkCreate(participantesParaGuardar, { transaction: t });
-      console.log('✅ Participantes agregados exitosamente');
-    } else {
-      console.log('🔍 DEBUG - No se agregaron participantes porque:');
-      console.log('  - esCompartida:', esCompartida);
-      console.log('  - participantesFinales.length:', participantesFinales.length);
     }
 
     // Si hay imágenes, guardarlas
@@ -1193,47 +1167,7 @@ export const getVisitaById = async (req, res) => {
         }))
     };
 
-    // Logs detallados para debug
-    console.log('🔍 DEBUG - Datos de la visita:', {
-      id: visitaTransformada.id,
-      fecha: visitaTransformada.fecha,
-      estado: visitaTransformada.estado,
-      esCompartida: visitaTransformada.esCompartida
-    });
 
-    console.log('👤 DEBUG - Datos del creador:', {
-      id: visitaTransformada.creador.id,
-      name: visitaTransformada.creador.name,
-      profileImage: visitaTransformada.creador.profileImage,
-      resena: {
-        calificacion: visitaTransformada.creador.resena.calificacion,
-        comentario: visitaTransformada.creador.resena.comentario
-      }
-    });
-
-    console.log('👥 DEBUG - Participantes:', visitaTransformada.participantes.map(p => ({
-      id: p.id,
-      name: p.name,
-      profileImage: p.profileImage,
-      estado: p.estado,
-      tieneResena: !!p.resena,
-      resena: p.resena ? {
-        calificacion: p.resena.calificacion,
-        comentario: p.resena.comentario
-      } : null
-    })));
-
-    console.log('📤 ENVIANDO RESPUESTA:', JSON.stringify({
-      mensaje: 'Visita encontrada',
-      visita: {
-        id: visitaTransformada.id,
-        creador: visitaTransformada.creador ? {
-          id: visitaTransformada.creador.id,
-          name: visitaTransformada.creador.name,
-          resena: visitaTransformada.creador.resena ? 'SI' : 'NO'
-        } : 'NULL'
-      }
-    }, null, 2));
 
     res.json({ mensaje: 'Visita encontrada', visita: visitaTransformada });
   } catch (error) {

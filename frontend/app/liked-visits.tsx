@@ -65,7 +65,7 @@ export default function LikedVisitsScreen() {
 
   const handleShare = (visitId: number) => {
     // Implementar compartir si es necesario
-    console.log('Compartir visita:', visitId);
+
   };
 
   return (

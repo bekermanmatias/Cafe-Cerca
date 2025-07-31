@@ -92,11 +92,8 @@ export default function SharedVisitsInvitationsScreen() {
         // Buscar la invitación para mostrar el modal
         const invitacion = invitaciones.find(inv => inv.visita.id === visitaId);
         if (invitacion) {
-          console.log('🔍 DEBUG - Abriendo modal para:', invitacion.visita.cafeteria.name);
           setSelectedVisita(invitacion);
           setShowReviewModal(true);
-        } else {
-          console.log('❌ DEBUG - No se encontró la invitación para ID:', visitaId);
         }
         return;
       }

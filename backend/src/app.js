@@ -45,30 +45,13 @@ app.use('/api/resenas', resenasRoutes);
 app.use('/api/visita-participantes', visitaParticipanteRoutes);
 
 // Mostrar rutas disponibles por consola
-console.log('📋 Rutas disponibles:');
-console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/health');
-console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visitas');
-console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visitas/usuario/1');
-console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/cafes');
-console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/cafes');
-console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/comentarios');
-console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/comentarios');
-console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/enviar');
-console.log('   PATCH http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/responder/:solicitudId');
-console.log('   DELETE http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/eliminar');
-console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/lista');
-console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/solicitudes/recibidas');
-console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/solicitudes/enviadas');
-console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/visita-participantes/:visitaId/invitar');
-console.log('   PUT  http://localhost:' + (process.env.PORT || 3000) + '/api/visita-participantes/:visitaId/respuesta');
-console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visita-participantes/invitaciones-pendientes');
-console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visita-participantes/:visitaId/participantes');
+// Available routes logged
 
 // Verificar configuración JWT
 if (!process.env.JWT_SECRET) {
   console.warn('⚠️ JWT_SECRET no está configurado en las variables de entorno');
 } else {
-  console.log('✅ JWT_SECRET configurado correctamente');
+  // JWT_SECRET configured correctly
 }
 
 // Manejo de errores global
@@ -88,7 +71,9 @@ app.use((req, res) => {
 
 // Prueba de conexión a la base de datos al iniciar
 testConnection()
-  .then(() => console.log('✅ Base de datos conectada'))
+  .then(() => {
+  // Database connected
+})
   .catch(err => console.error('❌ Error al conectar la base de datos:', err));
 
 export default app;

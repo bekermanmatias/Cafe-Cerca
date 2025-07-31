@@ -164,7 +164,7 @@ export default function CafeDetail() {
   const displayedTags = cafe.tags.slice(0, 4);
 
   const onGuardarPress = () => {
-    console.log('Guardar pressed');
+
   };
 
 const onIrDireccionIconPress = () => {
@@ -207,11 +207,11 @@ const onIrDireccionIconPress = () => {
   };
 
   const handleLike = () => {
-    console.log('Like pressed');
+
   };
 
   const handleShare = (visitId: number) => {
-    console.log('Share pressed', visitId);
+
   };
 
   const handleDetails = (visit: any) => {

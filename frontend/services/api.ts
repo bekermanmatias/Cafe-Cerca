@@ -159,9 +159,6 @@ class ApiService {
         throw new Error('El servidor backend no está disponible. Verifica que esté corriendo en el puerto 3000.');
       }
 
-      console.log('Enviando petición de registro a:', API_ENDPOINTS.AUTH.REGISTER);
-      console.log('Datos del usuario:', userData);
-      
       const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
         method: 'POST',
         headers: {
@@ -170,13 +167,10 @@ class ApiService {
         },
         body: JSON.stringify(userData),
       });
-
-      console.log('Respuesta del servidor:', response.status, response.statusText);
       
       let data;
       try {
         data = await response.json();
-        console.log('Datos de respuesta:', data);
       } catch (jsonError) {
         console.error('Error parseando JSON:', jsonError);
         throw new Error('Error en la respuesta del servidor');
@@ -197,8 +191,6 @@ class ApiService {
   }
 
   async updateProfileImage(imageUri: string): Promise<ProfileImageResponse> {
-    console.log('Actualizando imagen de perfil...');
-    
     const token = await storage.getItem(StorageKeys.TOKEN);
     if (!token) {
       throw new Error('No se encontró el token de autenticación');

@@ -13,7 +13,7 @@ const Example = sequelize.define('Example', {
   }
 }, {
   tableName: 'example_table',
-  timestamps: true, // ✅ Activa createdAt y updatedAt
+  timestamps: true, // Activa createdAt y updatedAt
   // Opcional: personalizar nombres de columnas
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

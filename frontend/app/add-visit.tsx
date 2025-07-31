@@ -241,14 +241,7 @@ export default function AddVisitScreen() {
 
       // Si hay amigos seleccionados, crear visita compartida
       if (selectedFriends.length > 0) {
-        console.log('Creando visita compartida con:', {
-          cafeteriaId: selectedCafe.id,
-          comentario: comment,
-          calificacion: rating,
-          amigosIds: selectedFriends.map(f => f.id),
-          maxParticipantes: 10,
-          imagenes: images.length
-        });
+
         
 
 
@@ -265,12 +258,6 @@ export default function AddVisitScreen() {
         }
       } else {
         // Crear visita normal
-        console.log('Creando visita normal con:', {
-          cafeteriaId: selectedCafe.id,
-          comentario: comment,
-          calificacion: rating,
-          imagenes: images.length
-        });
 
         response = await fetch(`${API_URL}/visitas`, {
           method: 'POST',

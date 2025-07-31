@@ -88,7 +88,6 @@ export default function VisitDetailsScreen() {
   const { token } = useAuth();
 
   useEffect(() => {
-    console.log('Actualizando detalles de visita...', { visitId: params.visitId, refresh: params.refresh });
     fetchVisitDetails();
   }, [params.visitId, params.refresh]);
 
@@ -108,9 +107,7 @@ export default function VisitDetailsScreen() {
         throw new Error('ID de visita no válido');
       }
 
-      console.log('🔍 DEBUG - Obteniendo detalles de visita:', visitId);
       const fullUrl = `${API_URL}/visitas/${visitId}`;
-      console.log('🔍 DEBUG - URL completa:', fullUrl);
 
       const response = await fetch(fullUrl, {
         headers: {
@@ -126,17 +123,7 @@ export default function VisitDetailsScreen() {
 
       const data: ApiResponse = await response.json();
       
-      console.log('📥 DATOS RECIBIDOS EN FRONTEND:', JSON.stringify({
-        mensaje: data.mensaje,
-        visita: {
-          id: data.visita?.id,
-          creador: data.visita?.creador ? {
-            id: data.visita.creador.id,
-            name: data.visita.creador.name,
-            resena: data.visita.creador.resena ? 'SI' : 'NO'
-          } : 'NULL'
-        }
-      }, null, 2));
+
       
       // Validar datos críticos
       if (!data.visita) {
@@ -153,16 +140,7 @@ export default function VisitDetailsScreen() {
         throw new Error('No se encontró la reseña del creador');
       }
 
-      // Log de datos recibidos
-      console.log('✅ Datos de visita recibidos:', {
-        id: data.visita.id,
-        creador: {
-          id: data.visita.creador.id,
-          name: data.visita.creador.name,
-          tieneResena: !!data.visita.creador.resena
-        },
-        participantes: data.visita.participantes.length
-      });
+
 
       setVisitData(data.visita);
 

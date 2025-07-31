@@ -23,9 +23,6 @@ export default function ReviewModal({ visible, onClose, onSubmit, cafeName }: Re
   const [calificacion, setCalificacion] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Debug log
-  console.log('🔍 DEBUG - ReviewModal renderizado:', { visible, cafeName });
-
   const handleSubmit = async () => {
     if (calificacion === 0) {
       Alert.alert('Error', 'Por favor selecciona una calificación');
