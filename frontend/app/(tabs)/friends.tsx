@@ -137,17 +137,16 @@ export default function FriendsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.addButton} onPress={navigateToAddFriends}>
-            <Ionicons name="person-add" size={28} color="#333" />
-          </TouchableOpacity>
-        </View>
-
         {/* Lista de Amigos */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="people" size={20} color="#8D6E63" /> Tus amigos ({friends.length})
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="people" size={20} color="#8D6E63" /> Amigos ({friends.length})
+            </Text>
+            <TouchableOpacity style={styles.addButton} onPress={navigateToAddFriends}>
+              <Ionicons name="person-add" size={20} color="#000" />
+            </TouchableOpacity>
+          </View>
           {friends.length === 0 ? (
             <Text style={styles.noFriendsText}>No tienes amigos todavía. ¡Agrega alguno!</Text>
           ) : (
@@ -167,16 +166,8 @@ export default function FriendsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
-  },
   addButton: {
-    padding: 12,
+    padding: 8,
   },
   invitationsButton: {
     flexDirection: 'row',
@@ -194,11 +185,17 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 16,
     marginBottom: 20,
+    paddingTop: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 12,
     color: '#8D6E63',
     flexDirection: 'row',
     alignItems: 'center',
