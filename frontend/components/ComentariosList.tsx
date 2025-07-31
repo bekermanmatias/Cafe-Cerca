@@ -47,6 +47,7 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [showOptions, setShowOptions] = useState<number | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -82,23 +83,30 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
   }, [cargarComentarios]);
 
   useEffect(() => {
-    const keyboardWillShow = () => {
+    const keyboardWillShow = (event: any) => {
       setIsKeyboardVisible(true);
+      if (Platform.OS === 'android') {
+        setKeyboardHeight(event.endCoordinates.height);
+      }
+      // Scroll más suave y con delay para que el teclado aparezca primero
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      }, Platform.OS === 'ios' ? 300 : 100);
     };
 
     const keyboardWillHide = () => {
       setIsKeyboardVisible(false);
+      if (Platform.OS === 'android') {
+        setKeyboardHeight(0);
+      }
     };
 
     const showSubscription = Keyboard.addListener(
-      'keyboardDidShow',
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       keyboardWillShow
     );
     const hideSubscription = Keyboard.addListener(
-      'keyboardDidHide',
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       keyboardWillHide
     );
 
@@ -120,14 +128,30 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
     }
   }, [user]);
 
+  const handleTextChange = (text: string) => {
+    setNuevoComentario(text);
+    
+    // Si el usuario comienza a escribir y el teclado no está visible, hacer scroll
+    if (text.length === 1 && !isKeyboardVisible) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  };
+
   const agregarComentario = async () => {
-    if (!nuevoComentario.trim() || !visitaId || !userData) return;
+    if (!nuevoComentario.trim()) return;
 
     setIsSubmitting(true);
     try {
       const response = await apiService.createComentario(visitaId, nuevoComentario.trim());
       setComentarios(prevComentarios => [...prevComentarios, response.comentario]);
       setNuevoComentario('');
+      
+      // Scroll al final después de agregar comentario
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     } catch (error) {
       console.error('Error al agregar comentario:', error);
       Alert.alert('Error', 'No se pudo agregar el comentario');
@@ -321,7 +345,12 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      enabled={Platform.OS === 'ios'} // Deshabilitar en Android para manejar manualmente
+    >
       <FlatList
         ref={flatListRef}
         data={comentarios}
@@ -358,86 +387,48 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
         )
       )}
 
-      {Platform.OS === 'android' ? (
-        <View style={[
-          styles.inputWrapper,
-          isKeyboardVisible && styles.inputWrapperWithKeyboard
-        ]}>
-          <View style={styles.inputContainer}>
-            <View style={styles.avatarContainer}>
-              <Image
-                source={{ 
-                  uri: userData?.profileImage || defaultProfileImage
-                }}
-                style={styles.avatar}
-              />
-            </View>
-            <TextInput
-              value={nuevoComentario}
-              onChangeText={setNuevoComentario}
-              placeholder="Escribe un comentario..."
-              placeholderTextColor="#999"
-              style={styles.input}
-              multiline
-              textAlignVertical="center"
+      {/* Input de comentarios */}
+      <View style={[
+        styles.inputWrapper,
+        isKeyboardVisible && styles.inputWrapperWithKeyboard,
+        Platform.OS === 'android' && isKeyboardVisible && { 
+          bottom: keyboardHeight + 20 // Reducir el espacio extra
+        }
+      ]}>
+        <View style={styles.inputContainer}>
+          <View style={styles.avatarContainer}>
+            <Image
+              source={{ 
+                uri: userData?.profileImage || defaultProfileImage
+              }}
+              style={styles.avatar}
             />
-            <TouchableOpacity
-              onPress={agregarComentario}
-              disabled={isSubmitting || !nuevoComentario.trim()}
-              style={[
-                styles.publishButton,
-                (!nuevoComentario.trim() || isSubmitting) && styles.publishButtonDisabled
-              ]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <ThemedText style={styles.publishButtonText}>Publicar</ThemedText>
-              )}
-            </TouchableOpacity>
           </View>
+          <TextInput
+            value={nuevoComentario}
+            onChangeText={handleTextChange}
+            placeholder="Escribe un comentario..."
+            placeholderTextColor="#999"
+            style={styles.input}
+            multiline
+            textAlignVertical="center"
+          />
+          <TouchableOpacity
+            onPress={agregarComentario}
+            disabled={isSubmitting || !nuevoComentario.trim()}
+            style={[
+              styles.publishButton,
+              (!nuevoComentario.trim() || isSubmitting) && styles.publishButtonDisabled
+            ]}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <ThemedText style={styles.publishButtonText}>Publicar</ThemedText>
+            )}
+          </TouchableOpacity>
         </View>
-      ) : (
-        <KeyboardAvoidingView
-          behavior="padding"
-          keyboardVerticalOffset={90}
-          style={styles.keyboardAvoidingView}
-        >
-          <View style={styles.inputContainer}>
-            <View style={styles.avatarContainer}>
-              <Image
-                source={{ 
-                  uri: userData?.profileImage || defaultProfileImage
-                }}
-                style={styles.avatar}
-              />
-            </View>
-            <TextInput
-              value={nuevoComentario}
-              onChangeText={setNuevoComentario}
-              placeholder="Escribe un comentario..."
-              placeholderTextColor="#999"
-              style={styles.input}
-              multiline
-              textAlignVertical="center"
-            />
-            <TouchableOpacity
-              onPress={agregarComentario}
-              disabled={isSubmitting || !nuevoComentario.trim()}
-              style={[
-                styles.publishButton,
-                (!nuevoComentario.trim() || isSubmitting) && styles.publishButtonDisabled
-              ]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <ThemedText style={styles.publishButtonText}>Publicar</ThemedText>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      )}
+      </View>
 
       <Modal
         visible={showEditModal}
@@ -477,7 +468,7 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -491,7 +482,7 @@ const styles = StyleSheet.create({
   },
   flatListContent: {
     flexGrow: 1,
-    paddingBottom: 100, // Espacio para el input
+    paddingBottom: 120, // Más espacio para el input
   },
   keyboardAvoidingView: {
     width: '100%',
@@ -505,14 +496,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 5, // Reducir padding en Android
     ...Platform.select({
       android: {
         elevation: 3,
+        // Asegurar que esté por encima del teclado
+        zIndex: 1000,
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
       },
     }),
   },
   inputWrapperWithKeyboard: {
-    position: 'relative',
+    // En Android, el KeyboardAvoidingView se encarga de subir el input
+    ...Platform.select({
+      android: {
+        // Asegurar que el input esté visible cuando el teclado aparece
+        position: 'relative',
+      },
+    }),
   },
   inputContainer: {
     flexDirection: 'row',
