@@ -277,6 +277,32 @@ export default function VisitDetailsScreen() {
   // URL de la imagen de perfil por defecto
   const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
 
+  // Calcular promedio de calificaciones entre todos los integrantes
+  const calcularPromedioCalificaciones = () => {
+    if (!visitData) return null;
+    
+    const calificaciones = [];
+    
+    // Agregar calificación del creador si existe
+    if (visitData.creador?.resena?.calificacion) {
+      calificaciones.push(visitData.creador.resena.calificacion);
+    }
+    
+    // Agregar calificaciones de participantes aceptados
+    visitData.participantes.forEach(p => {
+      if (p.estado === 'aceptada' && p.resena?.calificacion) {
+        calificaciones.push(p.resena.calificacion);
+      }
+    });
+    
+    if (calificaciones.length === 0) return null;
+    
+    const promedio = calificaciones.reduce((sum, cal) => sum + cal, 0) / calificaciones.length;
+    return Math.round(promedio * 10) / 10; // Redondear a 1 decimal
+  };
+  
+  const promedioCalificaciones = calcularPromedioCalificaciones();
+
   const renderHeader = () => {
     if (!visitData) return null;
 
@@ -289,35 +315,12 @@ export default function VisitDetailsScreen() {
               {new Date(visitData.fecha).toLocaleDateString()}
             </Text>
           </View>
-          <View style={styles.participantsContainer}>
-            <Image
-              source={{ 
-                uri: visitData.creador.profileImage || defaultProfileImage
-              }}
-              style={styles.participantPhoto}
-            />
-            {visitData.participantes.map((participante, index) => (
-              index < 3 && (
-                <Image
-                  key={participante.id}
-                  source={{ 
-                    uri: participante.profileImage || defaultProfileImage
-                  }}
-                  style={[
-                    styles.participantPhoto,
-                    { marginLeft: -10 }
-                  ]}
-                />
-              )
-            ))}
-            {visitData.participantes.length > 3 && (
-              <View style={[styles.participantPhoto, styles.moreParticipants]}>
-                <Text style={styles.moreParticipantsText}>
-                  +{visitData.participantes.length - 3}
-                </Text>
-              </View>
-            )}
-          </View>
+          {/* Burbuja flotante con puntuación arriba a la derecha */}
+          {promedioCalificaciones && (
+            <View style={styles.ratingBubble}>
+              <Text style={styles.ratingBubbleText}>{promedioCalificaciones} ★</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.mainImageContainer}>
@@ -335,9 +338,6 @@ export default function VisitDetailsScreen() {
               </View>
             ))}
           </ScrollView>
-          <View style={styles.ratingBadge}>
-            <Text style={styles.ratingText}>{visitData.creador.resena.calificacion} ★</Text>
-          </View>
         </View>
 
         <View style={styles.actionButtons}>
@@ -376,7 +376,7 @@ export default function VisitDetailsScreen() {
         </View>
 
         {/* Reseña del creador */}
-        <View style={styles.mainReviewContainer}>
+        <View style={styles.reviewContainer}>
           <View style={styles.authorSection}>
             <Image
               source={{ 
@@ -398,49 +398,44 @@ export default function VisitDetailsScreen() {
               </View>
             </View>
           </View>
-          <Text style={styles.mainReviewText}>{visitData.creador.resena.comentario}</Text>
+          <Text style={styles.reviewText}>{visitData.creador.resena.comentario}</Text>
         </View>
 
         {/* Reseñas de participantes */}
-        {visitData.participantes.length > 0 && (
-          <View style={styles.participantsReviewsContainer}>
-            <Text style={styles.sectionTitle}>Opiniones de participantes</Text>
-            {visitData.participantes.map((participante, index) => (
-              <View key={participante.id} style={styles.participantReviewCard}>
-                <View style={styles.authorSection}>
-                  <Image
-                    source={{ 
-                      uri: participante.profileImage || defaultProfileImage
-                    }}
-                    style={styles.authorPhoto}
-                  />
-                  <View style={styles.authorInfo}>
-                    <Text style={styles.authorName}>{participante.name}</Text>
-                    {participante.resena ? (
-                      <View style={styles.starsContainer}>
-                        {[...Array(5)].map((_, i) => (
-                          <Ionicons
-                            key={i}
-                            name={i < participante.resena!.calificacion ? "star" : "star-outline"}
-                            size={20}
-                            color="#FFD700"
-                          />
-                        ))}
-                      </View>
-                    ) : (
-                      <Text style={styles.pendingReview}>
-                        {participante.estado === 'pendiente' ? 'Invitación pendiente' : 'Sin reseña'}
-                      </Text>
-                    )}
+        {visitData.participantes.map((participante, index) => (
+          <View key={participante.id} style={styles.reviewContainer}>
+            <View style={styles.authorSection}>
+              <Image
+                source={{ 
+                  uri: participante.profileImage || defaultProfileImage
+                }}
+                style={styles.authorPhoto}
+              />
+              <View style={styles.authorInfo}>
+                <Text style={styles.authorName}>{participante.name}</Text>
+                {participante.resena ? (
+                  <View style={styles.starsContainer}>
+                    {[...Array(5)].map((_, i) => (
+                      <Ionicons
+                        key={i}
+                        name={i < participante.resena!.calificacion ? "star" : "star-outline"}
+                        size={20}
+                        color="#FFD700"
+                      />
+                    ))}
                   </View>
-                </View>
-                {participante.resena && (
-                  <Text style={styles.reviewText}>{participante.resena.comentario}</Text>
+                ) : (
+                  <Text style={styles.pendingReview}>
+                    {participante.estado === 'pendiente' ? 'Invitación pendiente' : 'Sin reseña'}
+                  </Text>
                 )}
               </View>
-            ))}
+            </View>
+            {participante.resena && (
+              <Text style={styles.reviewText}>{participante.resena.comentario}</Text>
+            )}
           </View>
-        )}
+        ))}
       </>
     );
   };
@@ -530,34 +525,16 @@ export default function VisitDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  participantsReviewsContainer: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
-  participantReviewCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
-  },
   pendingReview: {
     fontSize: 14,
     color: '#666',
     fontStyle: 'italic',
   },
   reviewText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#333',
     marginTop: 8,
-    lineHeight: 20,
+    lineHeight: 24,
   },
   loadingContainer: {
     flex: 1,
@@ -737,9 +714,11 @@ const styles = StyleSheet.create({
     color: '#FF4444',
     fontWeight: '500',
   },
-  mainReviewContainer: {
+  reviewContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   authorSection: {
     flexDirection: 'row',
@@ -765,10 +744,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  mainReviewText: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
+
   commentInputContainer: {
     padding: 16,
     borderTopWidth: 1,
@@ -852,5 +828,19 @@ const styles = StyleSheet.create({
   },
   likesCountActive: {
     color: '#FF4B4B',
+  },
+  ratingBubble: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: '#8B4513',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  ratingBubbleText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 }); 
