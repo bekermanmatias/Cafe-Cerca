@@ -2,6 +2,7 @@
 import Visita from './Visita.js';
 import Cafe from './Cafe.js';
 import VisitaImagen from './VisitaImagen.js';
+import VisitaCompartida from './VisitaCompartida.js';
 import sequelize from '../config/database.js';
 import { DataTypes } from 'sequelize';
 import userModel from './user.model.js';
@@ -120,6 +121,27 @@ SavedCafe.belongsTo(Cafe, {
   as: 'cafe'
 });
 
+// Relaciones para Visitas Compartidas
+Visita.hasMany(VisitaCompartida, {
+  foreignKey: 'visitaId',
+  as: 'participantes'
+});
+
+VisitaCompartida.belongsTo(Visita, {
+  foreignKey: 'visitaId',
+  as: 'visita'
+});
+
+User.hasMany(VisitaCompartida, {
+  foreignKey: 'usuarioId',
+  as: 'visitasCompartidas'
+});
+
+VisitaCompartida.belongsTo(User, {
+  foreignKey: 'usuarioId',
+  as: 'usuario'
+});
+
 // Sincronizar tablas en la base de datos
 sequelize.sync({ alter: true })
   .then(() => console.log('✅ Tablas sincronizadas correctamente'))
@@ -130,6 +152,7 @@ export {
   Visita, 
   Cafe, 
   VisitaImagen, 
+  VisitaCompartida,
   User, 
   Comentario,
   Like,

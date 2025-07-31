@@ -46,6 +46,20 @@ const Visita = sequelize.define('Visita', {
   fecha: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
+  },
+  esCompartida: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  maxParticipantes: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 10,
+    validate: {
+      min: 1,
+      max: 10
+    }
   }
 }, {
   tableName: 'visitas',

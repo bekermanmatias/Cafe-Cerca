@@ -255,9 +255,18 @@ export default function FriendsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <TouchableOpacity style={styles.addButton} onPress={navigateToAddFriends}>
-          <Ionicons name="person-add" size={28} color="#333" />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity style={styles.addButton} onPress={navigateToAddFriends}>
+            <Ionicons name="person-add" size={28} color="#333" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.invitationsButton} 
+            onPress={() => router.push('/shared-visits-invitations')}
+          >
+            <Ionicons name="mail" size={24} color="#333" />
+            <Text style={styles.invitationsButtonText}>Invitaciones</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Solicitudes Recibidas */}
         <View style={styles.section}>
@@ -319,12 +328,29 @@ export default function FriendsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  addButton: {
-    padding: 12,
-    alignSelf: 'flex-end',
-    marginRight: 16,
+  headerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
     marginTop: 16,
     marginBottom: 8,
+  },
+  addButton: {
+    padding: 12,
+  },
+  invitationsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  invitationsButtonText: {
+    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
   },
   section: {
     paddingHorizontal: 16,

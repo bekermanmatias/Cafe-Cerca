@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import visitasRoutes from './routes/visita.routes.js';
+import visitaCompartidaRoutes from './routes/visitaCompartida.routes.js';
 import cafesRoutes from './routes/cafes.js';
 import comentariosRoutes from './routes/comentarios.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -31,6 +32,7 @@ app.get('/health', (req, res) => {
 
 // Rutas de la API
 app.use('/api/visitas', visitasRoutes);
+app.use('/api/visitas-compartidas', visitaCompartidaRoutes);
 app.use('/api/cafes', cafesRoutes);
 app.use('/api/comentarios', comentariosRoutes);
 app.use('/api/auth', authRoutes);
@@ -55,6 +57,10 @@ console.log('   DELETE http://localhost:' + (process.env.PORT || 3000) + '/api/a
 console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/lista');
 console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/solicitudes/recibidas');
 console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/amigos/solicitudes/enviadas');
+console.log('   POST http://localhost:' + (process.env.PORT || 3000) + '/api/visitas-compartidas');
+console.log('   PUT  http://localhost:' + (process.env.PORT || 3000) + '/api/visitas-compartidas/:visitaId/respuesta');
+console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visitas-compartidas/invitaciones-pendientes');
+console.log('   GET  http://localhost:' + (process.env.PORT || 3000) + '/api/visitas-compartidas/mis-visitas-compartidas');
 
 // Verificar configuración JWT
 if (!process.env.JWT_SECRET) {

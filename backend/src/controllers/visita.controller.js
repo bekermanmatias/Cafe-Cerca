@@ -1,4 +1,4 @@
-import { Visita, Cafe, User, VisitaImagen, Like } from '../models/index.js';
+import { Visita, Cafe, User, VisitaImagen, Like, VisitaCompartida } from '../models/index.js';
 import sequelize from '../config/database.js';
 import { Op } from 'sequelize';
 
@@ -21,6 +21,19 @@ const includeUsuario = {
   model: User,
   as: 'usuario',
   attributes: ['id', 'name', 'profileImage']
+};
+
+// Función helper para incluir participantes (solo para visitas compartidas)
+const includeParticipantes = {
+  model: VisitaCompartida,
+  as: 'participantes',
+  include: [
+    {
+      model: User,
+      as: 'usuario',
+      attributes: ['id', 'name', 'profileImage']
+    }
+  ]
 };
 
 // Función helper para ordenar las imágenes
@@ -85,7 +98,9 @@ export const crearVisita = async (req, res) => {
           as: 'usuario',
           attributes: ['id', 'name', 'profileImage'],
           required: true
-        }
+        },
+        // Incluir participantes solo si es una visita compartida
+        ...(nuevaVisita.esCompartida ? [includeParticipantes] : [])
       ],
       order: orderOptions
     });

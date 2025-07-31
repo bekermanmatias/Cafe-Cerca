@@ -55,7 +55,13 @@ export const API_ENDPOINTS = {
     GET_LISTA: `${API_URL}/amigos/lista`,
     GET_SOLICITUDES_RECIBIDAS: `${API_URL}/amigos/solicitudes/recibidas`,
     GET_SOLICITUDES_ENVIADAS: `${API_URL}/amigos/solicitudes/enviadas`
-    
+  },
+  VISITAS_COMPARTIDAS: {
+    CREATE: `${API_URL}/visitas-compartidas`,
+    RESPONDER_INVITACION: (visitaId: number) => `${API_URL}/visitas-compartidas/${visitaId}/respuesta`,
+    GET_INVITACIONES_PENDIENTES: `${API_URL}/visitas-compartidas/invitaciones-pendientes`,
+    GET_MIS_VISITAS_COMPARTIDAS: `${API_URL}/visitas-compartidas/mis-visitas-compartidas`,
+    GET_VISITA_COMPARTIDA: (visitaId: number) => `${API_URL}/visitas-compartidas/${visitaId}`
   },
   USERS: {
     GET_PROFILE: `${API_URL}/users/profile`,

@@ -19,6 +19,12 @@ interface User {
   email: string;
 }
 
+interface Friend {
+  id: number;
+  name: string;
+  profileImage: string;
+}
+
 interface AuthResponse {
   token: string;
   user: User;
@@ -79,6 +85,33 @@ interface ComentarioResponse {
       name: string;
       profileImage: string;
     };
+  };
+}
+
+interface VisitaCompartidaRequest {
+  cafeteriaId: number;
+  comentario: string;
+  calificacion: number;
+  amigosIds: number[];
+  maxParticipantes?: number;
+}
+
+interface VisitaCompartidaResponse {
+  message: string;
+  visita: {
+    id: number;
+    esCompartida: boolean;
+    maxParticipantes: number;
+    participantes: Array<{
+      id: number;
+      usuario: {
+        id: number;
+        name: string;
+        profileImage: string;
+      };
+      rol: string;
+      estado: string;
+    }>;
   };
 }
 
@@ -314,6 +347,56 @@ class ApiService {
       `/comentarios/${comentarioId}`,
       token,
       { method: 'DELETE' }
+    );
+  }
+
+  // Funciones para visitas compartidas
+  async crearVisitaCompartida(formData: FormData): Promise<VisitaCompartidaResponse> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+
+
+    try {
+      const response = await fetch(`${API_URL}/visitas-compartidas`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // No establecer Content-Type para FormData, el navegador lo hace automáticamente
+        },
+        body: formData,
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Error parseando JSON de respuesta:', jsonError);
+        throw new Error('Error en la respuesta del servidor');
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || data.mensaje || `Error al crear la visita compartida: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error en crearVisitaCompartida:', error);
+      if (error instanceof TypeError && error.message.includes('Network request failed')) {
+        throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté corriendo.');
+      }
+      throw error;
+    }
+  }
+
+  async obtenerListaAmigos(): Promise<Friend[]> {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) throw new Error('No se encontró el token de autenticación');
+
+    return this.makeAuthenticatedRequest(
+      '/amigos/lista',
+      token,
+      { method: 'GET' }
     );
   }
 }
