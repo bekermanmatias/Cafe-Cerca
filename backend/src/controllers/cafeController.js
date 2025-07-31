@@ -1,4 +1,4 @@
-import { Cafe, Visita, User, VisitaImagen, Like, VisitaParticipante } from '../models/index.js';
+import { Cafe, Visita, User, VisitaImagen, Like, VisitaParticipante, Resena } from '../models/index.js';
 import { Op } from 'sequelize';
 
 export const getAllCafes = async (req, res) => {
@@ -49,18 +49,43 @@ export const getCafeById = async (req, res) => {
     const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
 
+    console.log('🔍 DEBUG - Obteniendo cafetería:', { id, page, limit, offset });
+
     const cafe = await Cafe.findByPk(id);
     if (!cafe) {
       return res.status(404).json({ mensaje: 'Cafetería no encontrada' });
     }
 
-    const { count, rows: reseñas } = await Visita.findAndCountAll({
+    console.log('✅ Cafetería encontrada:', cafe.name);
+
+    // Obtener todas las visitas de la cafetería con toda la información necesaria
+    const { count, rows: visitas } = await Visita.findAndCountAll({
       where: { cafeteriaId: id },
       include: [
         {
+          model: Cafe,
+          as: 'cafeteria',
+          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+        },
+        {
+          model: User,
+          as: 'usuario',
+          attributes: ['id', 'name', 'profileImage']
+        },
+        {
           model: VisitaParticipante,
           as: 'participantes',
-          where: { rol: 'creador' },
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ]
+        },
+        {
+          model: Resena,
+          as: 'resenas',
           include: [
             {
               model: User,
@@ -68,7 +93,7 @@ export const getCafeById = async (req, res) => {
               attributes: ['id', 'name', 'profileImage']
             }
           ],
-          required: true // Asegura que solo se devuelvan visitas con creador
+          required: false
         },
         {
           model: VisitaImagen,
@@ -85,26 +110,79 @@ export const getCafeById = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
 
-    // Transformar las reseñas para incluir el conteo de likes y asegurar que la información del usuario esté presente
-    const reseñasConLikes = reseñas.map(reseña => {
-      const reseñaJSON = reseña.toJSON();
-      const creador = reseñaJSON.participantes?.[0]?.usuario || null;
+    // Transformar las visitas para que tengan la misma estructura que en diary
+    const visitasTransformadas = visitas.map(visita => {
+      const visitaJSON = visita.toJSON();
+      const creador = visitaJSON.usuario;
+      const resenaCreador = visitaJSON.resenas?.find(r => r.usuarioId === creador?.id);
+
       return {
-        ...reseñaJSON,
-        likesCount: reseñaJSON.likes.length,
-        likes: undefined, // Removemos el array de likes ya que solo necesitamos el conteo
-        usuario: creador, // Usuario creador de la visita
-        participantes: undefined // Removemos el array de participantes ya que solo necesitamos el usuario
+        id: visitaJSON.id,
+        fecha: visitaJSON.fecha,
+        estado: visitaJSON.estado,
+        esCompartida: visitaJSON.esCompartida,
+        cafeteria: visitaJSON.cafeteria,
+        imagenes: visitaJSON.visitaImagenes || [],
+        likesCount: visitaJSON.likes?.length || 0,
+        // Estructura completa como en diary
+        creador: creador ? {
+          id: creador.id,
+          name: creador.name,
+          profileImage: creador.profileImage,
+          resena: resenaCreador ? {
+            id: resenaCreador.id,
+            calificacion: resenaCreador.calificacion,
+            comentario: resenaCreador.comentario,
+            fecha: resenaCreador.createdAt,
+            usuario: {
+              id: creador.id,
+              name: creador.name,
+              profileImage: creador.profileImage
+            }
+          } : null
+        } : null,
+        participantes: (visitaJSON.participantes || [])
+          .filter(p => p.rol !== 'creador')
+          .map(p => ({
+            id: p.usuario.id,
+            name: p.usuario.name,
+            profileImage: p.usuario.profileImage,
+            estado: p.estado,
+            rol: p.rol,
+            fechaRespuesta: p.fechaRespuesta,
+            resena: visitaJSON.resenas?.find(r => r.usuarioId === p.usuarioId) ? {
+              id: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).id,
+              calificacion: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).calificacion,
+              comentario: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).comentario,
+              fecha: visitaJSON.resenas.find(r => r.usuarioId === p.usuarioId).createdAt,
+              usuario: {
+                id: p.usuario.id,
+                name: p.usuario.name,
+                profileImage: p.usuario.profileImage
+              }
+            } : null
+          })),
+        // Compatibilidad con estructura antigua
+        usuario: creador,
+        comentario: resenaCreador?.comentario,
+        calificacion: resenaCreador?.calificacion
       };
     });
 
     const totalPages = Math.ceil(count / limit);
     const hasMore = page < totalPages;
 
+    console.log('📤 ENVIANDO RESPUESTA:', {
+      cafe: cafe.name,
+      visitasCount: visitasTransformadas.length,
+      total: count,
+      hasMore
+    });
+
     res.json({
       cafe,
-      reseñas: {
-        items: reseñasConLikes,
+      visitas: {
+        items: visitasTransformadas,
         total: count,
         totalPages,
         currentPage: page,
@@ -112,8 +190,8 @@ export const getCafeById = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error al obtener cafetería:', error);
-    res.status(500).json({ mensaje: 'Error al obtener la cafetería' });
+    console.error('❌ Error al obtener cafetería:', error);
+    res.status(500).json({ mensaje: 'Error al obtener la cafetería', error: error.message });
   }
 };
 

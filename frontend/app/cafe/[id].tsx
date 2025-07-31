@@ -21,7 +21,7 @@ import Lapiz from '../../assets/icons/lapiz.svg';
 import { API_URL } from '../../constants/Config';
 import { VisitCard } from '../../components/VisitCard';
 import { useAuth } from '../../context/AuthContext';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
 
 type Cafe = {
@@ -58,8 +58,8 @@ type Reseña = {
 
 type CafeResponse = {
   cafe: Cafe;
-  reseñas: {
-    items: Reseña[];
+  visitas: {
+    items: any[]; // Usando any[] para compatibilidad con la estructura de VisitCard
     total: number;
     totalPages: number;
     currentPage: number;
@@ -71,7 +71,7 @@ export default function CafeDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [cafe, setCafe] = useState<Cafe | null>(null);
-  const [reseñas, setReseñas] = useState<Reseña[]>([]);
+  const [visitas, setVisitas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -93,13 +93,13 @@ export default function CafeDetail() {
       
       if (isFirstLoad) {
         setCafe(data.cafe);
-        setReseñas(data.reseñas.items);
+        setVisitas(data.visitas.items);
       } else {
-        setReseñas(prev => [...prev, ...data.reseñas.items]);
+        setVisitas(prev => [...prev, ...data.visitas.items]);
       }
       
-      setHasMore(data.reseñas.hasMore);
-      setCurrentPage(data.reseñas.currentPage);
+      setHasMore(data.visitas.hasMore);
+      setCurrentPage(data.visitas.currentPage);
     } catch (error) {
       console.error('Error al traer la cafetería:', error);
     } finally {
@@ -224,12 +224,12 @@ const onIrDireccionIconPress = () => {
   };
 
   const handleLikeChange = (visitId: number, liked: boolean, likesCount: number) => {
-    // Actualizar el estado local de las reseñas cuando cambia un like
-    setReseñas(prevReseñas => 
-      prevReseñas.map(reseña => 
-        reseña.id === visitId 
-          ? { ...reseña, isLiked: liked, likesCount }
-          : reseña
+    // Actualizar el estado local de las visitas cuando cambia un like
+    setVisitas(prevVisitas => 
+      prevVisitas.map(visita => 
+        visita.id === visitId 
+          ? { ...visita, isLiked: liked, likesCount }
+          : visita
       )
     );
   };
@@ -238,9 +238,6 @@ const onIrDireccionIconPress = () => {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.imageContainer}>
         <Image source={{ uri: cafe.imageUrl }} style={styles.image} />
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
       </View>
 
       <View style={styles.infoContainer}>
@@ -248,13 +245,20 @@ const onIrDireccionIconPress = () => {
           <Text style={styles.name}>{cafe.name}</Text>
 
           <View style={styles.iconsRight}>
-            <Pressable onPress={handleSave} hitSlop={8}>
+            <TouchableOpacity 
+              style={styles.saveButton} 
+              onPress={handleSave}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.saveButtonText}>
+                {isSaved ? 'Guardada' : 'Guardar'}
+              </Text>
               <MaterialIcons 
                 name={isSaved ? "bookmark" : "bookmark-outline"} 
-                size={24} 
-                color="#8D6E63" 
+                size={20} 
+                color="#FFFFFF" 
               />
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -277,9 +281,14 @@ const onIrDireccionIconPress = () => {
             {cafe.address}
           </Text>
 
-          <Pressable onPress={onIrDireccionIconPress} hitSlop={8} style={{ marginLeft: 8 }}>
-            <IrDireccionIcon width={24} height={24} style={styles.iconSvg} />
-          </Pressable>
+          <TouchableOpacity 
+            style={styles.irButton} 
+            onPress={onIrDireccionIconPress}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.irButtonText}>Ir</Text>
+            <MaterialIcons name="directions" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.row}>
@@ -292,54 +301,44 @@ const onIrDireccionIconPress = () => {
         {/* Reseñas header */}
         <View style={styles.reviewsHeader}>
           <View style={styles.ratingContainer}>
-            <Text style={styles.reviewsTitle}>
-              Reseñas <Text style={styles.ratingValue}>{cafe.rating}/5</Text>
-            </Text>
-            <Text style={styles.starIcon}>⭐️</Text>
+            <Text style={styles.reviewsTitle}>Reseñas</Text>
+            <View style={styles.ratingDisplay}>
+              <Text style={styles.ratingValue}>{cafe.rating.toFixed(1)}</Text>
+              <Ionicons name="star" size={20} color="#FFD700" />
+            </View>
           </View>
-          <Pressable style={styles.visitarButton} onPress={handleVisitar} hitSlop={8}>
+          <TouchableOpacity style={styles.visitarButton} onPress={handleVisitar} activeOpacity={0.7}>
             <Text style={styles.visitarText}>Visitar</Text>
-            <Lapiz width={20} height={20} style={styles.visitarIcon} />
-          </Pressable>
-        </View>
-
-        {/* Lista de reseñas */}
-        <View style={styles.reviewsList}>
-          {reseñas.map((visita) => (
-            <VisitCard
-              key={visita.id}
-              visit={{
-                id: visita.id,
-                comentario: visita.comentario,
-                calificacion: visita.calificacion,
-                fecha: visita.fecha,
-                cafeteria: cafe,
-                imagenes: visita.visitaImagenes,
-                usuario: visita.usuario,
-                likesCount: visita.likesCount
-              }}
-              onLikeChange={(liked) => handleLikeChange(visita.id, liked, visita.likesCount)}
-              onShare={() => handleShare(visita.id)}
-              onDetails={() => handleDetails(visita)}
-            />
-          ))}
-
-          {/* Botón Ver más */}
-          {hasMore && (
-            <TouchableOpacity
-              style={styles.loadMoreButton}
-              onPress={handleLoadMore}
-              disabled={loadingMore}
-            >
-              {loadingMore ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.loadMoreText}>Ver más reseñas</Text>
-              )}
-            </TouchableOpacity>
-          )}
+            <MaterialIcons name="edit" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
       </View>
+
+      {/* Lista de visitas - fuera del infoContainer para ancho completo */}
+      {visitas.map((visita) => (
+        <VisitCard
+          key={visita.id}
+          visit={visita}
+          onLikeChange={(liked) => handleLikeChange(visita.id, liked, visita.likesCount)}
+          onShare={() => handleShare(visita.id)}
+          onDetails={() => handleDetails(visita)}
+        />
+      ))}
+
+      {/* Botón Ver más */}
+      {hasMore && (
+        <TouchableOpacity
+          style={styles.loadMoreButton}
+          onPress={handleLoadMore}
+          disabled={loadingMore}
+        >
+          {loadingMore ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.loadMoreText}>Ver más reseñas</Text>
+          )}
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -430,15 +429,22 @@ const styles = StyleSheet.create({
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
   reviewsTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#8D6E63',
   },
   ratingValue: {
-    color: '#000',
-    fontWeight: 'normal',
+    color: '#000000',
+    fontWeight: '600',
+    fontSize: 20,
+  },
+  ratingDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   starIcon: {
     fontSize: 18,
@@ -448,20 +454,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#8D6E63',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 6,
   },
   visitarText: {
     fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  visitarIcon: {
-    marginLeft: 6,
-    width: 20,
-    height: 20,
-  },
+
   reviewsList: {
     width: '100%',
     marginTop: 16,
@@ -474,10 +477,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
     marginBottom: 8,
+    marginHorizontal: 16,
   },
   loadMoreText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8D6E63',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 6,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  irButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8D6E63',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 6,
+  },
+  irButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  starsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
   }
 });

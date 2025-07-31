@@ -435,17 +435,6 @@ export default function AddVisitScreen() {
   return (
     <>
       <ScrollView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={handleBack}
-            style={styles.backButton}
-          >
-            <AntDesign name="arrowleft" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Nueva Visita</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
         <View style={styles.content}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Amigos</Text>
@@ -643,26 +632,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    flex: 1,
-    textAlign: 'center',
-    marginRight: 24, // Para compensar el botón de retroceso
-  },
+
   content: {
     flex: 1,
     paddingHorizontal: 16,

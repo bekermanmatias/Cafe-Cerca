@@ -303,27 +303,32 @@ export default function VisitDetailsScreen() {
   
   const promedioCalificaciones = calcularPromedioCalificaciones();
 
-  const renderHeader = () => {
+  const renderContent = () => {
     if (!visitData) return null;
 
     return (
       <>
-        <View style={styles.header}>
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>{visitData.cafeteria.name}</Text>
-            <Text style={styles.headerDate}>
-              {new Date(visitData.fecha).toLocaleDateString()}
+        {/* Información de la visita en la parte superior */}
+        <View style={styles.visitInfoHeader}>
+          <View style={styles.visitInfoLeft}>
+            <Text style={styles.cafeteriaName}>{visitData.cafeteria.name}</Text>
+            <Text style={styles.visitDate}>
+              {new Date(visitData.fecha).toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
             </Text>
           </View>
-          {/* Burbuja flotante con puntuación arriba a la derecha */}
           {promedioCalificaciones && (
-            <View style={styles.ratingBubble}>
-              <Text style={styles.ratingBubbleText}>{promedioCalificaciones} ★</Text>
+            <View style={styles.headerRatingBubble}>
+              <Text style={styles.headerRatingBubbleText}>{promedioCalificaciones} ★</Text>
             </View>
           )}
         </View>
 
-        <View style={styles.mainImageContainer}>
+                 <View style={styles.mainImageContainer}>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
@@ -485,7 +490,7 @@ export default function VisitDetailsScreen() {
 
       <ComentariosList 
         visitaId={visitData.id}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={renderContent}
       />
 
       {showOptions && (
@@ -580,27 +585,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 70,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  headerDate: {
-    fontSize: 14,
-    color: '#666',
-  },
+
   participantsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -833,14 +818,56 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     right: 16,
-                backgroundColor: '#8D6E63',
+    backgroundColor: '#D7CCC8',
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    width: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   ratingBubbleText: {
-    color: '#fff',
+    color: '#5D4037',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  visitInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  visitInfoLeft: {
+    flex: 1,
+  },
+  cafeteriaName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  visitDate: {
     fontSize: 14,
+    color: '#666',
+  },
+  headerRatingBubble: {
+    backgroundColor: '#D7CCC8',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    width: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerRatingBubbleText: {
+    color: '#5D4037',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 }); 

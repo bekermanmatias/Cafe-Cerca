@@ -238,7 +238,14 @@ export const VisitCard = ({
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.place}>{cafeteriaName}</Text>
-          <Text style={styles.date}>{new Date(visit.fecha).toLocaleDateString()}</Text>
+          <Text style={styles.date}>
+            {new Date(visit.fecha).toLocaleDateString('es-ES', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
+          </Text>
         </View>
         {/* Burbuja flotante con puntuación arriba a la derecha */}
         {promedioCalificaciones && (
@@ -367,14 +374,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     right: 16,
-                backgroundColor: '#8D6E63',
+    backgroundColor: '#D7CCC8',
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    width: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   ratingBubbleText: {
-    color: '#fff',
-    fontSize: 14,
+    color: '#5D4037',
+    fontSize: 16,
     fontWeight: 'bold',
   },
   paginationDots: {
