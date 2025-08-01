@@ -152,12 +152,12 @@ export default function ExploreScreen() {
     );
   }
 
-  // FILTRADO: se busca por nombre y los cafés deben tener todas las etiquetas seleccionadas (por id)
-  const filteredCafes = cafes.filter(cafe =>
-    cafe.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    selectedFilters.every(selectedId => cafe.tags.some(tag => tag.id === selectedId))
-  );
-
+ const filteredCafes = cafes.filter(cafe =>
+  cafe.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+  selectedFilters.every(selectedId =>
+    Array.isArray(cafe.tags) && cafe.tags.some(tag => tag.id === selectedId)
+  )
+);
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
