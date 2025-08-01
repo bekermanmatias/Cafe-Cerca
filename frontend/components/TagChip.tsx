@@ -1,15 +1,17 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View, ViewStyle, TextStyle } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons'; // Asumiendo que usas FontAwesome para iconos
 
 type TagChipProps = {
   label: string;
+  icon?: string;            // nuevo prop para icono (nombre de icono FontAwesome5)
   selected?: boolean;
-  onPress?: () => void; // Si no se pasa, es decorativo
+  onPress?: () => void;
   style?: ViewStyle;
-  textStyle?: TextStyle;  // <-- agregar
+  textStyle?: TextStyle;
 };
 
-export default function TagChip({ label, selected = false, onPress, style, textStyle }: TagChipProps) {
+export default function TagChip({ label, icon, selected = false, onPress, style, textStyle }: TagChipProps) {
   const ChipComponent = onPress ? Pressable : View;
 
   return (
@@ -21,10 +23,18 @@ export default function TagChip({ label, selected = false, onPress, style, textS
         style,
       ]}
     >
+      {icon && (
+        <FontAwesome5
+          name={icon}
+          size={14}
+          color={selected ? '#333' : '#333'}
+          style={styles.icon}
+        />
+      )}
       <Text
         style={[
           selected ? styles.textSelected : styles.textUnselected,
-          textStyle,  // <-- agregar aquí
+          textStyle,
         ]}
       >
         {label}
@@ -35,6 +45,8 @@ export default function TagChip({ label, selected = false, onPress, style, textS
 
 const styles = StyleSheet.create({
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -55,5 +67,8 @@ const styles = StyleSheet.create({
   },
   textUnselected: {
     color: '#333',
+  },
+  icon: {
+    marginRight: 6,
   },
 });

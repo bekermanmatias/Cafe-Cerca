@@ -4,9 +4,14 @@ import { useRouter } from 'expo-router';
 import SearchBar from '../../components/SearchBar';
 import FilterChips from '../../components/FilterChips';
 import TagChip from '../../components/TagChip';
-import { filters } from '../../constants/Filters';
 import { API_URL } from '../../constants/Config';
 import * as Location from 'expo-location';
+
+interface Tag {
+  id: number;
+  nombre: string;
+  icono: string;
+}
 
 interface Cafe {
   id: number;
@@ -14,7 +19,7 @@ interface Cafe {
   address: string;
   rating: number;
   imageUrl: string | null;
-  tags: string[];
+  tags: Tag[];
   openingHours: string;
   lat?: number;
   lng?: number;
@@ -23,9 +28,11 @@ interface Cafe {
 
 export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [filters, setFilters] = useState<Tag[]>([]); // Etiquetas del backend
+  const [selectedFilters, setSelectedFilters] = useState<number[]>([]);
   const [cafes, setCafes] = useState<Cafe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingFilters, setLoadingFilters] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,12 +40,29 @@ export default function ExploreScreen() {
   const router = useRouter();
 
   useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const res = await fetch(`${API_URL}/etiquetas`);
+        if (!res.ok) throw new Error('No se pudieron cargar las etiquetas');
+        const data = await res.json();
+        setFilters(data);
+      } catch (error) {
+        console.error('Error cargando filtros:', error);
+      } finally {
+        setLoadingFilters(false);
+      }
+    };
+
+    fetchFilters();
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           console.warn('Permiso de ubicación denegado');
-          fetchCafes(); // aún así se cargan los cafés sin ubicación
+          fetchCafes(); // Cargar sin ubicación
           return;
         }
 
@@ -99,7 +123,7 @@ export default function ExploreScreen() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           console.warn('Permiso de ubicación denegado');
-          fetchCafes(); // aún así se cargan los cafés sin ubicación
+          fetchCafes(); // Cargar sin ubicación
           return;
         }
 
@@ -118,9 +142,20 @@ export default function ExploreScreen() {
     fetchData();
   }, []);
 
+  // Si siguen cargando los filtros, mostramos loading
+  if (loadingFilters) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#8D6E63" />
+        <Text style={styles.loadingText}>Cargando filtros...</Text>
+      </View>
+    );
+  }
+
+  // FILTRADO: se busca por nombre y los cafés deben tener todas las etiquetas seleccionadas (por id)
   const filteredCafes = cafes.filter(cafe =>
     cafe.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    selectedFilters.every(tag => cafe.tags?.includes(tag))
+    selectedFilters.every(selectedId => cafe.tags.some(tag => tag.id === selectedId))
   );
 
   if (loading) {
@@ -141,7 +176,7 @@ export default function ExploreScreen() {
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
         <RefreshControl
@@ -201,8 +236,11 @@ export default function ExploreScreen() {
                 </Text>
               )}
               <View style={styles.tagsContainer}>
-                {cafe.tags?.map((tag: string, idx: number) => (
-                  <TagChip key={idx} label={tag} />
+                {cafe.tags?.map((tag, idx) => (
+                  <TagChip
+                    key={tag.id}
+                    label={`${tag.icono} ${tag.nombre}`}
+                  />
                 ))}
               </View>
             </View>

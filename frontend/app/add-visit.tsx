@@ -12,13 +12,19 @@ import { apiService } from '../services/api';
 
 const STANDARD_SIZE = 1080; // Tamaño estándar para las imágenes (1080x1080)
 
+interface Tag {
+  id: number;
+  nombre: string;
+  icono: string;
+}
+
 interface Cafe {
   id: number;
   name: string;
   address: string;
   rating: number;
   imageUrl: string | null;
-  tags: string[];
+  tags: Tag[];  // ahora es array de objetos Tag
   openingHours: string;
 }
 

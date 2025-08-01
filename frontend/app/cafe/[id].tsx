@@ -25,17 +25,21 @@ import { useAuth } from '../../context/AuthContext';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
 
-type Cafe = {
+interface Tag {
+  id: number;
+  nombre: string;
+  icono: string;
+}
+
+interface Cafe {
   id: number;
   name: string;
   address: string;
-  imageUrl: string;
-  tags: string[];
   rating: number;
+  imageUrl: string;
+  tags: Tag[];  // ahora es array de objetos Tag
   openingHours: string;
-  lat: number;
-  lng: number;
-};
+}
 
 type Usuario = {
   id: number;

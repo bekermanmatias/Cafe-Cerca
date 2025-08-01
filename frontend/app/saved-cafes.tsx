@@ -5,13 +5,19 @@ import { apiService } from '../services/api';
 import { Stack, useRouter } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 
+interface Tag {
+  id: number;
+  nombre: string;
+  icono: string;
+}
+
 interface Cafe {
   id: number;
   name: string;
   address: string;
-  imageUrl: string | null;
   rating: number;
-  tags: string[];
+  imageUrl: string | null;
+  tags: Tag[];  // ahora es array de objetos Tag
   openingHours: string;
 }
 

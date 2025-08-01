@@ -15,13 +15,19 @@ interface Imagen {
   orden: number;
 }
 
+interface Tag {
+  id: number;
+  nombre: string;
+  icono: string;
+}
+
 interface Cafeteria {
   id: number;
   name: string;
   address: string;
-  imageUrl: string | null;
   rating: number;
-  tags: string[];
+  imageUrl: string | null;
+  tags: Tag[];  // ahora es array de objetos Tag
   openingHours: string;
 }
 
