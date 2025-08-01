@@ -137,6 +137,19 @@ export default function RootLayout() {
               animation: 'slide_from_right',
             }}
           />
+          <Stack.Screen
+            name="addFriendsScreen"
+            options={{
+              headerShown: true,
+              headerTitle: '',
+              headerBackTitle: '',
+              headerStyle: {
+                backgroundColor: '#fff',
+              },
+              headerTintColor: '#8D6E63',
+              animation: 'slide_from_right',
+            }}
+          />
         </Stack>
         <StatusBar style="auto" />
       </SafeAreaProvider>

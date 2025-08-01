@@ -137,11 +137,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
     paddingHorizontal: 20,
+    paddingTop: 10,
   },
   title: {
     fontSize: Fonts.sizes.title,
     fontWeight: Fonts.weights.bold,
-    marginTop: 20,
+    marginTop: -40,
     marginBottom: 12,
     color: Colors.text.primary,
   },

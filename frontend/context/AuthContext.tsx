@@ -1,5 +1,5 @@
 // context/AuthContext.tsx - Context para manejar autenticación
-import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { storage, StorageKeys } from '../utils/storage';
 
 interface User {
@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkAuthState = async () => {
+  const checkAuthState = useCallback(async () => {
     try {
       const storedToken = await storage.getItem(StorageKeys.TOKEN);
       const storedUser = await storage.getItem(StorageKeys.USER);
@@ -58,13 +58,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     checkAuthState();
-  }, []);
+  }, [checkAuthState]);
 
-  const login = useMemo(() => async (newToken: string, newUser: User) => {
+  const login = useCallback(async (newToken: string, newUser: User) => {
     try {
       console.log('Saving user:', newUser);
       await storage.setItem(StorageKeys.TOKEN, newToken);
@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const updateUser = useMemo(() => async (updatedUser: User) => {
+  const updateUser = useCallback(async (updatedUser: User) => {
     try {
       await storage.setItem(StorageKeys.USER, JSON.stringify(updatedUser));
       setUser(updatedUser);
@@ -87,12 +87,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const logout = useMemo(() => async () => {
+  const logout = useCallback(async () => {
     try {
+      console.log('Logging out user...');
       await storage.removeItem(StorageKeys.TOKEN);
       await storage.removeItem(StorageKeys.USER);
       setToken(null);
       setUser(null);
+      console.log('User logged out successfully');
     } catch (error) {
       console.error('Error during logout:', error);
       // Asegurar que el estado se limpie incluso si hay error
@@ -101,15 +103,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // Memoizar el value del contexto para evitar re-renders innecesarios
-  const value = useMemo<AuthContextType>(() => ({
+  const value: AuthContextType = {
     user,
     token,
     login,
     updateUser,
     logout,
     isLoading,
-  }), [user, token, login, updateUser, logout, isLoading]);
+  };
 
   return (
     <AuthContext.Provider value={value}>
