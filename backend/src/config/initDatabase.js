@@ -146,19 +146,20 @@ async function createInitialData() {
 const etiquetasIniciales = [
   { nombre: 'Café de especialidad', icono: 'coffee' },
   { nombre: 'Brunch', icono: 'utensils' },
-  { nombre: 'Tienda', icono: 'gift' },
+  { nombre: 'Tienda', icono: 'home' }, // ← corregido "Home" a "home"
   { nombre: 'Ambiente natural', icono: 'leaf' },
-  { nombre: 'Franquicia', icono: 'home' },
-  { nombre: 'Tradicional', icono: 'home' },
-  { nombre: 'Alfajores', icono: 'gift' },
-  { nombre: 'Pastelería francesa', icono: 'star' },
-  { nombre: 'Macarons', icono: 'star' },
+  { nombre: 'Franquicia', icono: 'map-pin' }, // ← icono alternativo
+  { nombre: 'Tradicional', icono: 'star' }, // ← icono alternativo
+  { nombre: 'Alfajores', icono: 'gift' }, // ← icono alternativo
+  { nombre: 'Pastelería francesa', icono: 'camera' }, // ← icono alternativo
+  { nombre: 'Macarons', icono: 'gift' },
   { nombre: 'Sin gluten', icono: 'shield' },
-  { nombre: 'Pastelería celíaca', icono: 'utensils' },
+  { nombre: 'Pastelería celíaca', icono: 'bookmark' },
   { nombre: 'Ambiente moderno', icono: 'laptop' },
-  { nombre: 'Panadería artesanal', icono: 'utensils' },
-  { nombre: 'Tostado propio', icono: 'coffee' }
+  { nombre: 'Panadería artesanal', icono: 'bookmark' },
+  { nombre: 'Tostado propio', icono: 'zap' }
 ];
+
 
     for (const etiqueta of etiquetasIniciales) {
       await Etiqueta.findOrCreate({ where: { nombre: etiqueta.nombre }, defaults: etiqueta });
