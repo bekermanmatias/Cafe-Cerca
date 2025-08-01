@@ -1,4 +1,4 @@
-import { SavedCafe, Cafe } from '../models/index.js';
+import { SavedCafe, Cafe, Etiqueta } from '../models/index.js';
 
 export const toggleSavedCafe = async (req, res) => {
   try {
@@ -83,13 +83,40 @@ export const getSavedCafes = async (req, res) => {
       include: [{
         model: Cafe,
         as: 'cafe',
-        attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours', 'lat', 'lng']
+        attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'openingHours', 'lat', 'lng'],
+        include: [{
+          model: Etiqueta,
+          as: 'etiquetas', // o el alias que tengas definido en la relación muchos a muchos
+          attributes: ['nombre', 'icono'],
+          through: { attributes: [] } // no traer datos de la tabla intermedia
+        }]
       }],
       order: [['createdAt', 'DESC']]
     });
 
-    // Transformar los datos para enviar solo la información de las cafeterías
-    const cafes = savedCafes.map(saved => saved.cafe).filter(cafe => cafe !== null);
+    const cafes = savedCafes
+      .map(saved => {
+        if (!saved.cafe) return null;
+
+        // Mapear etiquetas a un array simple de objetos { nombre, icono }
+        const etiquetas = saved.cafe.etiquetas.map(e => ({
+          nombre: e.nombre,
+          icono: e.icono
+        }));
+
+        return {
+          id: saved.cafe.id,
+          name: saved.cafe.name,
+          address: saved.cafe.address,
+          imageUrl: saved.cafe.imageUrl,
+          rating: saved.cafe.rating,
+          openingHours: saved.cafe.openingHours,
+          lat: saved.cafe.lat,
+          lng: saved.cafe.lng,
+          etiquetas // acá van las etiquetas asociadas
+        };
+      })
+      .filter(cafe => cafe !== null);
 
     if (cafes.length === 0) {
       return res.status(200).json({
@@ -106,9 +133,9 @@ export const getSavedCafes = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener cafeterías guardadas:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Error al obtener cafeterías guardadas',
-      error: error.message 
+      error: error.message
     });
   }
-}; 
+};
