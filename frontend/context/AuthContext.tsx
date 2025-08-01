@@ -37,40 +37,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const checkAuthState = async () => {
+    try {
+      const storedToken = await storage.getItem(StorageKeys.TOKEN);
+      const storedUser = await storage.getItem(StorageKeys.USER);
+
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+      } else {
+        // Limpiar estado sin llamar a logout para evitar recursión
+        setToken(null);
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Error en checkAuthState', error);
+      // En caso de error, también limpiar el estado
+      setToken(null);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     checkAuthState();
   }, []);
 
-const checkAuthState = async () => {
-  try {
-    const storedToken = await storage.getItem(StorageKeys.TOKEN);
-    const storedUser = await storage.getItem(StorageKeys.USER);
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    } else {
-      logout(); // <- esto también debería hacer setIsLoading(false)
+  const login = useMemo(() => async (newToken: string, newUser: User) => {
+    try {
+      console.log('Saving user:', newUser);
+      await storage.setItem(StorageKeys.TOKEN, newToken);
+      await storage.setItem(StorageKeys.USER, JSON.stringify(newUser));
+      setToken(newToken);
+      setUser(newUser);
+    } catch (error) {
+      console.error('Error during login:', error);
+      throw error;
     }
-  } catch (error) {
-    console.error('Error en checkAuthState', error);
-  } finally {
-    setIsLoading(false); // ✅ asegurate de que esto SIEMPRE se llame
-  }
-};
-
-const login = useMemo(() => async (newToken: string, newUser: User) => {
-  try {
-    console.log('Saving user:', newUser); // <-- log útil
-    await storage.setItem(StorageKeys.TOKEN, newToken);
-    await storage.setItem(StorageKeys.USER, JSON.stringify(newUser));
-    setToken(newToken);
-    setUser(newUser);
-  } catch (error) {
-    console.error('Error during login:', error);
-    throw error;
-  }
-}, []);
+  }, []);
 
   const updateUser = useMemo(() => async (updatedUser: User) => {
     try {
@@ -90,6 +95,9 @@ const login = useMemo(() => async (newToken: string, newUser: User) => {
       setUser(null);
     } catch (error) {
       console.error('Error during logout:', error);
+      // Asegurar que el estado se limpie incluso si hay error
+      setToken(null);
+      setUser(null);
     }
   }, []);
 

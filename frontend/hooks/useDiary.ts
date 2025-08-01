@@ -66,14 +66,19 @@ interface DiarioResponse {
 }
 
 export const useDiary = () => {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const [visitas, setVisitas] = useState<Visita[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchDiario = useCallback(async () => {
-    if (!user || !token) return;
+    // No hacer la petición si no hay usuario o token, o si aún está cargando la autenticación
+    if (!user || !token || authLoading) {
+      setIsLoading(false);
+      setRefreshing(false);
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -96,11 +101,12 @@ export const useDiary = () => {
     } catch (error) {
       console.error('Error fetching diario:', error);
       setError('No se pudo cargar el diario');
+      setVisitas([]); // Limpiar visitas en caso de error
     } finally {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id, token]);
+  }, [user?.id, token, authLoading]);
 
   const refreshDiary = useCallback(() => {
     setRefreshing(true);
@@ -115,16 +121,26 @@ export const useDiary = () => {
     );
   }, []);
 
-  // Cargar datos iniciales
+  // Cargar datos iniciales solo cuando la autenticación esté completa
   useEffect(() => {
-    if (user && token) {
+    if (!authLoading) {
       fetchDiario();
     }
-  }, [fetchDiario]);
+  }, [fetchDiario, authLoading]);
+
+  // Limpiar datos cuando el usuario cierra sesión
+  useEffect(() => {
+    if (!user && !authLoading) {
+      setVisitas([]);
+      setError(null);
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  }, [user, authLoading]);
 
   return {
     visitas,
-    isLoading,
+    isLoading: isLoading || authLoading,
     refreshing,
     error,
     refreshDiary,

@@ -18,8 +18,11 @@ export default function DiaryScreen() {
   // Redirigir a login si no hay usuario después de la carga del contexto
   useEffect(() => {
     if (!authLoading && !user) {
-      Alert.alert('Error', 'Debes iniciar sesión para ver tu diario');
-      router.replace('/(auth)/signin');
+      // Solo mostrar el alert si no estamos en proceso de carga
+      if (!authLoading) {
+        Alert.alert('Error', 'Debes iniciar sesión para ver tu diario');
+        router.replace('/(auth)/signin');
+      }
     }
   }, [authLoading, user, router]);
 
@@ -91,7 +94,17 @@ export default function DiaryScreen() {
       />
     )), [visitas, updateVisitLike, handleShare, handleDetails]);
 
-  if (authLoading || !user) {
+  // Mostrar loading mientras se carga la autenticación
+  if (authLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#8D6E63" />
+      </View>
+    );
+  }
+
+  // Si no hay usuario autenticado, mostrar loading hasta que se redirija
+  if (!user) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#8D6E63" />
