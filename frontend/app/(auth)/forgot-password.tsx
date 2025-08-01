@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -42,47 +43,54 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <MaterialIcons name="arrow-back" size={24} color="#8D6E63" />
-      </TouchableOpacity>
+    <>
+      <SafeAreaView style={styles.container}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <MaterialIcons name="arrow-back" size={24} color="#8D6E63" />
+        </TouchableOpacity>
 
-      <Text style={styles.title}>Reset password</Text>
-      <Text style={styles.subtitle}>We'll email you a reset link</Text>
+        <Text style={styles.title}>Reset password</Text>
+        <Text style={styles.subtitle}>We'll email you a reset link</Text>
 
-      <View style={styles.form}>
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="email" size={20} color="#8D6E63" style={styles.icon} />
-          <TextInput
-            placeholder="Email address"
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+        <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="email" size={20} color="#8D6E63" style={styles.icon} />
+            <TextInput
+              placeholder="Email address"
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleResetPassword}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <MaterialIcons name="arrow-forward" size={24} color="white" />
+            )}
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleResetPassword}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <MaterialIcons name="arrow-forward" size={24} color="white" />
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Remembered your password?</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.footerLink}> Go back</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Remembered your password?</Text>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.footerLink}> Go back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+      
+      <LoadingSpinner 
+        visible={loading} 
+        message="Enviando enlace de recuperación..."
+      />
+    </>
   );
 }
 

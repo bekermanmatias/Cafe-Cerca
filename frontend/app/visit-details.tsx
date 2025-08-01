@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { 
   StyleSheet, 
   View, 
@@ -17,6 +18,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { shareVisit } from '../constants/Sharing';
 import { API_URL } from '../constants/Config';
 import ComentariosList from '../components/ComentariosList';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 
@@ -84,12 +86,23 @@ export default function VisitDetailsScreen() {
   const [showOptions, setShowOptions] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [isLiked, setIsLiked] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const optionsButtonRef = useRef<View>(null);
   const { token } = useAuth();
 
   useEffect(() => {
     fetchVisitDetails();
   }, [params.visitId, params.refresh]);
+
+  // Actualizar datos cuando la pantalla vuelva a estar en foco (después de editar)
+  useFocusEffect(
+    useCallback(() => {
+      if (params.visitId) {
+        fetchVisitDetails();
+      }
+    }, [params.visitId])
+  );
 
   useEffect(() => {
     if (token && visitData?.id) {
@@ -101,56 +114,27 @@ export default function VisitDetailsScreen() {
     try {
       setIsLoading(true);
       setError(null);
-
-      const visitId = String(params.visitId).replace(/[^0-9]/g, '');
-      if (!visitId) {
-        throw new Error('ID de visita no válido');
+      
+      if (!params.visitId) {
+        setError('ID de visita no proporcionado');
+        return;
       }
 
-      const fullUrl = `${API_URL}/visitas/${visitId}`;
-
-      const response = await fetch(fullUrl, {
+      const response = await fetch(`${API_URL}/visitas/${params.visitId}`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Error del servidor:', errorData);
-        throw new Error(errorData.mensaje || 'Error al obtener los detalles de la visita');
+        throw new Error('Error al cargar los detalles de la visita');
       }
 
       const data: ApiResponse = await response.json();
-      
-
-      
-      // Validar datos críticos
-      if (!data.visita) {
-        throw new Error('No se recibieron datos de la visita');
-      }
-      
-      if (!data.visita.creador) {
-        console.error('❌ Datos de visita incompletos:', data.visita);
-        throw new Error('No se encontró el creador de la visita');
-      }
-
-      if (!data.visita.creador.resena) {
-        console.error('❌ Datos del creador incompletos:', data.visita.creador);
-        throw new Error('No se encontró la reseña del creador');
-      }
-
-
-
       setVisitData(data.visita);
-
-      // Si tenemos token, verificar el estado del like
-      if (token) {
-        checkLikeStatus();
-      }
-    } catch (error: any) {
-      console.error('❌ Error:', error);
-      setError(error.message || 'Error al cargar los detalles de la visita');
+    } catch (error) {
+      console.error('Error fetching visit details:', error);
+      setError('No se pudieron cargar los detalles de la visita');
     } finally {
       setIsLoading(false);
     }
@@ -175,20 +159,29 @@ export default function VisitDetailsScreen() {
   };
 
   const handleLike = async () => {
-    if (!token || !visitData?.id) return;
+    if (!visitData?.id) return;
+    
     try {
-      const response = await apiService.toggleLike(visitData.id, token);
-      setIsLiked(response.liked);
-      // Actualizar el contador de likes en el estado local
-      setVisitData(prevData => {
-        if (!prevData) return null;
-        return {
-          ...prevData,
-          likesCount: response.likesCount
-        };
+      setIsLiking(true);
+      const response = await fetch(`${API_URL}/visitas/${visitData.id}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
+
+      if (response.ok) {
+        setIsLiked(!isLiked);
+        // Actualizar el contador de likes localmente
+        setVisitData(prev => prev ? {
+          ...prev,
+          likesCount: isLiked ? prev.likesCount - 1 : prev.likesCount + 1
+        } : null);
+      }
     } catch (error) {
       console.error('Error al procesar el like:', error);
+    } finally {
+      setIsLiking(false);
     }
   };
 
@@ -212,16 +205,29 @@ export default function VisitDetailsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
+              setIsDeleting(true);
               const response = await fetch(`${API_URL}/visitas/${visitData?.id}`, {
                 method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                },
               });
               if (response.ok) {
-                router.back();
+                Alert.alert("Éxito", "Visita eliminada correctamente", [
+                  {
+                    text: "OK",
+                    onPress: () => router.back()
+                  }
+                ]);
               } else {
-                Alert.alert("Error", "No se pudo eliminar la visita");
+                const errorData = await response.json();
+                Alert.alert("Error", errorData.mensaje || "No se pudo eliminar la visita");
               }
             } catch (error) {
+              console.error('Error al eliminar visita:', error);
               Alert.alert("Error", "Ocurrió un error al eliminar la visita");
+            } finally {
+              setIsDeleting(false);
             }
           }
         }
@@ -233,7 +239,10 @@ export default function VisitDetailsScreen() {
     // Implementar navegación a la pantalla de edición
     router.push({
       pathname: "/edit-visit" as any, // Temporal hasta que se cree la ruta
-      params: { visitId: visitData?.id }
+      params: { 
+        visitId: visitData?.id,
+        refresh: Date.now().toString() // Agregar timestamp para forzar refresh
+      }
     });
   };
 
@@ -458,52 +467,62 @@ export default function VisitDetailsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen 
-        options={{
-          headerShown: true,
-          title: ''
-        }}
-      />
+    <>
+      <View style={styles.container}>
+        <Stack.Screen 
+          options={{
+            headerShown: true,
+            title: ''
+          }}
+        />
 
-      <ComentariosList 
-        visitaId={visitData.id}
-        ListHeaderComponent={renderContent}
-      />
+        <ComentariosList 
+          visitaId={visitData.id}
+          ListHeaderComponent={renderContent}
+        />
 
-      {showOptions && (
-        <>
-          <TouchableOpacity 
-            style={styles.overlay} 
-            activeOpacity={0} 
-            onPress={() => setShowOptions(false)} 
-          />
-          <View style={[styles.optionsMenu, { top: menuPosition.y, left: menuPosition.x }]}>
+        {showOptions && (
+          <>
             <TouchableOpacity 
-              style={styles.optionItem}
-              onPress={() => {
-                setShowOptions(false);
-                handleEdit();
-              }}
-            >
-              <Ionicons name="create-outline" size={24} color="#000" />
-              <Text style={styles.optionText}>Modificar visita</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.optionItem, styles.deleteOption]}
-              onPress={() => {
-                setShowOptions(false);
-                handleDelete();
-              }}
-            >
-              <Ionicons name="trash-outline" size={24} color="#FF4444" />
-              <Text style={styles.deleteOptionText}>Eliminar visita</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
-    </View>
+              style={styles.overlay} 
+              activeOpacity={0} 
+              onPress={() => setShowOptions(false)} 
+            />
+            <View style={[styles.optionsMenu, { top: menuPosition.y, left: menuPosition.x }]}>
+              <TouchableOpacity 
+                style={styles.optionItem}
+                onPress={() => {
+                  setShowOptions(false);
+                  handleEdit();
+                }}
+              >
+                <Ionicons name="create-outline" size={24} color="#000" />
+                <Text style={styles.optionText}>Modificar visita</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.optionItem, styles.deleteOption]}
+                onPress={() => {
+                  setShowOptions(false);
+                  handleDelete();
+                }}
+              >
+                <Ionicons name="trash-outline" size={24} color="#FF4444" />
+                <Text style={styles.deleteOptionText}>Eliminar visita</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </View>
+      
+      <LoadingSpinner 
+        visible={isLiking || isDeleting} 
+        message={
+          isLiking ? "Procesando like..." :
+          isDeleting ? "Eliminando visita..." : ""
+        }
+      />
+    </>
   );
 }
 

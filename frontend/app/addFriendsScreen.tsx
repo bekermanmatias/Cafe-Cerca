@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { API_ENDPOINTS } from '../constants/Config';
 import axios from 'axios';
@@ -28,6 +29,7 @@ export default function AddFriendsScreen() {
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isAddingFriend, setIsAddingFriend] = useState(false);
   const { token } = useAuth();
 
   const handleSearch = useCallback(async (text: string) => {
@@ -62,6 +64,7 @@ export default function AddFriendsScreen() {
 
   const handleAddFriend = async (friendId: string, friendName: string) => {
     try {
+      setIsAddingFriend(true);
       if (!token) throw new Error('Token no disponible');
 
       const response = await axios.post(API_ENDPOINTS.AMIGOS.ENVIAR_SOLICITUD, 
@@ -78,45 +81,54 @@ export default function AddFriendsScreen() {
     } catch (error: any) {
       console.error(error);
       Alert.alert('Error', error.response?.data?.error || error.message || 'No se pudo enviar la solicitud.');
+    } finally {
+      setIsAddingFriend(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Agregar amigos</Text>
+    <>
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.title}>Agregar amigos</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Buscar por nombre o email..."
-        placeholderTextColor={Colors.text.light}
-        value={search}
-        onChangeText={handleSearch}
+        <TextInput
+          style={styles.input}
+          placeholder="Buscar por nombre o email..."
+          placeholderTextColor={Colors.text.light}
+          value={search}
+          onChangeText={handleSearch}
+        />
+
+        {loading && <ActivityIndicator size="small" color={Colors.gray[500]} style={{ marginTop: 10 }} />}
+
+        <FlatList
+          data={users}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={{ paddingVertical: 12 }}
+          renderItem={({ item }) => (
+            <View style={styles.userCard}>
+              <Text style={styles.userName}>{item.name}</Text>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => handleAddFriend(item.id, item.name)}
+              >
+                <Text style={styles.addButtonText}>Agregar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          ListEmptyComponent={
+            !loading && search.length >= 2 ? (
+              <Text style={styles.emptyText}>No se encontraron usuarios.</Text>
+            ) : null
+          }
+        />
+      </SafeAreaView>
+      
+      <LoadingSpinner 
+        visible={isAddingFriend} 
+        message="Enviando solicitud..."
       />
-
-      {loading && <ActivityIndicator size="small" color={Colors.gray[500]} style={{ marginTop: 10 }} />}
-
-      <FlatList
-        data={users}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={{ paddingVertical: 12 }}
-        renderItem={({ item }) => (
-          <View style={styles.userCard}>
-            <Text style={styles.userName}>{item.name}</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => handleAddFriend(item.id, item.name)}
-            >
-              <Text style={styles.addButtonText}>Agregar</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        ListEmptyComponent={
-          !loading && search.length >= 2 ? (
-            <Text style={styles.emptyText}>No se encontraron usuarios.</Text>
-          ) : null
-        }
-      />
-    </SafeAreaView>
+    </>
   );
 }
 

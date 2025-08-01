@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, View, Dimensions, Platform, Linking, ActivityIndicator, Text, Alert, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { StyleSheet, View, Dimensions, Platform, Linking, ActivityIndicator, Text, Alert, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { API_URL } from '../../constants/Config';
@@ -16,38 +16,45 @@ export default function MapScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const mapRef = useRef<MapView | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Pedir permisos
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permiso denegado', 'No se pudo obtener tu ubicación');
-          return;
-        }
-
-        // Obtener ubicación del usuario
-        const location = await Location.getCurrentPositionAsync({});
-        setUserLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-
-        // Obtener cafeterías
-        const response = await fetch(`${API_URL}/cafes`);
-        if (!response.ok) throw new Error('Error al obtener las cafeterías');
-        const data = await response.json();
-        setCafes(data);
-      } catch (err: any) {
-        console.error(err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    try {
+      // Pedir permisos
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'No se pudo obtener tu ubicación');
+        return;
       }
-    };
 
+      // Obtener ubicación del usuario
+      const location = await Location.getCurrentPositionAsync({});
+      setUserLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      // Obtener cafeterías
+      const response = await fetch(`${API_URL}/cafes`);
+      if (!response.ok) throw new Error('Error al obtener las cafeterías');
+      const data = await response.json();
+      setCafes(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
     fetchData();
   }, []);
 
@@ -101,34 +108,51 @@ export default function MapScreen() {
         longitudeDelta: 0.05,
       }
     : {
-        latitude: cafes.length > 0 ? cafes[0].lat : -34.6037,
-        longitude: cafes.length > 0 ? cafes[0].lng : -58.3816,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
+        latitude: -34.6037,
+        longitude: -58.3816,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
       };
 
   return (
     <View style={styles.container}>
-      <MapView 
-        ref={mapRef}
-        style={styles.map} 
-        initialRegion={initialRegion}
-        showsUserLocation
-      >
-        {cafes.map(cafe => (
-          <Marker
-            key={cafe.id}
-            coordinate={{ latitude: cafe.lat, longitude: cafe.lng }}
-            title={cafe.name}
-            description="Toca para abrir la app de mapas"
-            onCalloutPress={() => openMapsApp(cafe.lat, cafe.lng)}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#8D6E63']}
+            tintColor="#8D6E63"
           />
-        ))}
-      </MapView>
-
-      {/* Botón para volver a la ubicación del usuario */}
-      <TouchableOpacity style={styles.button} onPress={goToUserLocation}>
-        <Text style={styles.buttonText}>📍 Mi ubicación</Text>
+        }
+      >
+        {userLocation && (
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            initialRegion={initialRegion}
+            showsUserLocation={true}
+            showsMyLocationButton={false}
+          >
+            {cafes.map((cafe) => (
+              <Marker
+                key={cafe.id}
+                coordinate={{
+                  latitude: cafe.lat,
+                  longitude: cafe.lng,
+                }}
+                title={cafe.name}
+                onPress={() => openMapsApp(cafe.lat, cafe.lng)}
+              />
+            ))}
+          </MapView>
+        )}
+      </ScrollView>
+      
+      <TouchableOpacity style={styles.locationButton} onPress={goToUserLocation}>
+        <Text style={styles.locationButtonText}>📍</Text>
       </TouchableOpacity>
     </View>
   );
@@ -138,6 +162,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+  },
   map: {
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
@@ -146,13 +176,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
   },
-  button: {
+  locationButton: {
     position: 'absolute',
     bottom: 30,
-    right: 20,
+    left: 20,
     backgroundColor: '#fff',
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -163,8 +191,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
-  buttonText: {
+  locationButtonText: {
     color: '#333',
-    fontWeight: 'bold',
+    fontSize: 24,
   },
 });

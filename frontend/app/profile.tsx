@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { apiService } from '../services/api';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
@@ -125,8 +126,8 @@ const ProfileScreen = () => {
   console.log('Usuario cargado:', user);
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+    <>
+      <ScrollView style={styles.container}>
         <View style={styles.profileSection}>
           <View style={styles.imageContainer}>
             <Image
@@ -167,6 +168,11 @@ const ProfileScreen = () => {
         </View>
       </ScrollView>
 
+      <LoadingSpinner 
+        visible={loading} 
+        message="Actualizando foto de perfil..."
+      />
+
       <TouchableOpacity 
         style={styles.logoutButton}
         onPress={handleLogout}
@@ -174,7 +180,7 @@ const ProfileScreen = () => {
         <MaterialIcons name="logout" size={24} color="white" />
         <Text style={styles.logoutText}>Cerrar Sesión</Text>
       </TouchableOpacity>
-    </View>
+    </>
   );
 };
 

@@ -540,6 +540,11 @@ export const obtenerVisitaPorId = async (req, res) => {
     console.log('🔍 DEBUG - Datos de la visita:', {
       id: visitaJSON.id,
       usuario: visitaJSON.usuario,
+      participantes: visitaJSON.participantes?.map(p => ({
+        id: p.usuario.id,
+        name: p.usuario.name,
+        rol: p.rol
+      })),
       resenas: visitaJSON.resenas?.map(r => ({
         id: r.id,
         usuarioId: r.usuarioId,
@@ -652,43 +657,189 @@ export const obtenerVisitaPorId = async (req, res) => {
 };
 
 export const actualizarVisita = async (req, res) => {
+  console.log('🚀 DEBUG - Iniciando actualizarVisita');
   const t = await sequelize.transaction();
 
   try {
     const { id } = req.params;
-    const { cafeteriaId, imagenesExistentes } = req.body;
+    console.log('🔍 DEBUG - ID de visita:', id);
+    const { 
+      cafeteriaId, 
+      imagenesExistentes,
+      calificacion,
+      comentario,
+      esCompartida,
+      maxParticipantes,
+      participantes = []
+    } = req.body;
     const imagenes = req.files;
 
-    console.log('Datos recibidos:', {
+    console.log('🔍 DEBUG - Datos recibidos en actualizarVisita:', {
       id,
       cafeteriaId,
       imagenesExistentes,
+      calificacion,
+      comentario,
+      esCompartida,
+      maxParticipantes,
+      participantes,
       'Número de imágenes nuevas': imagenes?.length || 0
     });
 
+    console.log('🔍 DEBUG - Buscando visita con ID:', id);
     // Verificar si la visita existe
     const visita = await Visita.findByPk(id, {
-      include: [includeImagenes]
+      include: [
+        includeImagenes,
+        {
+          model: VisitaParticipante,
+          as: 'participantes',
+          where: { rol: 'creador' },
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ]
+        }
+      ]
     });
 
     if (!visita) {
+      console.log('❌ DEBUG - Visita no encontrada:', id);
       return res.status(404).json({ mensaje: 'Visita no encontrada' });
     }
+    console.log('✅ DEBUG - Visita encontrada:', visita.id);
 
-    // Actualizar datos básicos de la visita (solo cafeteriaId si se proporciona)
-    if (cafeteriaId) {
-      await visita.update({
-        cafeteriaId
-      }, { transaction: t });
+    // Actualizar datos básicos de la visita
+    const updateData = {};
+    if (cafeteriaId) updateData.cafeteriaId = cafeteriaId;
+    
+    // Manejar esCompartida como booleano
+    if (esCompartida !== undefined) {
+      // Convertir a booleano si es string
+      const esCompartidaBool = typeof esCompartida === 'string' 
+        ? esCompartida === 'true' 
+        : Boolean(esCompartida);
+      updateData.esCompartida = esCompartidaBool;
+      console.log('🔍 DEBUG - esCompartida convertida:', esCompartidaBool);
+    }
+    
+    // Manejar maxParticipantes como número
+    if (maxParticipantes) {
+      const maxParticipantesNum = parseInt(maxParticipantes);
+      if (!isNaN(maxParticipantesNum)) {
+        updateData.maxParticipantes = maxParticipantesNum;
+        console.log('🔍 DEBUG - maxParticipantes convertido:', maxParticipantesNum);
+      }
+    }
+
+    console.log('🔍 DEBUG - Datos a actualizar:', updateData);
+
+    if (Object.keys(updateData).length > 0) {
+      console.log('🔍 DEBUG - Actualizando datos básicos de la visita');
+      await visita.update(updateData, { transaction: t });
+      console.log('✅ DEBUG - Datos básicos actualizados');
+    }
+
+    // Actualizar o crear reseña del creador
+    if (calificacion && comentario) {
+      console.log('🔍 DEBUG - Actualizando reseña del creador');
+      const creadorParticipante = visita.participantes.find(p => p.rol === 'creador');
+      if (creadorParticipante) {
+        console.log('🔍 DEBUG - Creador encontrado:', creadorParticipante.usuarioId);
+        const [resena, created] = await Resena.findOrCreate({
+          where: {
+            visitaId: id,
+            usuarioId: creadorParticipante.usuarioId
+          },
+          defaults: {
+            visitaId: id,
+            usuarioId: creadorParticipante.usuarioId,
+            calificacion: parseInt(calificacion),
+            comentario: comentario
+          },
+          transaction: t
+        });
+
+        if (!created) {
+          console.log('🔍 DEBUG - Actualizando reseña existente');
+          await resena.update({
+            calificacion: parseInt(calificacion),
+            comentario: comentario
+          }, { transaction: t });
+        } else {
+          console.log('✅ DEBUG - Reseña creada exitosamente');
+        }
+        console.log('✅ DEBUG - Reseña actualizada/creada');
+      } else {
+        console.log('❌ DEBUG - No se encontró el creador');
+      }
+    }
+
+    // Manejar participantes (amigos)
+    let participantesArray = [];
+    console.log('🔍 DEBUG - Participantes recibidos:', participantes);
+    
+    if (participantes) {
+      try {
+        // Si es un string JSON, parsearlo
+        if (typeof participantes === 'string') {
+          participantesArray = JSON.parse(participantes);
+          console.log('🔍 DEBUG - Participantes parseados:', participantesArray);
+        } else {
+          participantesArray = participantes;
+          console.log('🔍 DEBUG - Participantes ya son array:', participantesArray);
+        }
+      } catch (error) {
+        console.error('❌ Error al parsear participantes:', error);
+        participantesArray = [];
+      }
+    }
+
+    if (participantesArray && participantesArray.length > 0) {
+      console.log('🔍 DEBUG - Eliminando participantes existentes para visita:', id);
+      // Eliminar participantes existentes que no sean el creador
+      await VisitaParticipante.destroy({
+        where: {
+          visitaId: id,
+          rol: 'participante'
+        },
+        transaction: t
+      });
+
+      // Agregar nuevos participantes
+      const participantesParaGuardar = participantesArray.map(participanteId => ({
+        visitaId: id,
+        usuarioId: participanteId,
+        rol: 'participante',
+        estado: 'pendiente',
+        fechaInvitacion: new Date()
+      }));
+
+      console.log('🔍 DEBUG - Agregando nuevos participantes:', participantesParaGuardar);
+      await VisitaParticipante.bulkCreate(participantesParaGuardar, { transaction: t });
+    } else if (participantesArray && participantesArray.length === 0) {
+      console.log('🔍 DEBUG - Eliminando todos los participantes (array vacío)');
+      // Si se envía un array vacío, eliminar todos los participantes excepto el creador
+      await VisitaParticipante.destroy({
+        where: {
+          visitaId: id,
+          rol: 'participante'
+        },
+        transaction: t
+      });
     }
 
     // Procesar las imágenes existentes
+    console.log('🔍 DEBUG - Procesando imágenes');
     let imagenesExistentesArray = [];
     try {
       imagenesExistentesArray = imagenesExistentes ? JSON.parse(imagenesExistentes) : [];
-      console.log('Imágenes existentes parseadas:', imagenesExistentesArray);
+      console.log('🔍 DEBUG - Imágenes existentes parseadas:', imagenesExistentesArray);
     } catch (error) {
-      console.error('Error al parsear imagenesExistentes:', error);
+      console.error('❌ DEBUG - Error al parsear imagenesExistentes:', error);
       imagenesExistentesArray = [];
     }
 
@@ -715,36 +866,75 @@ export const actualizarVisita = async (req, res) => {
 
     // Si hay nuevas imágenes, agregarlas
     if (imagenes && imagenes.length > 0) {
+      console.log('🔍 DEBUG - Guardando nuevas imágenes');
       const imagenesParaGuardar = imagenes.map((imagen, index) => ({
         visitaId: id,
         imageUrl: imagen.path,
         orden: imagenesExistentesArray.length + index + 1
       }));
 
-      console.log('Guardando nuevas imágenes:', imagenesParaGuardar);
+      console.log('🔍 DEBUG - Imágenes para guardar:', imagenesParaGuardar);
       await VisitaImagen.bulkCreate(imagenesParaGuardar, { transaction: t });
+      console.log('✅ DEBUG - Nuevas imágenes guardadas');
     }
 
+    console.log('✅ DEBUG - Commit de transacción exitoso');
     await t.commit();
 
-    // Obtener la visita actualizada con sus imágenes
+    // Obtener la visita actualizada con todos sus datos
+    console.log('🔍 DEBUG - Obteniendo visita actualizada');
     const visitaActualizada = await Visita.findByPk(id, {
-      include: [includeImagenes],
+      include: [
+        includeImagenes,
+        includeCafeteria,
+        {
+          model: VisitaParticipante,
+          as: 'participantes',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ]
+        },
+        {
+          model: Resena,
+          as: 'resenas',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ]
+        }
+      ],
       order: orderOptions
     });
 
-    console.log('Visita actualizada exitosamente');
+        console.log('✅ DEBUG - Visita actualizada obtenida exitosamente');
     res.json({
       mensaje: 'Visita actualizada exitosamente',
       visita: visitaActualizada
     });
 
   } catch (error) {
-    await t.rollback();
+    console.error('❌ DEBUG - Error en actualizarVisita:', error);
+    console.error('❌ DEBUG - Stack trace:', error.stack);
+    
+    // Solo hacer rollback si la transacción no ha sido finalizada
+    try {
+      await t.rollback();
+    } catch (rollbackError) {
+      console.error('❌ DEBUG - Error en rollback:', rollbackError);
+    }
+    
     console.error('Error al actualizar visita:', error);
     res.status(500).json({
       mensaje: 'Error al actualizar la visita',
-      error: error.message
+      error: error.message,
+      stack: error.stack
     });
   }
 };
@@ -755,9 +945,33 @@ export const eliminarVisita = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Verificar si la visita existe y obtener sus imágenes
+    // Verificar si la visita existe y obtener sus datos
     const visita = await Visita.findByPk(id, {
-      include: [includeImagenes]
+      include: [
+        includeImagenes,
+        {
+          model: VisitaParticipante,
+          as: 'participantes',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ]
+        },
+        {
+          model: Resena,
+          as: 'resenas',
+          include: [
+            {
+              model: User,
+              as: 'usuario',
+              attributes: ['id', 'name', 'profileImage']
+            }
+          ]
+        }
+      ]
     });
 
     if (!visita) {
@@ -767,11 +981,44 @@ export const eliminarVisita = async (req, res) => {
     // Guardar información de la visita antes de eliminarla
     const visitaEliminada = { ...visita.toJSON() };
 
-    // Eliminar primero las imágenes asociadas
+    // Eliminar las reseñas asociadas
+    await Resena.destroy({
+      where: { visitaId: id },
+      transaction: t
+    });
+
+    // Eliminar los participantes asociados
+    await VisitaParticipante.destroy({
+      where: { visitaId: id },
+      transaction: t
+    });
+
+    // Eliminar las imágenes asociadas
     await VisitaImagen.destroy({
       where: { visitaId: id },
       transaction: t
     });
+
+    // Eliminar los likes asociados (si existe la tabla)
+    try {
+      await Like.destroy({
+        where: { visitaId: id },
+        transaction: t
+      });
+    } catch (error) {
+      console.log('No se encontró tabla de likes o ya no existe');
+    }
+
+    // Eliminar los comentarios asociados (si existe la tabla)
+    try {
+      const { Comentario } = await import('../models/index.js');
+      await Comentario.destroy({
+        where: { visitaId: id },
+        transaction: t
+      });
+    } catch (error) {
+      console.log('No se encontró tabla de comentarios o ya no existe');
+    }
 
     // Eliminar la visita
     await visita.destroy({ transaction: t });

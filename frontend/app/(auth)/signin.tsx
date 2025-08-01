@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -44,62 +45,68 @@ export default function SignInScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <>
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.title}>Sign in</Text>
+        <Text style={styles.subtitle}>Welcome back</Text>
 
-      <Text style={styles.title}>Sign in</Text>
-      <Text style={styles.subtitle}>Welcome back</Text>
+        <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="email" size={20} color="#8D6E63" style={styles.icon} />
+            <TextInput
+              placeholder="Email address"
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
 
-      <View style={styles.form}>
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="email" size={20} color="#8D6E63" style={styles.icon} />
-          <TextInput
-            placeholder="Email address"
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="lock" size={20} color="#8D6E63" style={styles.icon} />
+            <TextInput
+              placeholder="Password"
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
+
+          <TouchableOpacity
+            onPress={() => router.push('./forgot-password')}
+            style={styles.forgotLink}
+          >
+            <Text style={styles.forgotText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleSignIn}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <MaterialIcons name="arrow-forward" size={24} color="white" />
+            )}
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="lock" size={20} color="#8D6E63" style={styles.icon} />
-          <TextInput
-            placeholder="Password"
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>New member?</Text>
+          <TouchableOpacity onPress={() => router.push('./signup')}>
+            <Text style={styles.footerLink}> Sign up</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          onPress={() => router.push('./forgot-password')}
-          style={styles.forgotLink}
-        >
-          <Text style={styles.forgotText}>Forgot Password?</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleSignIn}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <MaterialIcons name="arrow-forward" size={24} color="white" />
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>New member?</Text>
-        <TouchableOpacity onPress={() => router.push('./signup')}>
-          <Text style={styles.footerLink}> Sign up</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+      
+      <LoadingSpinner 
+        visible={loading} 
+        message="Iniciando sesión..."
+      />
+    </>
   );
 }
 

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../constants/Config';
 import { apiService } from '../services/api';
@@ -38,6 +39,8 @@ export default function SharedVisitsInvitationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedVisita, setSelectedVisita] = useState<InvitacionPendiente | null>(null);
+  const [isRespondingInvitacion, setIsRespondingInvitacion] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const router = useRouter();
   const { token } = useAuth();
 
@@ -86,6 +89,7 @@ export default function SharedVisitsInvitationsScreen() {
 
   const responderInvitacion = async (visitaId: number, respuesta: 'aceptada' | 'rechazada') => {
     try {
+      setIsRespondingInvitacion(true);
       if (!token) throw new Error('Token no disponible');
 
       if (respuesta === 'aceptada') {
@@ -118,6 +122,8 @@ export default function SharedVisitsInvitationsScreen() {
     } catch (error: any) {
       console.error(error);
       Alert.alert('Error', error.message || 'No se pudo responder la invitación.');
+    } finally {
+      setIsRespondingInvitacion(false);
     }
   };
 
@@ -125,6 +131,7 @@ export default function SharedVisitsInvitationsScreen() {
     if (!selectedVisita) return;
 
     try {
+      setIsSubmittingReview(true);
       await apiService.aceptarInvitacionConResena(
         selectedVisita.visita.id,
         comentario,
@@ -138,6 +145,8 @@ export default function SharedVisitsInvitationsScreen() {
     } catch (error: any) {
       console.error('Error al aceptar invitación con reseña:', error);
       Alert.alert('Error', error.message || 'No se pudo aceptar la invitación con reseña.');
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -211,50 +220,60 @@ export default function SharedVisitsInvitationsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Invitaciones de Visitas</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Invitaciones de Visitas</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {invitaciones.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="mail-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyStateText}>No tienes invitaciones pendientes</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Cuando tus amigos te inviten a visitas compartidas, aparecerán aquí
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={invitaciones}
+              keyExtractor={(item) => `invitacion-${item.id}`}
+              renderItem={renderInvitacion}
+              contentContainerStyle={styles.invitacionesList}
+              scrollEnabled={false}
+            />
+          )}
+        </ScrollView>
+
+        {/* Modal para reseña */}
+        <ReviewModal
+          visible={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false);
+            setSelectedVisita(null);
+          }}
+          onSubmit={handleSubmitReview}
+          cafeName={selectedVisita?.visita.cafeteria.name || ''}
+        />
+      </SafeAreaView>
+      
+      <LoadingSpinner 
+        visible={isRespondingInvitacion || isSubmittingReview} 
+        message={
+          isRespondingInvitacion ? "Procesando invitación..." :
+          isSubmittingReview ? "Creando reseña..." : ""
         }
-      >
-        {invitaciones.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="mail-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyStateText}>No tienes invitaciones pendientes</Text>
-            <Text style={styles.emptyStateSubtext}>
-              Cuando tus amigos te inviten a visitas compartidas, aparecerán aquí
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={invitaciones}
-            keyExtractor={(item) => `invitacion-${item.id}`}
-            renderItem={renderInvitacion}
-            contentContainerStyle={styles.invitacionesList}
-            scrollEnabled={false}
-          />
-        )}
-      </ScrollView>
-
-      {/* Modal para reseña */}
-      <ReviewModal
-        visible={showReviewModal}
-        onClose={() => {
-          setShowReviewModal(false);
-          setSelectedVisita(null);
-        }}
-        onSubmit={handleSubmitReview}
-        cafeName={selectedVisita?.visita.cafeteria.name || ''}
       />
-    </SafeAreaView>
+    </>
   );
 }
 

@@ -29,7 +29,10 @@ export const API_ENDPOINTS = {
     UPDATE_PROFILE_IMAGE: `${API_URL}/auth/profile-image`,
   },
   CAFES: `${API_URL}/cafes`,
-  VISITAS: `${API_URL}/visitas`,
+  VISITAS: {
+    BASE: `${API_URL}/visitas`,
+    UPDATE: (visitaId: number) => `${API_URL}/visitas/${visitaId}`,
+  },
   ESTADISTICAS: `${API_URL}/estadisticas`,
   COMENTARIOS: {
     GET_BY_VISITA: (visitaId: number) => `${API_URL}/comentarios/visita/${visitaId}`,

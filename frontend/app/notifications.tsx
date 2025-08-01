@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { API_ENDPOINTS, API_URL } from '../constants/Config';
 import axios from 'axios';
@@ -66,6 +67,10 @@ export default function NotificationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedVisita, setSelectedVisita] = useState<InvitacionVisita | null>(null);
+  const [isRespondingSolicitud, setIsRespondingSolicitud] = useState(false);
+  const [isCancelingSolicitud, setIsCancelingSolicitud] = useState(false);
+  const [isRespondingInvitacion, setIsRespondingInvitacion] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const router = useRouter();
   const { token } = useAuth();
 
@@ -123,6 +128,7 @@ export default function NotificationsScreen() {
 
   const responderSolicitud = async (solicitudId: number, status: 'accepted' | 'rejected') => {
     try {
+      setIsRespondingSolicitud(true);
       if (!token) throw new Error('Token no disponible');
 
       await axios.put(
@@ -141,11 +147,14 @@ export default function NotificationsScreen() {
     } catch (error) {
       console.error('Error responding to solicitud:', error);
       Alert.alert('Error', 'No se pudo procesar la solicitud.');
+    } finally {
+      setIsRespondingSolicitud(false);
     }
   };
 
   const cancelarSolicitudEnviada = async (solicitudId: number) => {
     try {
+      setIsCancelingSolicitud(true);
       if (!token) throw new Error('Token no disponible');
 
       await axios.delete(
@@ -160,11 +169,14 @@ export default function NotificationsScreen() {
     } catch (error) {
       console.error('Error canceling solicitud:', error);
       Alert.alert('Error', 'No se pudo cancelar la solicitud.');
+    } finally {
+      setIsCancelingSolicitud(false);
     }
   };
 
   const responderInvitacionVisita = async (visitaId: number, respuesta: 'aceptada' | 'rechazada') => {
     try {
+      setIsRespondingInvitacion(true);
       if (!token) throw new Error('Token no disponible');
 
       if (respuesta === 'aceptada') {
@@ -190,11 +202,14 @@ export default function NotificationsScreen() {
     } catch (error) {
       console.error('Error responding to invitacion:', error);
       Alert.alert('Error', 'No se pudo procesar la invitación.');
+    } finally {
+      setIsRespondingInvitacion(false);
     }
   };
 
   const handleSubmitReview = async (comentario: string, calificacion: number) => {
     try {
+      setIsSubmittingReview(true);
       if (!token || !selectedVisita) throw new Error('Token o visita no disponible');
 
       // Primero aceptar la invitación
@@ -219,11 +234,13 @@ export default function NotificationsScreen() {
       setShowReviewModal(false);
       setSelectedVisita(null);
       fetchSolicitudes();
-
-      Alert.alert('Éxito', 'Invitación aceptada y reseña guardada');
+      
+      Alert.alert('Éxito', 'Invitación aceptada y reseña creada');
     } catch (error) {
       console.error('Error submitting review:', error);
-      Alert.alert('Error', 'No se pudo guardar la reseña.');
+      Alert.alert('Error', 'No se pudo procesar la reseña.');
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -341,84 +358,96 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen 
-        options={{
-          headerShown: true,
-          title: 'Notificaciones',
-          headerTitleStyle: {
-            fontSize: 20,
-            fontWeight: '600',
-          },
-        }}
-      />
+    <>
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{
+            headerShown: true,
+            title: 'Notificaciones',
+            headerTitleStyle: {
+              fontSize: 20,
+              fontWeight: '600',
+            },
+          }}
+        />
+        
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {/* Invitaciones a Visitas */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="calendar" size={20} color="#8D6E63" /> Invitaciones a visitas ({invitacionesVisitas.length})
+            </Text>
+            {invitacionesVisitas.length === 0 ? (
+              <Text style={styles.noItemsText}>No tienes invitaciones a visitas pendientes</Text>
+            ) : (
+              <FlatList
+                data={invitacionesVisitas}
+                keyExtractor={(item) => `invitacion-${item.id}`}
+                renderItem={renderInvitacionVisita}
+                contentContainerStyle={{ paddingBottom: 16 }}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
+
+          {/* Solicitudes Recibidas */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="mail" size={20} color="#8D6E63" /> Solicitudes recibidas ({solicitudesRecibidas.length})
+            </Text>
+            {solicitudesRecibidas.length === 0 ? (
+              <Text style={styles.noItemsText}>No tienes solicitudes pendientes</Text>
+            ) : (
+              <FlatList
+                data={solicitudesRecibidas}
+                keyExtractor={(item) => `recibida-${item.id}`}
+                renderItem={renderSolicitudRecibida}
+                contentContainerStyle={{ paddingBottom: 16 }}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
+
+          {/* Solicitudes Enviadas */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="paper-plane" size={20} color="#8D6E63" /> Solicitudes enviadas ({solicitudesEnviadas.length})
+            </Text>
+            {solicitudesEnviadas.length === 0 ? (
+              <Text style={styles.noItemsText}>No has enviado solicitudes</Text>
+            ) : (
+              <FlatList
+                data={solicitudesEnviadas}
+                keyExtractor={(item) => `enviada-${item.id}`}
+                renderItem={renderSolicitudEnviada}
+                contentContainerStyle={{ paddingBottom: 16 }}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
+        </ScrollView>
+        <ReviewModal
+          visible={showReviewModal}
+          onClose={handleCancelReview}
+          onSubmit={handleSubmitReview}
+          cafeName={selectedVisita?.visita.cafeteria.name || 'Cafetería'}
+        />
+      </SafeAreaView>
       
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      <LoadingSpinner 
+        visible={isRespondingSolicitud || isCancelingSolicitud || isRespondingInvitacion || isSubmittingReview} 
+        message={
+          isRespondingSolicitud ? "Procesando solicitud..." :
+          isCancelingSolicitud ? "Cancelando solicitud..." :
+          isRespondingInvitacion ? "Procesando invitación..." :
+          isSubmittingReview ? "Creando reseña..." : ""
         }
-      >
-        {/* Invitaciones a Visitas */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="calendar" size={20} color="#8D6E63" /> Invitaciones a visitas ({invitacionesVisitas.length})
-          </Text>
-          {invitacionesVisitas.length === 0 ? (
-            <Text style={styles.noItemsText}>No tienes invitaciones a visitas pendientes</Text>
-          ) : (
-            <FlatList
-              data={invitacionesVisitas}
-              keyExtractor={(item) => `invitacion-${item.id}`}
-              renderItem={renderInvitacionVisita}
-              contentContainerStyle={{ paddingBottom: 16 }}
-              scrollEnabled={false}
-            />
-          )}
-        </View>
-
-        {/* Solicitudes Recibidas */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="mail" size={20} color="#8D6E63" /> Solicitudes recibidas ({solicitudesRecibidas.length})
-          </Text>
-          {solicitudesRecibidas.length === 0 ? (
-            <Text style={styles.noItemsText}>No tienes solicitudes pendientes</Text>
-          ) : (
-            <FlatList
-              data={solicitudesRecibidas}
-              keyExtractor={(item) => `recibida-${item.id}`}
-              renderItem={renderSolicitudRecibida}
-              contentContainerStyle={{ paddingBottom: 16 }}
-              scrollEnabled={false}
-            />
-          )}
-        </View>
-
-        {/* Solicitudes Enviadas */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="paper-plane" size={20} color="#8D6E63" /> Solicitudes enviadas ({solicitudesEnviadas.length})
-          </Text>
-          {solicitudesEnviadas.length === 0 ? (
-            <Text style={styles.noItemsText}>No has enviado solicitudes</Text>
-          ) : (
-            <FlatList
-              data={solicitudesEnviadas}
-              keyExtractor={(item) => `enviada-${item.id}`}
-              renderItem={renderSolicitudEnviada}
-              contentContainerStyle={{ paddingBottom: 16 }}
-              scrollEnabled={false}
-            />
-          )}
-        </View>
-      </ScrollView>
-      <ReviewModal
-        visible={showReviewModal}
-        onClose={handleCancelReview}
-        onSubmit={handleSubmitReview}
-        cafeName={selectedVisita?.visita.cafeteria.name || 'Cafetería'}
       />
-    </SafeAreaView>
+    </>
   );
 }
 

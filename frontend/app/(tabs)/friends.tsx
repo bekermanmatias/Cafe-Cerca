@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../constants/Config';
 import axios from 'axios';
@@ -18,6 +19,7 @@ export default function FriendsScreen() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isDeletingFriend, setIsDeletingFriend] = useState(false);
   const router = useRouter();
   const { token } = useAuth();
 
@@ -34,8 +36,6 @@ export default function FriendsScreen() {
       const friendsRes = await axios.get<Friend[]>(API_ENDPOINTS.AMIGOS.GET_LISTA, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-
 
       setFriends(friendsRes.data || []);
     } catch (error) {
@@ -77,6 +77,7 @@ export default function FriendsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              setIsDeletingFriend(true);
               if (!token) throw new Error('Token no disponible');
 
               await axios.delete(`${API_ENDPOINTS.AMIGOS.ELIMINAR_AMIGO}/${friendId}`, {
@@ -90,6 +91,8 @@ export default function FriendsScreen() {
             } catch (error) {
               console.error('Error eliminating friend:', error);
               Alert.alert('Error', 'No se pudo eliminar al amigo.');
+            } finally {
+              setIsDeletingFriend(false);
             }
           },
         },
@@ -128,36 +131,43 @@ export default function FriendsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Lista de Amigos */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              <Ionicons name="people" size={20} color="#8D6E63" /> Amigos ({friends.length})
-            </Text>
-            <TouchableOpacity style={styles.addButton} onPress={navigateToAddFriends}>
-              <Ionicons name="person-add" size={20} color="#000" />
-            </TouchableOpacity>
+    <>
+      <SafeAreaView style={styles.container}>
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {/* Lista de Amigos */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                <Ionicons name="people" size={20} color="#8D6E63" /> Amigos ({friends.length})
+              </Text>
+              <TouchableOpacity style={styles.addButton} onPress={navigateToAddFriends}>
+                <Ionicons name="person-add" size={20} color="#000" />
+              </TouchableOpacity>
+            </View>
+            {friends.length === 0 ? (
+              <Text style={styles.noFriendsText}>No tienes amigos todavía. ¡Agrega alguno!</Text>
+            ) : (
+              <FlatList
+                data={friends}
+                keyExtractor={(item) => `friend-${item.id}`}
+                renderItem={renderFriend}
+                contentContainerStyle={{ paddingBottom: 16 }}
+                scrollEnabled={false}
+              />
+            )}
           </View>
-          {friends.length === 0 ? (
-            <Text style={styles.noFriendsText}>No tienes amigos todavía. ¡Agrega alguno!</Text>
-          ) : (
-            <FlatList
-              data={friends}
-              keyExtractor={(item) => `friend-${item.id}`}
-              renderItem={renderFriend}
-              contentContainerStyle={{ paddingBottom: 16 }}
-              scrollEnabled={false}
-            />
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+      
+      <LoadingSpinner 
+        visible={isDeletingFriend} 
+        message="Eliminando amigo..."
+      />
+    </>
   );
 }
 

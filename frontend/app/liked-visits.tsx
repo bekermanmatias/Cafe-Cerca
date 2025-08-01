@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { VisitCard } from '../components/VisitCard';
@@ -24,6 +24,7 @@ export default function LikedVisitsScreen() {
   const [likedVisits, setLikedVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const { token } = useAuth();
   const router = useRouter();
 
@@ -47,8 +48,14 @@ export default function LikedVisitsScreen() {
       setError('No se pudieron cargar las visitas favoritas');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadLikedVisits();
+  }, []);
 
   const handleLikeChange = async (visitId: number, liked: boolean) => {
     if (!liked) {
@@ -107,7 +114,9 @@ export default function LikedVisitsScreen() {
           )}
         </View>
       ) : likedVisits.length === 0 ? (
-        <EmptyState onExplore={() => router.push('/(tabs)/diary')} />
+        <View style={styles.emptyContainer}>
+          <EmptyState onExplore={() => router.push('/(tabs)/diary')} />
+        </View>
       ) : (
         <FlatList
           data={likedVisits}
@@ -115,12 +124,20 @@ export default function LikedVisitsScreen() {
             <VisitCard
               visit={item}
               onLikeChange={(liked) => handleLikeChange(item.id, liked)}
-              onDetails={() => handleDetails(item)}
               onShare={() => handleShare(item.id)}
+              onDetails={() => handleDetails(item)}
             />
           )}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#8D6E63']}
+              tintColor="#8D6E63"
+            />
+          }
         />
       )}
     </View>

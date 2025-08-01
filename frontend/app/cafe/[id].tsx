@@ -1,5 +1,5 @@
 // app/cafe/[id].tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   Platform,
   Linking,
+  RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import TagChip from '../../components/TagChip';
@@ -77,6 +78,7 @@ export default function CafeDetail() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const { token } = useAuth();
 
   const fetchCafe = async (page = 1) => {
@@ -101,12 +103,19 @@ export default function CafeDetail() {
       setHasMore(data.visitas.hasMore);
       setCurrentPage(data.visitas.currentPage);
     } catch (error) {
-      console.error('Error al traer la cafetería:', error);
+      console.error('Error fetching cafe:', error);
     } finally {
       setLoading(false);
       setLoadingMore(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setCurrentPage(1);
+    fetchCafe(1);
+  }, []);
 
   useEffect(() => {
     fetchCafe();
@@ -235,7 +244,17 @@ const onIrDireccionIconPress = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#8D6E63']}
+          tintColor="#8D6E63"
+        />
+      }
+    >
       <View style={styles.imageContainer}>
         <Image source={{ uri: cafe.imageUrl }} style={styles.image} />
       </View>
