@@ -95,7 +95,7 @@ export default function RootLayout() {
           <Stack.Screen
             name="cafe/[id]"
             options={{
-              headerShown: true,
+              headerShown: false,
               headerTitle: '',
               headerBackTitle: '',
               animation: 'slide_from_right',

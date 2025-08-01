@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ScrollView, ViewStyle } from 'react-native';
 import TagChip from './TagChip';
 
@@ -9,20 +9,20 @@ type Tag = {
 };
 
 type FilterChipsProps = {
-  items: Tag[];               // ahora recibe array de Tags
-  selected: number[];         // ids seleccionados
+  items: Tag[];
+  selected: number[];
   onSelect: (newSelected: number[]) => void;
   style?: ViewStyle;
 };
 
 export default function FilterChips({ items, selected, onSelect, style }: FilterChipsProps) {
-  const toggleSelect = (itemId: number) => {
+  const toggleSelect = useCallback((itemId: number) => {
     if (selected.includes(itemId)) {
       onSelect(selected.filter(i => i !== itemId));
     } else {
       onSelect([...selected, itemId]);
     }
-  };
+  }, [selected, onSelect]);
 
   return (
     <ScrollView

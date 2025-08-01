@@ -1,17 +1,57 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle, TextStyle } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons'; // Asumiendo que usas FontAwesome para iconos
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
 type TagChipProps = {
   label: string;
-  icon?: string;            // nuevo prop para icono (nombre de icono FontAwesome5)
+  icon?: string;
   selected?: boolean;
   onPress?: () => void;
   style?: ViewStyle;
   textStyle?: TextStyle;
 };
 
-export default function TagChip({ label, icon, selected = false, onPress, style, textStyle }: TagChipProps) {
+// Componente para iconos seguros (mismo que en explore)
+const SafeIcon = React.memo(({ iconName }: { iconName: string }) => {
+  const iconMap: { [key: string]: string } = {
+    'shield': 'shield-alt',
+    'volume-x': 'volume-mute',
+    'utensils': 'utensils',
+    'coffee': 'coffee',
+    'wifi': 'wifi',
+  };
+
+  const validIconName = iconMap[iconName] || 'tag';
+
+  try {
+    return (
+      <FontAwesome5 
+        name={validIconName} 
+        size={14} 
+        color="#8D6E63" 
+        style={styles.icon} 
+      />
+    );
+  } catch (error) {
+    return (
+      <FontAwesome5 
+        name="tag" 
+        size={14} 
+        color="#8D6E63" 
+        style={styles.icon} 
+      />
+    );
+  }
+});
+
+export default function TagChip({ 
+  label, 
+  icon, 
+  selected = false, 
+  onPress, 
+  style, 
+  textStyle 
+}: TagChipProps) {
   const ChipComponent = onPress ? Pressable : View;
 
   return (
@@ -23,19 +63,14 @@ export default function TagChip({ label, icon, selected = false, onPress, style,
         style,
       ]}
     >
-      {icon && (
-        <FontAwesome5
-          name={icon}
-          size={14}
-          color={selected ? '#333' : '#333'}
-          style={styles.icon}
-        />
-      )}
+      {icon && <SafeIcon iconName={icon} />}
       <Text
         style={[
+          styles.text,
           selected ? styles.textSelected : styles.textUnselected,
           textStyle,
         ]}
+        numberOfLines={1}
       >
         {label}
       </Text>
@@ -47,26 +82,31 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     marginRight: 8,
-    marginBottom: 8,
-    borderWidth: 1,
+    marginBottom: 4,
   },
   selected: {
-    backgroundColor: '#D7B899',
-    borderColor: '#D7B899',
+    backgroundColor: '#D4AF8C', // Un poco más oscuro cuando está seleccionado
+    borderWidth: 2,
+    borderColor: '#8D6E63',
   },
   unselected: {
-    backgroundColor: '#EDDCC2',
-    borderColor: '#EDDCC2',
+    backgroundColor: '#E8D5B7', // Mismo color que las otras etiquetas
+    borderWidth: 1,
+    borderColor: '#E8D5B7',
+  },
+  text: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   textSelected: {
-    color: '#333',
+    color: '#6B4423', // Más oscuro cuando está seleccionado
   },
   textUnselected: {
-    color: '#333',
+    color: '#6B4423', // Mismo color que las otras etiquetas
   },
   icon: {
     marginRight: 6,

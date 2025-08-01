@@ -41,34 +41,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuthState();
   }, []);
 
-  const checkAuthState = async () => {
-    try {
-      const storedToken = await storage.getItem(StorageKeys.TOKEN);
-      const storedUser = await storage.getItem(StorageKeys.USER);
+const checkAuthState = async () => {
+  try {
+    const storedToken = await storage.getItem(StorageKeys.TOKEN);
+    const storedUser = await storage.getItem(StorageKeys.USER);
 
-      if (storedToken && storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setToken(storedToken);
-        setUser(parsedUser);
-      }
-    } catch (error) {
-      console.error('Error checking auth state:', error);
-    } finally {
-      setIsLoading(false);
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      setUser(JSON.parse(storedUser));
+    } else {
+      logout(); // <- esto también debería hacer setIsLoading(false)
     }
-  };
+  } catch (error) {
+    console.error('Error en checkAuthState', error);
+  } finally {
+    setIsLoading(false); // ✅ asegurate de que esto SIEMPRE se llame
+  }
+};
 
-  const login = async (newToken: string, newUser: User) => {
-    try {
-      await storage.setItem(StorageKeys.TOKEN, newToken);
-      await storage.setItem(StorageKeys.USER, JSON.stringify(newUser));
-      setToken(newToken);
-      setUser(newUser);
-    } catch (error) {
-      console.error('Error during login:', error);
-      throw error;
-    }
-  };
+
+
+const login = async (newToken: string, newUser: User) => {
+  try {
+    console.log('Saving user:', newUser); // <-- log útil
+    await storage.setItem(StorageKeys.TOKEN, newToken);
+    await storage.setItem(StorageKeys.USER, JSON.stringify(newUser));
+    setToken(newToken);
+    setUser(newUser);
+  } catch (error) {
+    console.error('Error during login:', error);
+    throw error;
+  }
+};
+
 
   const updateUser = async (updatedUser: User) => {
     try {

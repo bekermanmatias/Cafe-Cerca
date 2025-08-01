@@ -1,4 +1,4 @@
-import { StyleSheet, ScrollView, Alert, TouchableOpacity, Text, View, RefreshControl } from 'react-native';
+import { StyleSheet, ScrollView, Alert, TouchableOpacity, Text, View, RefreshControl, ActivityIndicator } from 'react-native';
 import { VisitCard } from '../../components/VisitCard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
@@ -6,7 +6,6 @@ import Constants from 'expo-constants';
 import { shareVisit, shareDiary } from '../../constants/Sharing';
 import { AntDesign, Feather } from '@expo/vector-icons';
 import { API_URL } from '../../constants/Config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
 import EmptyDiary from '../../assets/icons/empty-diary.svg';
 
@@ -27,7 +26,7 @@ interface Cafeteria {
   address: string;
   rating: number;
   imageUrl: string | null;
-  tags: Tag[];  // ahora es array de objetos Tag
+  tags: Tag[];
   openingHours: string;
 }
 
@@ -67,13 +66,12 @@ interface Visita {
   };
   participantes?: Participante[];
   likesCount?: number;
-  // Compatibilidad con estructura antigua
   usuarioId?: number;
   cafeteriaId?: number;
   usuario?: Usuario;
   comentario?: string;
   calificacion?: number;
-  isLiked?: boolean; // Added for local state management
+  isLiked?: boolean;
 }
 
 interface DiarioResponse {
@@ -85,66 +83,49 @@ interface DiarioResponse {
 export default function DiaryScreen() {
   const router = useRouter();
   const { refresh } = useLocalSearchParams();
+  const { user, token, isLoading: authLoading } = useAuth();
+
   const [visitas, setVisitas] = useState<Visita[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
-  const { token } = useAuth();
 
-  const loadUserData = async () => {
-    try {
-      const userDataStr = await AsyncStorage.getItem('userData');
-      if (userDataStr) {
-        const userData = JSON.parse(userDataStr);
-        setUserData(userData);
-        return userData;
-      } else {
-        // Si no hay datos de usuario, redirigir al login
-        Alert.alert('Error', 'Debes iniciar sesión para ver tu diario');
-        router.replace('/(auth)/signin');
-        return null;
-      }
-    } catch (error) {
-      console.error('Error cargando datos del usuario:', error);
-      return null;
+  // Redirigir a login si no hay usuario después de la carga del contexto
+  useEffect(() => {
+    if (!authLoading && !user) {
+      Alert.alert('Error', 'Debes iniciar sesión para ver tu diario');
+      router.replace('/(auth)/signin');
     }
-  };
+  }, [authLoading, user, router]);
 
-  const fetchDiario = async () => {
+  const fetchDiario = useCallback(async () => {
+    if (!user || !token) return;
+
     try {
       setIsLoading(true);
-      
-      if (!token) {
-        throw new Error('No se encontró el token de autenticación');
-      }
-
-      const user = userData || await loadUserData();
-      if (!user) return;
 
       const response = await fetch(`${API_URL}/visitas/usuario/${user.id}`, {
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
       });
-      
-      const data: DiarioResponse = await response.json();
-      
 
-      
-      // Si la respuesta es exitosa pero no hay visitas, simplemente establecemos el array vacío
+      if (!response.ok) {
+        throw new Error('Error al obtener visitas');
+      }
+
+      const data: DiarioResponse = await response.json();
       setVisitas(data.visitas || []);
     } catch (error) {
       console.error('Error fetching diario:', error);
-      // No mostramos alerta si es la primera carga y no hay visitas
       if (!isLoading) {
         Alert.alert(
           'Error de conexión',
           'No se pudo actualizar el diario. ¿Deseas intentar de nuevo?',
           [
             { text: 'Cancelar', style: 'cancel' },
-            { text: 'Reintentar', onPress: () => fetchDiario() }
+            { text: 'Reintentar', onPress: () => fetchDiario() },
           ]
         );
       }
@@ -152,30 +133,26 @@ export default function DiaryScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user, token, isLoading]);
 
+  // Ejecutar fetch al montar y cuando cambian user, token o refresh
   useEffect(() => {
-    loadUserData().then(() => fetchDiario());
-  }, [refresh]);
+    if (user && token) {
+      fetchDiario();
+    }
+  }, [user, token, refresh, fetchDiario]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchDiario();
-  }, []);
+  }, [fetchDiario]);
 
   const handleLikeChange = (visitId: number, liked: boolean) => {
-    // Actualizar el estado local de las visitas cuando cambia un like
-    setVisitas(prevVisitas => 
-      prevVisitas.map(visita => 
-        visita.id === visitId 
-          ? { ...visita, isLiked: liked }
-          : visita
+    setVisitas(prevVisitas =>
+      prevVisitas.map(visita =>
+        visita.id === visitId ? { ...visita, isLiked: liked } : visita
       )
     );
-  };
-
-  const handleLike = () => {
-    // Like pressed
   };
 
   const handleShare = (visitId: number) => {
@@ -186,24 +163,24 @@ export default function DiaryScreen() {
     router.push({
       pathname: '/visit-details',
       params: {
-        visitId: visit.id.toString()
-      }
+        visitId: visit.id.toString(),
+      },
     });
   };
 
   const handleAddVisit = () => {
     router.push({
-      pathname: '/add-visit'
+      pathname: '/add-visit',
     });
   };
 
   const handleShareDiary = async () => {
     try {
-      if (!userData?.id) {
+      if (!user?.id) {
         Alert.alert('Error', 'Debes iniciar sesión para compartir tu diario');
         return;
       }
-      await shareDiary(userData.id);
+      await shareDiary(user.id);
     } catch (error) {
       console.error('Error sharing diary:', error);
       Alert.alert(
@@ -220,28 +197,26 @@ export default function DiaryScreen() {
 
   const EmptyState = () => (
     <View style={styles.emptyContainer}>
-      <EmptyDiary 
-        width={200} 
-        height={200} 
-        style={styles.emptyImage}
-        fill="#E0E0E0" // Color gris claro
-      />
+      <EmptyDiary width={200} height={200} style={styles.emptyImage} fill="#E0E0E0" />
       <Text style={styles.emptyTitle}>¡Tu diario está vacío!</Text>
-      <Text style={styles.emptyText}>
-        Aquí podrás ver todas tus visitas a cafeterías.
-      </Text>
+      <Text style={styles.emptyText}>Aquí podrás ver todas tus visitas a cafeterías.</Text>
       <Text style={styles.emptySubtext}>
         Comienza explorando cafeterías cercanas y comparte tus experiencias.
       </Text>
-      <TouchableOpacity
-        style={styles.exploreButton}
-        onPress={() => router.push('/(tabs)/explore')}
-      >
+      <TouchableOpacity style={styles.exploreButton} onPress={() => router.push('/(tabs)/explore')}>
         <Feather name="coffee" size={20} color="#FFF" />
         <Text style={styles.exploreButtonText}>Explorar cafeterías</Text>
       </TouchableOpacity>
     </View>
   );
+
+  if (authLoading || !user) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#8D6E63" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -254,22 +229,16 @@ export default function DiaryScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity 
-            style={styles.headerButton} 
-            onPress={handleStats}
-          >
+          <TouchableOpacity style={styles.headerButton} onPress={handleStats}>
             <AntDesign name="barschart" size={24} color="#8D6E63" />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.headerButton} 
-            onPress={handleShareDiary}
-          >
+          <TouchableOpacity style={styles.headerButton} onPress={handleShareDiary}>
             <AntDesign name="sharealt" size={24} color="#8D6E63" />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={visitas.length === 0 ? styles.scrollViewEmpty : undefined}
         nestedScrollEnabled={true}
         refreshControl={
@@ -299,11 +268,8 @@ export default function DiaryScreen() {
           ))
         )}
       </ScrollView>
-      
-      <TouchableOpacity 
-        style={styles.fabButton}
-        onPress={handleAddVisit}
-      >
+
+      <TouchableOpacity style={styles.fabButton} onPress={handleAddVisit}>
         <Text style={styles.fabText}>Agregar visita</Text>
       </TouchableOpacity>
     </View>
@@ -439,4 +405,4 @@ const styles = StyleSheet.create({
   scrollViewEmpty: {
     flexGrow: 1,
   },
-}); 
+});
