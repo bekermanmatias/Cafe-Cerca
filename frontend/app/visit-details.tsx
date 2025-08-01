@@ -149,7 +149,9 @@ export default function VisitDetailsScreen() {
   const checkLikeStatus = async () => {
     if (!token || !visitData?.id) return;
     try {
+      console.log('Verificando estado de like para visita:', visitData.id);
       const response = await apiService.getLikeStatus(visitData.id, token);
+      console.log('Estado de like recibido:', response);
       setIsLiked(response.liked);
       // Actualizar el contador de likes en el estado de la visita
       setVisitData(prevData => {
@@ -161,31 +163,30 @@ export default function VisitDetailsScreen() {
       });
     } catch (error) {
       console.error('Error al obtener estado del like:', error);
+      // No mostrar alerta aquí para evitar spam, solo log del error
     }
   };
 
   const handleLike = async () => {
-    if (!visitData?.id) return;
+    if (!visitData?.id || !token) return;
     
     try {
       setIsLiking(true);
-      const response = await fetch(`${API_URL}/visitas/${visitData.id}/like`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      console.log('Enviando like para visita:', visitData.id);
+      const response = await apiService.toggleLike(visitData.id, token);
+      console.log('Respuesta del servidor:', response);
 
-      if (response.ok) {
-        setIsLiked(!isLiked);
-        // Actualizar el contador de likes localmente
-        setVisitData(prev => prev ? {
-          ...prev,
-          likesCount: isLiked ? prev.likesCount - 1 : prev.likesCount + 1
-        } : null);
-      }
+      // Actualizar el estado local con la respuesta del servidor
+      setIsLiked(response.liked);
+      setVisitData(prev => prev ? {
+        ...prev,
+        likesCount: response.likesCount
+      } : null);
+      
+      console.log('Estado actualizado - liked:', response.liked, 'count:', response.likesCount);
     } catch (error) {
       console.error('Error al procesar el like:', error);
+      Alert.alert('Error', 'No se pudo procesar el like. Intenta de nuevo.');
     } finally {
       setIsLiking(false);
     }
@@ -521,13 +522,10 @@ export default function VisitDetailsScreen() {
         )}
       </View>
       
-      <LoadingSpinner 
-        visible={isLiking || isDeleting} 
-        message={
-          isLiking ? "Procesando like..." :
-          isDeleting ? "Eliminando visita..." : ""
-        }
-      />
+             <LoadingSpinner 
+         visible={isDeleting} 
+         message="Eliminando visita..."
+       />
     </>
   );
 }
@@ -652,7 +650,7 @@ const styles = StyleSheet.create({
   },
   leftActions: {
     flexDirection: 'row',
-    gap: 16,
+    gap: -10,
   },
   rightActions: {
     flexDirection: 'row',
