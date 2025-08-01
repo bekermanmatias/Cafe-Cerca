@@ -143,22 +143,23 @@ async function createInitialData() {
     }
 
     // Crear etiquetas iniciales si no existen
-    const etiquetasIniciales = [
-      { nombre: 'Café de especialidad', icono: '☕' },
-      { nombre: 'Brunch', icono: '🥐' },
-      { nombre: 'Tienda', icono: '🛍️' },
-      { nombre: 'Ambiente natural', icono: '🌿' },
-      { nombre: 'Franquicia', icono: '🏢' },
-      { nombre: 'Tradicional', icono: '🏡' },
-      { nombre: 'Alfajores', icono: '🍫' },
-      { nombre: 'Pastelería francesa', icono: '🇫🇷' },
-      { nombre: 'Macarons', icono: '🍬' },
-      { nombre: 'Sin gluten', icono: '🚫🌾' },
-      { nombre: 'Pastelería celíaca', icono: '🧁' },
-      { nombre: 'Ambiente moderno', icono: '🛋️' },
-      { nombre: 'Panadería artesanal', icono: '🥖' },
-      { nombre: 'Tostado propio', icono: '🍞' }
-    ];
+const etiquetasIniciales = [
+  { nombre: 'Café de especialidad', icono: 'coffee' },
+  { nombre: 'Brunch', icono: 'utensils' },
+  { nombre: 'Tienda', icono: 'gift' },
+  { nombre: 'Ambiente natural', icono: 'leaf' },
+  { nombre: 'Franquicia', icono: 'home' },
+  { nombre: 'Tradicional', icono: 'home' },
+  { nombre: 'Alfajores', icono: 'gift' },
+  { nombre: 'Pastelería francesa', icono: 'star' },
+  { nombre: 'Macarons', icono: 'star' },
+  { nombre: 'Sin gluten', icono: 'shield' },
+  { nombre: 'Pastelería celíaca', icono: 'utensils' },
+  { nombre: 'Ambiente moderno', icono: 'laptop' },
+  { nombre: 'Panadería artesanal', icono: 'utensils' },
+  { nombre: 'Tostado propio', icono: 'coffee' }
+];
+
     for (const etiqueta of etiquetasIniciales) {
       await Etiqueta.findOrCreate({ where: { nombre: etiqueta.nombre }, defaults: etiqueta });
     }

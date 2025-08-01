@@ -1,4 +1,4 @@
-import { Visita, Cafe, User, VisitaImagen, Like, VisitaParticipante, Resena } from '../models/index.js';
+import { Visita, Cafe, User, VisitaImagen, Like, VisitaParticipante, Resena, Etiqueta } from '../models/index.js';
 import sequelize from '../config/database.js';
 import { Op } from 'sequelize';
 
