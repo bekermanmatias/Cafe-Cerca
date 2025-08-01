@@ -131,7 +131,7 @@ export default function NotificationsScreen() {
       setIsRespondingSolicitud(true);
       if (!token) throw new Error('Token no disponible');
 
-      await axios.put(
+      await axios.patch(
         API_ENDPOINTS.AMIGOS.RESPONDER_SOLICITUD(solicitudId),
         { status },
         { headers: { Authorization: `Bearer ${token}` } }

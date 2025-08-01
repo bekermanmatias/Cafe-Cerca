@@ -1,5 +1,5 @@
 // context/AuthContext.tsx - Context para manejar autenticación
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
 import { storage, StorageKeys } from '../utils/storage';
 
 interface User {
@@ -59,9 +59,7 @@ const checkAuthState = async () => {
   }
 };
 
-
-
-const login = async (newToken: string, newUser: User) => {
+const login = useMemo(() => async (newToken: string, newUser: User) => {
   try {
     console.log('Saving user:', newUser); // <-- log útil
     await storage.setItem(StorageKeys.TOKEN, newToken);
@@ -72,10 +70,9 @@ const login = async (newToken: string, newUser: User) => {
     console.error('Error during login:', error);
     throw error;
   }
-};
+}, []);
 
-
-  const updateUser = async (updatedUser: User) => {
+  const updateUser = useMemo(() => async (updatedUser: User) => {
     try {
       await storage.setItem(StorageKeys.USER, JSON.stringify(updatedUser));
       setUser(updatedUser);
@@ -83,9 +80,9 @@ const login = async (newToken: string, newUser: User) => {
       console.error('Error updating user:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useMemo(() => async () => {
     try {
       await storage.removeItem(StorageKeys.TOKEN);
       await storage.removeItem(StorageKeys.USER);
@@ -94,16 +91,17 @@ const login = async (newToken: string, newUser: User) => {
     } catch (error) {
       console.error('Error during logout:', error);
     }
-  };
+  }, []);
 
-  const value: AuthContextType = {
+  // Memoizar el value del contexto para evitar re-renders innecesarios
+  const value = useMemo<AuthContextType>(() => ({
     user,
     token,
     login,
     updateUser,
     logout,
     isLoading,
-  };
+  }), [user, token, login, updateUser, logout, isLoading]);
 
   return (
     <AuthContext.Provider value={value}>

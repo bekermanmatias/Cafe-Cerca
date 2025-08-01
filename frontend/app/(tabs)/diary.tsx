@@ -1,93 +1,19 @@
 import { StyleSheet, ScrollView, Alert, TouchableOpacity, Text, View, RefreshControl, ActivityIndicator } from 'react-native';
 import { VisitCard } from '../../components/VisitCard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import Constants from 'expo-constants';
 import { shareVisit, shareDiary } from '../../constants/Sharing';
 import { AntDesign, Feather } from '@expo/vector-icons';
-import { API_URL } from '../../constants/Config';
 import { useAuth } from '../../context/AuthContext';
+import { useDiary } from '../../hooks/useDiary';
 import EmptyDiary from '../../assets/icons/empty-diary.svg';
-
-interface Imagen {
-  imageUrl: string;
-  orden: number;
-}
-
-interface Tag {
-  id: number;
-  nombre: string;
-  icono: string;
-}
-
-interface Cafeteria {
-  id: number;
-  name: string;
-  address: string;
-  rating: number;
-  imageUrl: string | null;
-  tags: Tag[];
-  openingHours: string;
-}
-
-interface Usuario {
-  id: number;
-  name: string;
-  profileImage: string | null;
-}
-
-interface Resena {
-  id: number;
-  calificacion: number;
-  comentario: string;
-  fecha: string;
-  usuario: Usuario;
-}
-
-interface Participante extends Usuario {
-  estado: 'pendiente' | 'aceptada' | 'rechazada';
-  rol: 'creador' | 'participante';
-  fechaRespuesta?: string;
-  resena?: Resena;
-}
-
-interface Visita {
-  id: number;
-  fecha: string;
-  estado: 'activa' | 'completada' | 'cancelada';
-  esCompartida: boolean;
-  imagenes: Imagen[];
-  cafeteria: Cafeteria;
-  creador?: {
-    id: number;
-    name: string;
-    profileImage: string | null;
-    resena?: Resena;
-  };
-  participantes?: Participante[];
-  likesCount?: number;
-  usuarioId?: number;
-  cafeteriaId?: number;
-  usuario?: Usuario;
-  comentario?: string;
-  calificacion?: number;
-  isLiked?: boolean;
-}
-
-interface DiarioResponse {
-  mensaje: string;
-  totalVisitas: number;
-  visitas: Visita[];
-}
 
 export default function DiaryScreen() {
   const router = useRouter();
   const { refresh } = useLocalSearchParams();
-  const { user, token, isLoading: authLoading } = useAuth();
-
-  const [visitas, setVisitas] = useState<Visita[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { user, isLoading: authLoading } = useAuth();
+  const { visitas, isLoading, refreshing, error, refreshDiary, updateVisitLike } = useDiary();
 
   // Redirigir a login si no hay usuario después de la carga del contexto
   useEffect(() => {
@@ -97,84 +23,26 @@ export default function DiaryScreen() {
     }
   }, [authLoading, user, router]);
 
-  const fetchDiario = useCallback(async () => {
-    if (!user || !token) return;
-
-    try {
-      setIsLoading(true);
-
-      const response = await fetch(`${API_URL}/visitas/usuario/${user.id}`, {
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al obtener visitas');
-      }
-
-      const data: DiarioResponse = await response.json();
-      setVisitas(data.visitas || []);
-    } catch (error) {
-      console.error('Error fetching diario:', error);
-      if (!isLoading) {
-        Alert.alert(
-          'Error de conexión',
-          'No se pudo actualizar el diario. ¿Deseas intentar de nuevo?',
-          [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Reintentar', onPress: () => fetchDiario() },
-          ]
-        );
-      }
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
-  }, [user, token, isLoading]);
-
-  // Ejecutar fetch al montar y cuando cambian user, token o refresh
-  useEffect(() => {
-    if (user && token) {
-      fetchDiario();
-    }
-  }, [user, token, refresh, fetchDiario]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchDiario();
-  }, [fetchDiario]);
-
-  const handleLikeChange = (visitId: number, liked: boolean) => {
-    setVisitas(prevVisitas =>
-      prevVisitas.map(visita =>
-        visita.id === visitId ? { ...visita, isLiked: liked } : visita
-      )
-    );
-  };
-
-  const handleShare = (visitId: number) => {
+  const handleShare = useCallback((visitId: number) => {
     shareVisit(visitId);
-  };
+  }, []);
 
-  const handleDetails = (visit: Visita) => {
+  const handleDetails = useCallback((visit: any) => {
     router.push({
       pathname: '/visit-details',
       params: {
         visitId: visit.id.toString(),
       },
     });
-  };
+  }, [router]);
 
-  const handleAddVisit = () => {
+  const handleAddVisit = useCallback(() => {
     router.push({
       pathname: '/add-visit',
     });
-  };
+  }, [router]);
 
-  const handleShareDiary = async () => {
+  const handleShareDiary = useCallback(async () => {
     try {
       if (!user?.id) {
         Alert.alert('Error', 'Debes iniciar sesión para compartir tu diario');
@@ -189,13 +57,14 @@ export default function DiaryScreen() {
         [{ text: 'OK' }]
       );
     }
-  };
+  }, [user?.id]);
 
-  const handleStats = () => {
+  const handleStats = useCallback(() => {
     router.push('/stats');
-  };
+  }, [router]);
 
-  const EmptyState = () => (
+  // Memoizar el componente EmptyState
+  const EmptyState = useMemo(() => () => (
     <View style={styles.emptyContainer}>
       <EmptyDiary width={200} height={200} style={styles.emptyImage} fill="#E0E0E0" />
       <Text style={styles.emptyTitle}>¡Tu diario está vacío!</Text>
@@ -208,7 +77,19 @@ export default function DiaryScreen() {
         <Text style={styles.exploreButtonText}>Explorar cafeterías</Text>
       </TouchableOpacity>
     </View>
-  );
+  ), [router]);
+
+  // Memoizar las visitas renderizadas
+  const renderedVisits = useMemo(() => 
+    visitas.map((visit) => (
+      <VisitCard
+        key={visit.id}
+        visit={visit}
+        onLikeChange={(liked) => updateVisitLike(visit.id, liked)}
+        onShare={() => handleShare(visit.id)}
+        onDetails={() => handleDetails(visit)}
+      />
+    )), [visitas, updateVisitLike, handleShare, handleDetails]);
 
   if (authLoading || !user) {
     return (
@@ -244,7 +125,7 @@ export default function DiaryScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
+            onRefresh={refreshDiary}
             colors={['#8D6E63']}
             tintColor="#8D6E63"
           />
@@ -257,15 +138,7 @@ export default function DiaryScreen() {
         ) : visitas.length === 0 ? (
           <EmptyState />
         ) : (
-          visitas.map((visit) => (
-            <VisitCard
-              key={visit.id}
-              visit={visit}
-              onLikeChange={(liked) => handleLikeChange(visit.id, liked)}
-              onShare={() => handleShare(visit.id)}
-              onDetails={() => handleDetails(visit)}
-            />
-          ))
+          renderedVisits
         )}
       </ScrollView>
 
