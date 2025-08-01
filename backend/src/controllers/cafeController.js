@@ -126,6 +126,35 @@ export const getCafeById = async (req, res) => {
     });
   }
 };
+export const updateCafe = async (req, res) => {
+  try {
+    const { name, address, rating, tags, openingHours, lat, lng } = req.body;
+    const imageUrl = req.file ? req.file.path : null;
+
+    // Buscar la cafetería por ID
+    const cafe = await Cafe.findByPk(req.params.id);
+    if (!cafe) return res.status(404).json({ error: 'Cafetería no encontrada' });
+
+    // Parsear tags si es necesario
+    const tagsParsed = typeof tags === 'string' ? JSON.parse(tags) : tags;
+
+    // Actualizar campos
+    await cafe.update({
+      name: name ?? cafe.name,
+      address: address ?? cafe.address,
+      rating: rating ?? cafe.rating,
+      tags: tagsParsed ?? cafe.tags,
+      openingHours: openingHours ?? cafe.openingHours,
+      lat: lat ?? cafe.lat,
+      lng: lng ?? cafe.lng,
+      imageUrl: imageUrl ?? cafe.imageUrl
+    });
+
+    res.json(cafe);
+  } catch (err) {
+    res.status(400).json({ error: 'Error al actualizar la cafetería', details: err.message });
+  }
+};
 
 export const deleteCafe = async (req, res) => {
   try {
