@@ -148,7 +148,6 @@ const ProfileScreen = () => {
             </TouchableOpacity>
           </View>
           <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userHandle}>@{user.email.split('@')[0]}</Text>
         </View>
 
         <View style={styles.menuContainer}>
@@ -202,9 +201,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: '#f0f0f0',
   },
   cameraButton: {
@@ -212,9 +211,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#8D6E63',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -226,11 +225,7 @@ const styles = StyleSheet.create({
     color: '#8D6E63',
     marginBottom: 4,
   },
-  userHandle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
-  },
+
   menuContainer: {
     paddingHorizontal: 20,
   },

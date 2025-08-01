@@ -62,6 +62,10 @@ export default function RootLayout() {
               headerShown: true,
               headerTitle: '',
               headerBackTitle: '',
+              headerStyle: {
+                backgroundColor: '#fff',
+              },
+              headerTintColor: '#8D6E63',
               animation: 'slide_from_right',
             }}
           />
@@ -71,6 +75,10 @@ export default function RootLayout() {
               headerShown: true,
               headerTitle: '',
               headerBackTitle: '',
+              headerStyle: {
+                backgroundColor: '#fff',
+              },
+              headerTintColor: '#8D6E63',
               animation: 'slide_from_right',
             }}
           />
@@ -80,6 +88,10 @@ export default function RootLayout() {
               headerShown: true,
               headerTitle: '',
               headerBackTitle: '',
+              headerStyle: {
+                backgroundColor: '#fff',
+              },
+              headerTintColor: '#8D6E63',
               animation: 'slide_from_right',
             }}
           />
@@ -89,6 +101,10 @@ export default function RootLayout() {
               headerShown: true,
               headerTitle: '',
               headerBackTitle: '',
+              headerStyle: {
+                backgroundColor: '#fff',
+              },
+              headerTintColor: '#8D6E63',
               animation: 'slide_from_bottom',
             }}
           />
@@ -105,8 +121,12 @@ export default function RootLayout() {
             name="notifications"
             options={{
               headerShown: true,
-              headerTitle: 'Notificaciones',
+              headerTitle: '',
               headerBackTitle: '',
+              headerStyle: {
+                backgroundColor: '#fff',
+              },
+              headerTintColor: '#8D6E63',
               animation: 'slide_from_right',
             }}
           />
@@ -114,8 +134,12 @@ export default function RootLayout() {
             name="profile"
             options={{
               headerShown: true,
-              headerTitle: 'Perfil',
+              headerTitle: '',
               headerBackTitle: '',
+              headerStyle: {
+                backgroundColor: '#fff',
+              },
+              headerTintColor: '#8D6E63',
               animation: 'slide_from_right',
             }}
           />
@@ -123,8 +147,12 @@ export default function RootLayout() {
             name="liked-visits"
             options={{
               headerShown: true,
-              headerTitle: 'Visitas Me Gusta',
+              headerTitle: '',
               headerBackTitle: '',
+              headerStyle: {
+                backgroundColor: '#fff',
+              },
+              headerTintColor: '#8D6E63',
               animation: 'slide_from_right',
             }}
           />
@@ -132,8 +160,12 @@ export default function RootLayout() {
             name="saved-cafes"
             options={{
               headerShown: true,
-              headerTitle: 'Cafeterías Guardadas',
+              headerTitle: '',
               headerBackTitle: '',
+              headerStyle: {
+                backgroundColor: '#fff',
+              },
+              headerTintColor: '#8D6E63',
               animation: 'slide_from_right',
             }}
           />
