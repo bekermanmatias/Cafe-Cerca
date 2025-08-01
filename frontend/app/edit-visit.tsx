@@ -6,7 +6,9 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { AntDesign } from '@expo/vector-icons';
 import ImageEditor from '../components/ImageEditor';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { API_URL } from '../constants/Config';
+import { API_URL, API_ENDPOINTS } from '../constants/Config';
+import { useAuth } from '../context/AuthContext';
+import { apiService } from '../services/api';
 
 const STANDARD_SIZE = 1080;
 
@@ -25,14 +27,35 @@ interface Imagen {
   orden: number;
 }
 
+interface Friend {
+  id: number;
+  name: string;
+  profileImage: string;
+}
+
 interface VisitaDetalle {
   id: number;
   usuarioId: number;
   cafeteriaId: number;
-  comentario: string;
-  calificacion: number;
   fecha: string;
+  esCompartida: boolean;
+  maxParticipantes: number;
+  estado: string;
   imagenes: Imagen[];
+  cafeteria: Cafe;
+  participantes: any[];
+  resenas: any[];
+  creador?: {
+    id: number;
+    name: string;
+    profileImage?: string;
+    resena?: {
+      id: number;
+      calificacion: number;
+      comentario: string;
+      fecha: string;
+    };
+  };
 }
 
 export default function EditVisitScreen() {
@@ -49,10 +72,16 @@ export default function EditVisitScreen() {
   const [showCafeSelector, setShowCafeSelector] = useState(false);
   const [isLoadingCafes, setIsLoadingCafes] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedFriends, setSelectedFriends] = useState<any[]>([]);
+  const [showFriendsSelector, setShowFriendsSelector] = useState(false);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  const { user, token } = useAuth();
 
-  // Primero cargamos las cafeterías
+  // Primero cargamos las cafeterías y amigos
   useEffect(() => {
     fetchCafes();
+    fetchFriends();
   }, []);
 
   // Después de cargar las cafeterías, cargamos los detalles de la visita
@@ -62,10 +91,21 @@ export default function EditVisitScreen() {
     }
   }, [cafes, params.visitId]);
 
+  // Recargar datos cuando cambien los parámetros (cuando regrese de selección de amigos)
+  useEffect(() => {
+    if (cafes.length > 0 && params.visitId) {
+      fetchVisitDetails();
+    }
+  }, [cafes, params.visitId, params.refresh]);
+
   const fetchCafes = async () => {
     try {
       setIsLoadingCafes(true);
-      const response = await fetch(`${API_URL}/cafes`);
+      const response = await fetch(`${API_URL}/cafes`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
         throw new Error('Error al obtener las cafeterías');
       }
@@ -86,30 +126,51 @@ export default function EditVisitScreen() {
     try {
       setIsLoading(true);
       const visitId = String(params.visitId).replace(/[^0-9]/g, '');
-      const response = await fetch(`${API_URL}/visitas/${visitId}`);
+      const response = await fetch(`${API_URL}/visitas/${visitId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       
       if (!response.ok) {
         throw new Error('Error al obtener los detalles de la visita');
       }
 
       const data = await response.json();
+      console.log('🔍 DEBUG - Datos recibidos del backend:', JSON.stringify(data.visita, null, 2));
       setOriginalVisit(data.visita);
-      setRating(data.visita.calificacion);
-      setComment(data.visita.comentario);
-      setImages(data.visita.imagenes.map((img: Imagen) => img.imageUrl));
-
-      // Buscar y establecer la cafetería seleccionada
-      const cafeteriaId = data.visita.cafeteriaId;
-      const cafe = cafes.find(c => c.id === cafeteriaId);
-      if (cafe) {
-        setSelectedCafe(cafe);
+      
+      // Buscar la reseña del creador en la nueva estructura
+      const resenaCreador = data.visita.creador?.resena;
+      console.log('🔍 DEBUG - Reseña del creador:', resenaCreador);
+      
+      if (resenaCreador) {
+        console.log('✅ Estableciendo rating y comentario:', {
+          rating: resenaCreador.calificacion,
+          comment: resenaCreador.comentario
+        });
+        setRating(resenaCreador.calificacion);
+        setComment(resenaCreador.comentario);
       } else {
-        console.error('No se encontró la cafetería con ID:', cafeteriaId);
+        console.log('❌ No se encontró reseña del creador');
+        setRating(0);
+        setComment('');
+      }
+      
+      setImages(data.visita.imagenes?.map((img: Imagen) => img.imageUrl) || []);
+      setSelectedCafe(data.visita.cafeteria);
+      
+      // Precargar los amigos seleccionados (participantes)
+      if (data.visita.participantes && data.visita.participantes.length > 0) {
+        console.log('🔍 DEBUG - Participantes encontrados:', data.visita.participantes);
+        setSelectedFriends(data.visita.participantes);
+      } else {
+        console.log('❌ No se encontraron participantes');
+        setSelectedFriends([]);
       }
     } catch (error) {
-      console.error('Error al cargar la visita:', error);
-      Alert.alert('Error', 'No se pudieron cargar los datos de la visita');
-      router.back();
+      console.error('Error al cargar detalles de la visita:', error);
+      Alert.alert('Error', 'No se pudieron cargar los detalles de la visita');
     } finally {
       setIsLoading(false);
     }
@@ -147,6 +208,40 @@ export default function EditVisitScreen() {
       </View>
     </TouchableOpacity>
   );
+
+  const renderFriendItem = ({ item }: { item: Friend }) => {
+    const isSelected = selectedFriends.some(friend => friend.id === item.id);
+    
+    return (
+      <TouchableOpacity 
+        style={[styles.friendItem, isSelected && styles.friendItemSelected]}
+        onPress={() => {
+          if (isSelected) {
+            setSelectedFriends(selectedFriends.filter(friend => friend.id !== item.id));
+          } else {
+            if (selectedFriends.length < 9) { // Máximo 10 participantes (incluyendo el creador)
+              setSelectedFriends([...selectedFriends, item]);
+            } else {
+              Alert.alert('Límite alcanzado', 'Puedes invitar hasta 9 amigos (máximo 10 participantes en total)');
+            }
+          }
+        }}
+      >
+        <View style={styles.friendItemContent}>
+          <Image 
+            source={{ uri: item.profileImage || 'https://via.placeholder.com/50' }} 
+            style={styles.friendAvatar}
+          />
+          <View style={styles.friendInfo}>
+            <Text style={styles.friendName}>{item.name}</Text>
+          </View>
+          {isSelected && (
+            <AntDesign name="checkcircle" size={24} color="#4CAF50" />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const processImage = async (uri: string) => {
     try {
@@ -217,12 +312,44 @@ export default function EditVisitScreen() {
     setIsUpdating(true);
 
     try {
+      console.log('🔍 DEBUG - Iniciando actualización de visita');
+      console.log('🔍 DEBUG - Token disponible:', !!token);
+      
+      if (!token) {
+        Alert.alert('Error', 'No hay token de autenticación disponible');
+        return;
+      }
+      
       const formData = new FormData();
       
-      formData.append('usuarioId', originalVisit?.usuarioId.toString() || '1');
       formData.append('cafeteriaId', selectedCafe.id.toString());
-      formData.append('comentario', comment);
       formData.append('calificacion', rating.toString());
+      formData.append('comentario', comment);
+      
+      // Determinar si es compartida basado en si hay amigos seleccionados
+      const esCompartida = selectedFriends.length > 0;
+      formData.append('esCompartida', esCompartida.toString());
+      formData.append('maxParticipantes', '10');
+      
+      console.log('🔍 DEBUG - Datos básicos:', {
+        cafeteriaId: selectedCafe.id,
+        calificacion: rating,
+        comentario: comment,
+        esCompartida: esCompartida,
+        maxParticipantes: 10
+      });
+      
+      // Agregar los amigos seleccionados
+      if (selectedFriends.length > 0) {
+        // Enviar como participantes para compatibilidad con el backend
+        const participantesIds = selectedFriends.map(friend => friend.id);
+        formData.append('participantes', JSON.stringify(participantesIds));
+        console.log('🔍 DEBUG - Participantes seleccionados:', participantesIds);
+      } else {
+        // Si no hay amigos seleccionados, enviar array vacío
+        formData.append('participantes', JSON.stringify([]));
+        console.log('🔍 DEBUG - No hay participantes seleccionados');
+      }
 
       // Agregar las URLs de las imágenes existentes
       const existingImages = images.filter(uri => uri.startsWith('http'));
@@ -241,17 +368,22 @@ export default function EditVisitScreen() {
         } as any);
       }
 
-      const response = await fetch(`${API_URL}/visitas/${originalVisit?.id}`, {
+      console.log('🔍 DEBUG - Enviando request a:', API_ENDPOINTS.VISITAS.UPDATE(originalVisit?.id || 0));
+      const response = await fetch(API_ENDPOINTS.VISITAS.UPDATE(originalVisit?.id || 0), {
         method: 'PUT',
         body: formData,
         headers: {
           'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
 
+      console.log('🔍 DEBUG - Status de respuesta:', response.status);
       const responseData = await response.json();
+      console.log('🔍 DEBUG - Datos de respuesta:', responseData);
 
       if (!response.ok) {
+        console.error('❌ DEBUG - Error en respuesta:', responseData);
         throw new Error(responseData.mensaje || 'Error al actualizar la visita');
       }
 
@@ -259,8 +391,8 @@ export default function EditVisitScreen() {
         { 
           text: 'OK', 
           onPress: () => {
+            // Regresar a la pantalla anterior
             router.back();
-            router.setParams({ refresh: Date.now().toString() });
           }
         }
       ]);
@@ -274,6 +406,22 @@ export default function EditVisitScreen() {
 
   const handleBack = () => {
     router.back();
+  };
+
+  const fetchFriends = async () => {
+    try {
+      setIsLoadingFriends(true);
+      const friendsData = await apiService.obtenerListaAmigos();
+      setFriends(friendsData);
+    } catch (error) {
+      console.error('Error al cargar amigos:', error);
+    } finally {
+      setIsLoadingFriends(false);
+    }
+  };
+
+  const handleAddFriends = () => {
+    setShowFriendsSelector(true);
   };
 
   if (isLoading) {
@@ -294,24 +442,42 @@ export default function EditVisitScreen() {
             <Text style={styles.loadingText}>Guardando cambios...</Text>
           </View>
         )}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={handleBack}
-            style={styles.backButton}
-          >
-            <AntDesign name="arrowleft" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Editar Visita</Text>
-          <View style={{ width: 24 }} />
-        </View>
+
 
         <View style={styles.content}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Amigos</Text>
-            <TouchableOpacity style={styles.friendsButton}>
-              <Text style={styles.friendsButtonText}>Agregar amigo a la visita</Text>
+            <TouchableOpacity 
+              style={styles.friendsButton}
+              onPress={() => setShowFriendsSelector(true)}
+            >
+              <Text style={styles.friendsButtonText}>
+                {selectedFriends.length > 0 
+                  ? `${selectedFriends.length} amigo${selectedFriends.length > 1 ? 's' : ''} seleccionado${selectedFriends.length > 1 ? 's' : ''}`
+                  : 'Agregar amigos a la visita'
+                }
+              </Text>
               <AntDesign name="right" size={20} color="#8D6E63" />
             </TouchableOpacity>
+            {selectedFriends.length > 0 && (
+              <View style={styles.selectedFriendsContainer}>
+                {selectedFriends.map((friend) => (
+                  <View key={friend.id} style={styles.selectedFriendChip}>
+                    <Image 
+                      source={{ uri: friend.profileImage || 'https://via.placeholder.com/30' }} 
+                      style={styles.selectedFriendAvatar}
+                    />
+                    <Text style={styles.selectedFriendName}>{friend.name}</Text>
+                    <TouchableOpacity
+                      onPress={() => setSelectedFriends(selectedFriends.filter(f => f.id !== friend.id))}
+                      style={styles.removeFriendButton}
+                    >
+                      <AntDesign name="close" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -398,6 +564,42 @@ export default function EditVisitScreen() {
               onCancel={() => setEditingImage(null)}
             />
           )}
+
+          <Modal
+            visible={showFriendsSelector}
+            animationType="slide"
+            transparent={true}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Seleccionar Amigos</Text>
+                  <TouchableOpacity 
+                    onPress={() => setShowFriendsSelector(false)}
+                    style={styles.closeButton}
+                  >
+                    <AntDesign name="close" size={24} color="#000" />
+                  </TouchableOpacity>
+                </View>
+
+                {isLoadingFriends ? (
+                  <ActivityIndicator size="large" color="#8D6E63" />
+                ) : friends.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyStateText}>No tienes amigos agregados</Text>
+                    <Text style={styles.emptyStateSubtext}>Agrega amigos desde la pestaña de Amigos para poder invitarlos a visitas compartidas</Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={friends}
+                    renderItem={renderFriendItem}
+                    keyExtractor={item => item.id.toString()}
+                    contentContainerStyle={styles.friendsList}
+                  />
+                )}
+              </View>
+            </View>
+          </Modal>
         </View>
 
         <Modal
@@ -654,5 +856,79 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 8,
+  },
+  // Estilos para amigos
+  selectedFriendsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 12,
+    gap: 8,
+  },
+  selectedFriendChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  selectedFriendAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  selectedFriendName: {
+    fontSize: 14,
+    color: '#333',
+    marginRight: 8,
+  },
+  removeFriendButton: {
+    padding: 2,
+  },
+  friendItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    paddingVertical: 12,
+  },
+  friendItemSelected: {
+    backgroundColor: '#F8F8F8',
+  },
+  friendItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  friendAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  friendInfo: {
+    flex: 1,
+  },
+  friendName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  friendsList: {
+    padding: 16,
+  },
+  emptyState: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 }); 

@@ -163,6 +163,20 @@ Resena.belongsTo(User, {
   as: 'usuario'
 });
 
+// Relación entre VisitaParticipante y Resena
+VisitaParticipante.hasOne(Resena, {
+  foreignKey: 'usuarioId',
+  sourceKey: 'usuarioId',
+  scope: { visitaId: sequelize.col('VisitaParticipante.visitaId') },
+  as: 'resena'
+});
+
+Resena.belongsTo(VisitaParticipante, {
+  foreignKey: 'usuarioId',
+  targetKey: 'usuarioId',
+  as: 'participante'
+});
+
 // Nota: La sincronización de tablas se maneja en initDatabase.js
 // para evitar conflictos con migraciones existentes
 

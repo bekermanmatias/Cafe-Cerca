@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { 
   StyleSheet, 
   View, 
@@ -93,6 +94,15 @@ export default function VisitDetailsScreen() {
   useEffect(() => {
     fetchVisitDetails();
   }, [params.visitId, params.refresh]);
+
+  // Actualizar datos cuando la pantalla vuelva a estar en foco (después de editar)
+  useFocusEffect(
+    useCallback(() => {
+      if (params.visitId) {
+        fetchVisitDetails();
+      }
+    }, [params.visitId])
+  );
 
   useEffect(() => {
     if (token && visitData?.id) {
@@ -198,13 +208,23 @@ export default function VisitDetailsScreen() {
               setIsDeleting(true);
               const response = await fetch(`${API_URL}/visitas/${visitData?.id}`, {
                 method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                },
               });
               if (response.ok) {
-                router.back();
+                Alert.alert("Éxito", "Visita eliminada correctamente", [
+                  {
+                    text: "OK",
+                    onPress: () => router.back()
+                  }
+                ]);
               } else {
-                Alert.alert("Error", "No se pudo eliminar la visita");
+                const errorData = await response.json();
+                Alert.alert("Error", errorData.mensaje || "No se pudo eliminar la visita");
               }
             } catch (error) {
+              console.error('Error al eliminar visita:', error);
               Alert.alert("Error", "Ocurrió un error al eliminar la visita");
             } finally {
               setIsDeleting(false);
@@ -219,7 +239,10 @@ export default function VisitDetailsScreen() {
     // Implementar navegación a la pantalla de edición
     router.push({
       pathname: "/edit-visit" as any, // Temporal hasta que se cree la ruta
-      params: { visitId: visitData?.id }
+      params: { 
+        visitId: visitData?.id,
+        refresh: Date.now().toString() // Agregar timestamp para forzar refresh
+      }
     });
   };
 
