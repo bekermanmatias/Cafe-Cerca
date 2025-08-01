@@ -39,10 +39,17 @@ module.exports = {
     });
 
     // Añadir un índice único para evitar duplicados
-    await queryInterface.addIndex('SavedCafes', ['userId', 'cafeId'], {
-      unique: true,
-      name: 'saved_cafes_user_cafe_unique'
-    });
+    try {
+      await queryInterface.addIndex('SavedCafes', ['userId', 'cafeId'], {
+        unique: true,
+        name: 'saved_cafes_user_cafe_unique'
+      });
+    } catch (error) {
+      if (!error.message.includes('Duplicate key name')) {
+        throw error;
+      }
+      console.log('⚠️ Índice saved_cafes_user_cafe_unique ya existe');
+    }
   },
 
   async down(queryInterface, Sequelize) {

@@ -37,7 +37,7 @@ interface Cafe {
   address: string;
   rating: number;
   imageUrl: string;
-  tags: Tag[];  // ahora es array de objetos Tag
+  etiquetas: Tag[];  // el backend devuelve 'etiquetas'
   openingHours: string;
 }
 
@@ -174,7 +174,7 @@ export default function CafeDetail() {
     );
   }
 
-  const displayedTags = cafe.tags.slice(0, 4);
+  const displayedTags = cafe.etiquetas?.slice(0, 4) || [];
 
   const onGuardarPress = () => {
 
@@ -287,7 +287,7 @@ const onIrDireccionIconPress = () => {
 
         <View style={styles.tagsWrapper}>
           {displayedTags.map((tag, index) => (
-            <TagChip key={index} label={`${tag}`} />
+            <TagChip key={index} label={tag.nombre} />
           ))}
         </View>
 

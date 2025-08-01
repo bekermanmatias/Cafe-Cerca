@@ -39,10 +39,17 @@ module.exports = {
     });
 
     // Añadir un índice único para evitar likes duplicados
-    await queryInterface.addIndex('Likes', ['userId', 'visitaId'], {
-      unique: true,
-      name: 'likes_user_visita_unique'
-    });
+    try {
+      await queryInterface.addIndex('Likes', ['userId', 'visitaId'], {
+        unique: true,
+        name: 'likes_user_visita_unique'
+      });
+    } catch (error) {
+      if (!error.message.includes('Duplicate key name')) {
+        throw error;
+      }
+      console.log('⚠️ Índice likes_user_visita_unique ya existe');
+    }
   },
 
   async down(queryInterface, Sequelize) {

@@ -57,14 +57,36 @@ module.exports = {
     });
 
     // Índice único para evitar duplicados
-    await queryInterface.addIndex('CafeEtiquetas', ['cafeId', 'etiquetaId'], {
-      unique: true,
-      name: 'unique_cafe_etiqueta'
-    });
+    try {
+      await queryInterface.addIndex('CafeEtiquetas', ['cafeId', 'etiquetaId'], {
+        unique: true,
+        name: 'unique_cafe_etiqueta'
+      });
+    } catch (error) {
+      if (!error.message.includes('Duplicate key name')) {
+        throw error;
+      }
+      console.log('⚠️ Índice unique_cafe_etiqueta ya existe');
+    }
 
     // Índices para optimizar consultas
-    await queryInterface.addIndex('CafeEtiquetas', ['cafeId']);
-    await queryInterface.addIndex('CafeEtiquetas', ['etiquetaId']);
+    try {
+      await queryInterface.addIndex('CafeEtiquetas', ['cafeId']);
+    } catch (error) {
+      if (!error.message.includes('Duplicate key name')) {
+        throw error;
+      }
+      console.log('⚠️ Índice en cafeId ya existe');
+    }
+    
+    try {
+      await queryInterface.addIndex('CafeEtiquetas', ['etiquetaId']);
+    } catch (error) {
+      if (!error.message.includes('Duplicate key name')) {
+        throw error;
+      }
+      console.log('⚠️ Índice en etiquetaId ya existe');
+    }
   },
 
   async down(queryInterface, Sequelize) {
