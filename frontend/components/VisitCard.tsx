@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   moreParticipants: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#8D6E63',
     justifyContent: 'center',
     alignItems: 'center',
   },

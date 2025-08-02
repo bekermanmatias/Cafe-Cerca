@@ -243,6 +243,6 @@ const styles = StyleSheet.create({
   deleteButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#ffebee',
+    backgroundColor: '#FF4444',
   },
 });

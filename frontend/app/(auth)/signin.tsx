@@ -47,14 +47,16 @@ export default function SignInScreen() {
   return (
     <>
       <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>Sign in</Text>
-        <Text style={styles.subtitle}>Welcome back</Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>Iniciar Sesión</Text>
+          <Text style={styles.subtitle}>Bienvenido de vuelta</Text>
+        </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
             <MaterialIcons name="email" size={20} color="#8D6E63" style={styles.icon} />
             <TextInput
-              placeholder="Email address"
+              placeholder="Correo electrónico"
               style={styles.input}
               value={email}
               onChangeText={setEmail}
@@ -66,7 +68,7 @@ export default function SignInScreen() {
           <View style={styles.inputContainer}>
             <MaterialIcons name="lock" size={20} color="#8D6E63" style={styles.icon} />
             <TextInput
-              placeholder="Password"
+              placeholder="Contraseña"
               style={styles.input}
               value={password}
               onChangeText={setPassword}
@@ -78,26 +80,29 @@ export default function SignInScreen() {
             onPress={() => router.push('./forgot-password')}
             style={styles.forgotLink}
           >
-            <Text style={styles.forgotText}>Forgot Password?</Text>
+            <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.button}
+            style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSignIn}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <MaterialIcons name="arrow-forward" size={24} color="white" />
+              <View style={styles.buttonContent}>
+                <Text style={styles.buttonText}>Iniciar Sesión</Text>
+                <MaterialIcons name="arrow-forward" size={20} color="white" />
+              </View>
             )}
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>New member?</Text>
+          <Text style={styles.footerText}>¿Nuevo usuario?</Text>
           <TouchableOpacity onPress={() => router.push('./signup')}>
-            <Text style={styles.footerLink}> Sign up</Text>
+            <Text style={styles.footerLink}> Regístrate</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -111,47 +116,80 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#fff', 
+    padding: 20,
+    justifyContent: 'center',
+  },
   backButton: { marginBottom: 20 },
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
   title: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#8D6E63',
-    marginBottom: 4,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 40,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   form: { gap: 16 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomColor: '#ccc',
-    borderBottomWidth: 1,
-    paddingBottom: 4,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   icon: { marginRight: 8 },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     color: '#333',
+    paddingVertical: 0,
   },
   forgotLink: { alignSelf: 'flex-end' },
-      forgotText: { fontSize: 12, color: '#8D6E63', marginTop: 8 },
+      forgotText: { fontSize: 14, color: '#8D6E63', marginTop: 8, fontWeight: '500' },
   button: {
     backgroundColor: '#8D6E63',
-    height: 48,
-    borderRadius: 8,
+    height: 52,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 30,
+    marginTop: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 40,
+    marginTop: 30,
   },
   footerText: { fontSize: 13, color: '#999' },
       footerLink: { fontSize: 13, color: '#8D6E63', fontWeight: '500' },

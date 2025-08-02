@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#007bff', // Different color for invitations
+    borderLeftColor: '#8D6E63', // Brown color for invitations
   },
   invitacionHeader: {
     flexDirection: 'row',

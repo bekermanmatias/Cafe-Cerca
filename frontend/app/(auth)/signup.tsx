@@ -41,7 +41,6 @@ export default function SignUpScreen() {
       // Redirigir al usuario a la pestaña explore
       router.replace('/(tabs)/explore');
     } catch (error) {
-      console.error('Error de registro:', error);
       alert(error instanceof Error ? error.message : 'Error al crear la cuenta');
     } finally {
       setLoading(false);
@@ -55,8 +54,11 @@ export default function SignUpScreen() {
           <MaterialIcons name="arrow-back" size={24} color="#8D6E63" />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Registro</Text>
-        <Text style={styles.subtitle}>Crea tu cuenta aquí</Text>
+        <View style={styles.contentContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Crear Cuenta</Text>
+            <Text style={styles.subtitle}>Únete a nuestra comunidad</Text>
+          </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
@@ -94,18 +96,22 @@ export default function SignUpScreen() {
 
           <Text style={styles.terms}>
             Al registrarte aceptas nuestros{' '}
-            <Text style={styles.link}>Términos de Uso</Text>
+            <Text style={styles.link}>Términos de Uso</Text> y{' '}
+            <Text style={styles.link}>Política de Privacidad</Text>
           </Text>
 
           <TouchableOpacity
-            style={styles.button}
+            style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSignUp}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <MaterialIcons name="arrow-forward" size={24} color="white" />
+              <View style={styles.buttonContent}>
+                <Text style={styles.buttonText}>Crear Cuenta</Text>
+                <MaterialIcons name="arrow-forward" size={20} color="white" />
+              </View>
             )}
           </TouchableOpacity>
         </View>
@@ -115,6 +121,7 @@ export default function SignUpScreen() {
           <TouchableOpacity onPress={() => router.push('./signin')}>
             <Text style={styles.footerLink}> Inicia sesión</Text>
           </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
       
@@ -127,52 +134,89 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#fff', 
+    padding: 20,
+  },
   backButton: { marginBottom: 20 },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
   title: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#8D6E63',
-    marginBottom: 4,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 40,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   form: { gap: 16 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomColor: '#ccc',
-    borderBottomWidth: 1,
-    paddingBottom: 4,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   icon: { marginRight: 8 },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     color: '#333',
+    paddingVertical: 0,
   },
   terms: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 13,
+    color: '#666',
     textAlign: 'center',
-    marginTop: 20,
+    marginTop: 15,
+    lineHeight: 18,
   },
       link: { color: '#8D6E63', fontWeight: '500' },
   button: {
     backgroundColor: '#8D6E63',
-    height: 48,
-    borderRadius: 8,
+    height: 52,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 30,
+    marginTop: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 40,
+    marginTop: 30,
   },
   footerText: { fontSize: 13, color: '#999' },
       footerLink: { fontSize: 13, color: '#8D6E63', fontWeight: '500' },

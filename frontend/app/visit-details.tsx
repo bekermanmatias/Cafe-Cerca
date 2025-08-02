@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
     borderColor: 'white',
   },
   moreParticipants: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#8D6E63',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: -10,

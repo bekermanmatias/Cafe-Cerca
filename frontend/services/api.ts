@@ -122,7 +122,6 @@ class ApiService {
       const response = await fetch(`${API_URL.replace('/api', '')}/health`);
       return response.ok;
     } catch (error) {
-      console.error('Servidor no disponible:', error);
       return false;
     }
   }
@@ -146,7 +145,6 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('Error en login:', error);
       throw error;
     }
   }
@@ -172,7 +170,6 @@ class ApiService {
       try {
         data = await response.json();
       } catch (jsonError) {
-        console.error('Error parseando JSON:', jsonError);
         throw new Error('Error en la respuesta del servidor');
       }
 
@@ -182,7 +179,6 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('Error en register:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté corriendo.');
       }
@@ -373,7 +369,6 @@ class ApiService {
       try {
         data = await response.json();
       } catch (jsonError) {
-        console.error('Error parseando JSON de respuesta:', jsonError);
         throw new Error('Error en la respuesta del servidor');
       }
 
@@ -383,7 +378,6 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('Error en crearVisitaCompartida:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté corriendo.');
       }

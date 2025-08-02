@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: '#8D6E63',
   },
   invitacionHeader: {
     flexDirection: 'row',
