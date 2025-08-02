@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../constants/Config';
+import { formatRelativeDate } from '../utils/dateUtils';
 import { apiService } from '../services/api';
 import ReviewModal from '../components/ReviewModal';
 
@@ -165,7 +166,7 @@ export default function SharedVisitsInvitationsScreen() {
             {item.visita.cafeteria.name}
           </Text>
           <Text style={styles.invitacionDate}>
-            {new Date(item.visita.fecha).toLocaleDateString('es-ES')}
+                            {formatRelativeDate(item.visita.fecha)}
           </Text>
         </View>
       </View>

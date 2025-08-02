@@ -22,6 +22,7 @@ import ComentariosList from '../components/ComentariosList';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
+import { formatRelativeDate } from '../utils/dateUtils';
 
 const windowWidth = Dimensions.get('window').width;
 
@@ -386,12 +387,7 @@ export default function VisitDetailsScreen() {
           <View style={styles.visitInfoLeft}>
             <Text style={styles.cafeteriaName}>{visitData.cafeteria.name}</Text>
             <Text style={styles.visitDate}>
-              {new Date(visitData.fecha).toLocaleDateString('es-ES', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
+              {formatRelativeDate(visitData.fecha)}
             </Text>
           </View>
           {promedioCalificaciones && (

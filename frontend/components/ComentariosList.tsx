@@ -20,6 +20,7 @@ import { apiService } from '../services/api';
 import { ThemedText } from './ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { formatDateWithTime } from '../utils/dateUtils';
 
 interface Usuario {
   id: number;
@@ -253,7 +254,7 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
           <View style={styles.comentarioHeader}>
             <ThemedText style={styles.nombreUsuario}>{item.usuario?.name || 'Usuario sin nombre'}</ThemedText>
             <ThemedText style={styles.fecha}>
-              {new Date(item.createdAt).toLocaleDateString()}
+              {formatDateWithTime(item.createdAt)}
             </ThemedText>
           </View>
           <ThemedText style={styles.textoComentario}>{item.contenido}</ThemedText>

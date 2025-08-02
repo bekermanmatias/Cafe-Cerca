@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { formatRelativeDate } from '../utils/dateUtils';
 
 const windowWidth = Dimensions.get('window').width;
 
@@ -254,12 +255,7 @@ const VisitCardComponent = ({
         <View style={styles.headerLeft}>
           <Text style={styles.place}>{cafeteriaName}</Text>
           <Text style={styles.date}>
-            {new Date(visit.fecha).toLocaleDateString('es-ES', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
+            {formatRelativeDate(visit.fecha)}
           </Text>
         </View>
         {/* Burbuja flotante con puntuación arriba a la derecha */}
@@ -382,7 +378,7 @@ const styles = StyleSheet.create({
   },
   ratingBubble: {
     position: 'absolute',
-    top: 16,
+    top: '50%',
     right: 16,
     backgroundColor: '#D7CCC8',
     borderRadius: 20,
@@ -392,6 +388,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    transform: [{ translateY: -3 }], // Mitad de la altura aproximada del contenedor
   },
   ratingBubbleText: {
     color: '#5D4037',

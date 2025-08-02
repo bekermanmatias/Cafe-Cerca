@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { API_ENDPOINTS, API_URL } from '../constants/Config';
 import axios from 'axios';
+import { formatRelativeDate } from '../utils/dateUtils';
 import ReviewModal from '../components/ReviewModal';
 
 interface Solicitud {
@@ -326,7 +327,7 @@ export default function NotificationsScreen() {
             {item.visita.usuario.name} te invitó a visitar
           </Text>
           <Text style={styles.invitacionDate}>
-            {new Date(item.visita.fecha).toLocaleDateString()}
+                            {formatRelativeDate(item.visita.fecha)}
           </Text>
         </View>
       </View>
