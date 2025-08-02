@@ -232,7 +232,10 @@ export const getCafeById = async (req, res) => {
       ],
       limit,
       offset,
-      order: [['createdAt', 'DESC']]
+      order: [
+        ['createdAt', 'DESC'],
+        [{ model: VisitaImagen, as: 'visitaImagenes' }, 'orden', 'ASC']
+      ]
     });
 
     // Transformar las visitas para que tengan la misma estructura que en diary

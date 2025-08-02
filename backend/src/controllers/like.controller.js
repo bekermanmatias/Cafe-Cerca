@@ -123,7 +123,10 @@ export const getLikedVisitas = async (req, res) => {
           attributes: ['imageUrl', 'orden']
         }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [
+        ['createdAt', 'DESC'],
+        [{ model: VisitaImagen, as: 'visitaImagenes' }, 'orden', 'ASC']
+      ]
     });
 
     if (likedVisitas.length === 0) {

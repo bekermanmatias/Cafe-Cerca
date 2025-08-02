@@ -409,7 +409,10 @@ export const obtenerVisitas = async (req, res) => {
           as: 'likes'
         }
       ],
-      order: [['fecha', 'DESC']],
+      order: [
+        ['fecha', 'DESC'],
+        [{ model: VisitaImagen, as: 'visitaImagenes' }, 'orden', 'ASC']
+      ],
       raw: false,
       nest: true
     });
@@ -556,6 +559,9 @@ export const obtenerVisitaPorId = async (req, res) => {
           model: Like,
           as: 'likes'
         }
+      ],
+      order: [
+        [{ model: VisitaImagen, as: 'visitaImagenes' }, 'orden', 'ASC']
       ],
       raw: false,
       nest: true
@@ -1137,6 +1143,9 @@ export const obtenerDiarioUsuario = async (req, res) => {
               model: Like,
               as: 'likes'
             }
+          ],
+          order: [
+            [{ model: VisitaImagen, as: 'visitaImagenes' }, 'orden', 'ASC']
           ]
         }
       ],
@@ -1277,6 +1286,9 @@ export const getVisitasByUser = async (req, res) => {
               model: Like,
               as: 'likes'
             }
+          ],
+          order: [
+            [{ model: VisitaImagen, as: 'visitaImagenes' }, 'orden', 'ASC']
           ]
         }
       ],
@@ -1362,6 +1374,9 @@ export const getVisitaById = async (req, res) => {
           model: Like,
           as: 'likes'
         }
+      ],
+      order: [
+        [{ model: VisitaImagen, as: 'visitaImagenes' }, 'orden', 'ASC']
       ],
       raw: false,
       nest: true
