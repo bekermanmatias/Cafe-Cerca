@@ -19,7 +19,7 @@ import { useAuth } from '../context/AuthContext';
 
 const ProfileScreen = () => {
   const router = useRouter();
-  const { user, logout: contextLogout, login: updateUser } = useAuth();
+  const { user, logout: contextLogout, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleImagePick = async () => {
@@ -43,23 +43,27 @@ const ProfileScreen = () => {
 
       if (!result.canceled && result.assets[0]) {
         setLoading(true);
-        try {
-          // Usar el servicio para actualizar la imagen
-          const response = await apiService.updateProfileImage(result.assets[0].uri);
-          
-          // Actualizar datos del usuario en el contexto
-          if (user) {
-            const updatedUser = { ...user, profileImage: response.profileImage };
-            await updateUser(updatedUser);
-          }
-          
-          Alert.alert('Éxito', 'Foto de perfil actualizada');
-        } catch (error) {
-          console.error('Error actualizando foto:', error);
-          Alert.alert('Error', 'No se pudo actualizar la foto de perfil');
-        } finally {
-          setLoading(false);
-        }
+                 try {
+           // Usar el servicio para actualizar la imagen
+           const response = await apiService.updateProfileImage(result.assets[0].uri);
+           
+           // Actualizar datos del usuario en el contexto
+           if (user && response.profileImage) {
+             console.log('🔄 Actualizando usuario con nueva imagen:', response.profileImage);
+             const updatedUser = { ...user, profileImage: response.profileImage };
+             await updateUser(updatedUser);
+             console.log('✅ Usuario actualizado en contexto');
+           } else {
+             console.log('⚠️ No se pudo actualizar usuario:', { user: !!user, profileImage: response.profileImage });
+           }
+           
+           Alert.alert('Éxito', 'Foto de perfil actualizada');
+         } catch (error) {
+           console.error('Error actualizando foto:', error);
+           Alert.alert('Error', 'No se pudo actualizar la foto de perfil');
+         } finally {
+           setLoading(false);
+         }
       }
     } catch (error) {
       console.error('Error seleccionando imagen:', error);
@@ -167,18 +171,18 @@ const ProfileScreen = () => {
         </View>
       </ScrollView>
 
-      <LoadingSpinner 
-        visible={loading} 
-        message="Actualizando foto de perfil..."
-      />
+             <LoadingSpinner 
+         visible={loading} 
+         message="Actualizando foto de perfil..."
+       />
 
-      <TouchableOpacity 
-        style={styles.logoutButton}
-        onPress={handleLogout}
-      >
-        <MaterialIcons name="logout" size={24} color="white" />
-        <Text style={styles.logoutText}>Cerrar Sesión</Text>
-      </TouchableOpacity>
+       <TouchableOpacity 
+         style={styles.logoutButton}
+         onPress={handleLogout}
+       >
+         <MaterialIcons name="logout" size={24} color="white" />
+         <Text style={styles.logoutText}>Cerrar Sesión</Text>
+       </TouchableOpacity>
     </>
   );
 };

@@ -2,6 +2,103 @@
 import { API_URL, API_ENDPOINTS } from '../constants/Config';
 import { storage, StorageKeys } from '../utils/storage';
 
+interface User {
+  id: number;
+  email: string;
+  name: string;
+  profileImage?: string;
+}
+
+// Función para limpiar la sesión cuando se detecte un token inválido
+const clearInvalidSession = async () => {
+  console.log('🔐 Limpiando sesión inválida...');
+  await storage.removeItem(StorageKeys.TOKEN);
+  await storage.removeItem(StorageKeys.USER);
+};
+
+// Función para limpiar automáticamente token corrupto
+const cleanCorruptedToken = async () => {
+  const token = await storage.getItem(StorageKeys.TOKEN);
+  if (token === '[object Object]' || (token && token.includes('"id"'))) {
+    console.log('🔐 Token corrupto detectado, limpiando...');
+    console.log('🔐 Token corrupto:', token);
+    await storage.removeItem(StorageKeys.TOKEN);
+    await storage.removeItem(StorageKeys.USER);
+    return true;
+  }
+  return false;
+};
+
+// Función para limpiar manualmente la sesión (para casos de emergencia)
+export const clearSession = async () => {
+  console.log('🔐 Limpiando sesión manualmente...');
+  await storage.removeItem(StorageKeys.TOKEN);
+  await storage.removeItem(StorageKeys.USER);
+};
+
+
+
+// Función para regenerar el token si está corrupto
+export const regenerateToken = async () => {
+  console.log('🔐 Regenerando token...');
+  const currentToken = await storage.getItem(StorageKeys.TOKEN);
+  
+  if (currentToken) {
+    if (typeof currentToken === 'object') {
+      console.log('🔐 Token detectado como objeto, convirtiendo a string...');
+      const tokenString = JSON.stringify(currentToken);
+      await storage.setItem(StorageKeys.TOKEN, tokenString);
+      console.log('✅ Token regenerado como string');
+      return tokenString;
+    } else if (typeof currentToken === 'string') {
+      // Verificar que no sea [object Object]
+      if (currentToken === '[object Object]') {
+        console.log('❌ Token es [object Object], limpiando...');
+        await storage.removeItem(StorageKeys.TOKEN);
+        return null;
+      }
+      console.log('✅ Token ya es string válido');
+      return currentToken;
+    }
+  }
+  
+  console.log('❌ No se encontró token para regenerar');
+  return null;
+};
+
+// Función para probar conectividad específica del endpoint de imagen
+export const testProfileImageEndpoint = async () => {
+  try {
+    console.log('🔍 Probando endpoint de imagen de perfil...');
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    
+    if (!token) {
+      console.log('❌ No hay token disponible');
+      return false;
+    }
+    
+    const tokenString = typeof token === 'string' ? token : JSON.stringify(token);
+    const url = API_ENDPOINTS.AUTH.UPDATE_PROFILE_IMAGE;
+    
+    console.log('🔍 Probando URL:', url);
+    
+    const response = await fetch(url, {
+      method: 'OPTIONS', // Usar OPTIONS para probar conectividad sin enviar datos
+      headers: {
+        'Authorization': `Bearer ${tokenString}`,
+      },
+    });
+    
+    console.log('🔍 Response status:', response.status);
+    console.log('🔍 Response ok:', response.ok);
+    
+    return response.ok;
+  } catch (error) {
+    console.error('❌ Error probando endpoint de imagen:', error);
+    return false;
+  }
+};
+
 // Función para probar la conectividad con el backend
 export const testBackendConnection = async () => {
   try {
@@ -24,7 +121,6 @@ export const testBackendConnection = async () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          timeout: 5000, // 5 segundos de timeout
         });
         
         if (response.ok) {
@@ -32,7 +128,8 @@ export const testBackendConnection = async () => {
           return true;
         }
       } catch (urlError) {
-        console.log('❌ Error probando URL:', url, urlError.message);
+        const errorMessage = urlError instanceof Error ? urlError.message : 'Error desconocido';
+        console.log('❌ Error probando URL:', url, errorMessage);
         continue;
       }
     }
@@ -230,10 +327,38 @@ class ApiService {
   }
 
   async updateProfileImage(imageUri: string): Promise<ProfileImageResponse> {
-    const token = await storage.getItem(StorageKeys.TOKEN);
+  // Limpiar token corrupto automáticamente
+  const wasCleaned = await cleanCorruptedToken();
+  if (wasCleaned) {
+    throw new Error('Token corrupto detectado. Por favor, inicia sesión nuevamente.');
+  }
+
+  let token = await storage.getItem(StorageKeys.TOKEN);
+  console.log('🔐 Token obtenido del storage:', typeof token, token);
+
+  if (!token) {
+    throw new Error('No se encontró el token de autenticación');
+  }
+
+  // Si el token es un objeto, intentar regenerarlo
+  if (typeof token === 'object') {
+    console.log('🔐 Token detectado como objeto, regenerando...');
+    token = await regenerateToken();
     if (!token) {
-      throw new Error('No se encontró el token de autenticación');
+      throw new Error('No se pudo regenerar el token');
     }
+  }
+
+  // Asegurar que el token sea una cadena
+  const tokenString = typeof token === 'string' ? token : JSON.stringify(token);
+  console.log('🔐 Token final a enviar:', typeof tokenString, tokenString.substring(0, 50) + '...');
+
+  // Verificar que el token no sea [object Object]
+  if (tokenString === '[object Object]') {
+    console.log('❌ Token es [object Object], limpiando sesión...');
+    await clearInvalidSession();
+    throw new Error('Token corrupto. Por favor, inicia sesión nuevamente.');
+  }
 
     const formData = new FormData();
     formData.append('profileImage', {
@@ -242,22 +367,53 @@ class ApiService {
       name: 'profile.jpg',
     } as any);
 
-    const response = await fetch(API_ENDPOINTS.AUTH.UPDATE_PROFILE_IMAGE, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
-      },
-      body: formData,
-    });
+    try {
+      console.log('🔍 Enviando request a:', API_ENDPOINTS.AUTH.UPDATE_PROFILE_IMAGE);
+      console.log('🔍 Método:', 'PUT');
+      console.log('🔍 FormData creado con imagen:', imageUri);
+      
+      const response = await fetch(API_ENDPOINTS.AUTH.UPDATE_PROFILE_IMAGE, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${tokenString}`,
+          // No establecer Content-Type manualmente para FormData
+          // El navegador lo establece automáticamente con el boundary correcto
+        },
+        body: formData,
+      });
+      
+      console.log('🔍 Response status:', response.status);
+      console.log('🔍 Response headers:', response.headers);
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Error al actualizar la imagen de perfil');
+      if (!response.ok) {
+        // Si el error es 401 (token inválido), limpiar el token
+        if (response.status === 401) {
+          await clearInvalidSession();
+          throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+        }
+        throw new Error(data.error || 'Error al actualizar la imagen de perfil');
+      }
+
+      // Si la actualización fue exitosa, solo retornar los datos
+      console.log('✅ Imagen actualizada exitosamente');
+      return data;
+    } catch (error) {
+      console.error('❌ Error en updateProfileImage:', error);
+      
+      // Si hay un error de red o token malformado, limpiar el token
+      if (error instanceof Error) {
+        if (error.message.includes('jwt malformed') || error.message.includes('Token inválido')) {
+          await clearInvalidSession();
+          throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+        }
+        if (error.message.includes('Sesión expirada')) {
+          throw error; // Re-lanzar errores de sesión expirada
+        }
+      }
+      throw error;
     }
-
-    return data;
   }
 
   async toggleLike(visitaId: number, token: string): Promise<LikeResponse> {
@@ -311,36 +467,67 @@ class ApiService {
   }
 
   async makeAuthenticatedRequest(
-    endpoint: string,
-    token: string,
-    options: RequestInit = {}
-  ) {
-    const url = `${API_URL}${endpoint}`;
-    console.log('makeAuthenticatedRequest - URL:', url);
-    console.log('makeAuthenticatedRequest - Method:', options.method || 'GET');
-    
+  endpoint: string,
+  token: string,
+  options: RequestInit = {}
+) {
+  // Limpiar token corrupto automáticamente
+  const wasCleaned = await cleanCorruptedToken();
+  if (wasCleaned) {
+    throw new Error('Token corrupto detectado. Por favor, inicia sesión nuevamente.');
+  }
+
+  const url = `${API_URL}${endpoint}`;
+  console.log('makeAuthenticatedRequest - URL:', url);
+  console.log('makeAuthenticatedRequest - Method:', options.method || 'GET');
+  console.log('🔐 Token recibido en makeAuthenticatedRequest:', typeof token, token ? token.substring(0, 50) + '...' : 'null');
+
+  // Verificar que el token no sea [object Object]
+  if (token === '[object Object]') {
+    console.log('❌ Token es [object Object], limpiando sesión...');
+    await clearInvalidSession();
+    throw new Error('Token corrupto. Por favor, inicia sesión nuevamente.');
+  }
+
+  // Asegurar que el token sea una cadena
+  const tokenString = typeof token === 'string' ? token : JSON.stringify(token);
+
+  try {
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${tokenString}`,
         ...(options.headers || {}),
       },
     });
 
     console.log('makeAuthenticatedRequest - Response status:', response.status);
-    
+
     const data = await response.json();
     console.log('makeAuthenticatedRequest - Response data:', data);
 
     if (!response.ok) {
+      // Si el error es 401 (token inválido), limpiar el token
+      if (response.status === 401) {
+        await clearInvalidSession();
+        throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+      }
       throw new Error(data.error || 'Error en la solicitud autenticada');
     }
 
     return data;
-  }
+  } catch (error) {
+    // Si hay un error de red o token malformado, limpiar el token
+    if (error instanceof Error && error.message.includes('jwt malformed')) {
+      await clearInvalidSession();
+      throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+    }
+    throw error;
+    }
+}
 
-  async getComentarios(visitaId: number): Promise<any> {
+async getComentarios(visitaId: number): Promise<any> {
     const token = await storage.getItem(StorageKeys.TOKEN);
     if (!token) throw new Error('No se encontró el token de autenticación');
 
@@ -517,3 +704,21 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
+
+// Función para recuperar datos del usuario desde el backend
+export const fetchUserData = async (): Promise<User | null> => {
+  try {
+    const token = await storage.getItem(StorageKeys.TOKEN);
+    if (!token) {
+      console.log('❌ No hay token para recuperar datos del usuario');
+      return null;
+    }
+
+    const response = await apiService.makeAuthenticatedRequest('/auth/me', token);
+    console.log('✅ Datos del usuario recuperados:', response);
+    return response.user;
+  } catch (error) {
+    console.error('❌ Error recuperando datos del usuario:', error);
+    return null;
+  }
+};

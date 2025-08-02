@@ -42,6 +42,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const storedToken = await storage.getItem(StorageKeys.TOKEN);
       const storedUser = await storage.getItem(StorageKeys.USER);
 
+             // Verificar que el token no esté corrupto
+       if (storedToken === '[object Object]' || (storedToken && storedToken.includes('"id"'))) {
+         console.log('❌ Token corrupto detectado en AuthContext, limpiando...');
+         console.log('❌ Token corrupto:', storedToken);
+         await storage.removeItem(StorageKeys.TOKEN);
+         await storage.removeItem(StorageKeys.USER);
+         setToken(null);
+         setUser(null);
+         return;
+       }
+
       if (storedToken && storedUser) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
@@ -66,10 +77,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = useCallback(async (newToken: string, newUser: User) => {
     try {
-      console.log('Saving user:', newUser);
-      await storage.setItem(StorageKeys.TOKEN, newToken);
+      console.log('🔐 LOGIN llamado con:');
+      console.log('🔐 User:', newUser);
+      console.log('🔐 Token type:', typeof newToken);
+      console.log('🔐 Token preview:', newToken ? newToken.substring(0, 50) + '...' : 'null');
+      
+      // Stack trace para debug
+      console.log('🔐 Stack trace:', new Error().stack);
+      
+      // Verificar que los parámetros no sean undefined
+      if (!newToken || !newUser) {
+        console.error('❌ Error: Token o User son undefined');
+        console.error('❌ Token:', newToken);
+        console.error('❌ User:', newUser);
+        throw new Error('Token y User no pueden ser undefined');
+      }
+      
+      // Verificar que newToken sea realmente un token JWT, no un objeto usuario
+      if (typeof newToken === 'object') {
+        console.error('❌ Error: Se está intentando guardar un objeto como token');
+        throw new Error('Token inválido: se está guardando un objeto en lugar del token JWT');
+      }
+      
+      // Verificar que no sea un objeto JSON stringificado
+      if (typeof newToken === 'string' && (newToken.includes('"id"') || newToken.startsWith('{'))) {
+        console.error('❌ Error: Se está intentando guardar un objeto JSON como token');
+        throw new Error('Token inválido: se está guardando un objeto JSON en lugar del token JWT');
+      }
+      
+      // Asegurar que el token sea string
+      const tokenString = typeof newToken === 'string' ? newToken : JSON.stringify(newToken);
+      
+      await storage.setItem(StorageKeys.TOKEN, tokenString);
       await storage.setItem(StorageKeys.USER, JSON.stringify(newUser));
-      setToken(newToken);
+      setToken(tokenString);
       setUser(newUser);
     } catch (error) {
       console.error('Error during login:', error);
@@ -79,8 +120,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateUser = useCallback(async (updatedUser: User) => {
     try {
+      console.log('🔄 Actualizando usuario en AuthContext:', updatedUser);
+      
+      // Verificar que el usuario no sea undefined o null
+      if (!updatedUser) {
+        console.error('❌ Error: updatedUser es undefined o null');
+        throw new Error('Usuario no puede ser undefined');
+      }
+      
       await storage.setItem(StorageKeys.USER, JSON.stringify(updatedUser));
       setUser(updatedUser);
+      console.log('✅ Usuario actualizado exitosamente en AuthContext');
     } catch (error) {
       console.error('Error updating user:', error);
       throw error;

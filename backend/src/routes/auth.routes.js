@@ -12,9 +12,17 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB máximo
   },
   fileFilter: (req, file, cb) => {
+    console.log('📁 Multer procesando archivo:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype
+    });
+    
     if (file.mimetype.startsWith('image/')) {
+      console.log('✅ Archivo de imagen válido');
       cb(null, true);
     } else {
+      console.log('❌ Archivo no es imagen:', file.mimetype);
       cb(new Error('El archivo debe ser una imagen'));
     }
   }

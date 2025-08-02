@@ -87,30 +87,48 @@ export const login = async (req, res) => {
 };
 
 export const updateProfileImage = async (req, res) => {
+  console.log('🖼️ Iniciando actualización de imagen de perfil');
+  console.log('🖼️ Usuario ID:', req.user?.id);
+  console.log('🖼️ Archivo recibido:', req.file ? 'Sí' : 'No');
+  
   try {
     if (!req.file) {
+      console.log('❌ No se proporcionó archivo');
       return res.status(400).json({ error: 'No se proporcionó ninguna imagen' });
     }
+
+    console.log('🖼️ Archivo recibido:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      path: req.file.path
+    });
 
     const userId = req.user.id;
     const user = await User.findByPk(userId);
 
     if (!user) {
+      console.log('❌ Usuario no encontrado:', userId);
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
+    console.log('🖼️ Usuario encontrado:', user.name);
+
     // Subir nueva imagen a Cloudinary
+    console.log('🖼️ Subiendo imagen a Cloudinary...');
     const result = await uploadToCloudinary(req.file.path);
+    console.log('🖼️ Imagen subida a Cloudinary:', result.secure_url);
     
     // Actualizar el usuario con la nueva URL de la imagen
     await user.update({ profileImage: result.secure_url });
+    console.log('🖼️ Usuario actualizado con nueva imagen');
 
     res.json({ 
       message: 'Imagen de perfil actualizada exitosamente',
       profileImage: result.secure_url 
     });
   } catch (error) {
-    console.error('Error al actualizar imagen de perfil:', error);
+    console.error('❌ Error al actualizar imagen de perfil:', error);
     res.status(500).json({ error: 'Error al actualizar la imagen de perfil' });
   }
 };
