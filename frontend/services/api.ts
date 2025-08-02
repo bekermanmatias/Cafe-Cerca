@@ -2,6 +2,49 @@
 import { API_URL, API_ENDPOINTS } from '../constants/Config';
 import { storage, StorageKeys } from '../utils/storage';
 
+// Función para probar la conectividad con el backend
+export const testBackendConnection = async () => {
+  try {
+    console.log('🔍 Probando conexión con backend en:', API_URL);
+    
+    // Probar múltiples URLs posibles
+    const possibleUrls = [
+      `${API_URL.replace('/api', '')}/health`,
+      `${API_URL}/health`,
+      'http://localhost:3000/health',
+      'http://192.168.1.100:3000/health', // IP común en redes locales
+      'http://10.0.2.2:3000/health', // Para emulador Android
+    ];
+    
+    for (const url of possibleUrls) {
+      try {
+        console.log('🔍 Probando URL:', url);
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          timeout: 5000, // 5 segundos de timeout
+        });
+        
+        if (response.ok) {
+          console.log('✅ Backend conectado exitosamente en:', url);
+          return true;
+        }
+      } catch (urlError) {
+        console.log('❌ Error probando URL:', url, urlError.message);
+        continue;
+      }
+    }
+    
+    console.log('❌ No se pudo conectar con ninguna URL del backend');
+    return false;
+  } catch (error) {
+    console.error('❌ Error general conectando con backend:', error);
+    return false;
+  }
+};
+
 interface LoginRequest {
   email: string;
   password: string;

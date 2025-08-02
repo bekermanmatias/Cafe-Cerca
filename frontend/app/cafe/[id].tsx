@@ -17,11 +17,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import TagChip from '../../components/TagChip';
 import DireccionIcon from '../../assets/icons/direccion.svg';
 import HorarioIcon from '../../assets/icons/horario.svg';
+import IrDireccionIcon from '../../assets/icons/irdireccion.svg';
 import { API_URL } from '../../constants/Config';
 import { VisitCard } from '../../components/VisitCard';
 import { useAuth } from '../../context/AuthContext';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
-import { apiService } from '../../services/api';
+import { apiService, testBackendConnection } from '../../services/api';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
 interface Tag {
@@ -215,14 +216,14 @@ export default function CafeDetail() {
   }, [token, cafeData.cafe?.id]);
 
   const handleLoadMore = useCallback(() => {
-    if (!loadingStates.more && pagination.hasMore && visitas && visitas.length > 0) {
+    if (!loadingStates.more && pagination.hasMore && cafeData.visitas && cafeData.visitas.length > 0) {
       fetchCafe(pagination.currentPage + 1);
     }
-  }, [loadingStates.more, pagination.hasMore, pagination.currentPage, fetchCafe, visitas]);
+  }, [loadingStates.more, pagination.hasMore, pagination.currentPage, fetchCafe, cafeData.visitas]);
 
   const onRefresh = useCallback(() => {
     setLoadingStates(prev => ({ ...prev, refreshing: true }));
-    setPagination({ currentPage: 1, hasMore: false });
+    setPagination({ currentPage: 1, hasMore: false, totalItems: 0 });
     fetchCafe(1);
   }, [fetchCafe]);
 
@@ -276,6 +277,8 @@ export default function CafeDetail() {
 
   // Effects
   useEffect(() => {
+    // Probar conectividad con el backend al cargar
+    testBackendConnection();
     fetchCafe();
   }, [fetchCafe]);
 
@@ -304,148 +307,146 @@ export default function CafeDetail() {
   const { cafe, visitas = [], isSaved } = cafeData;
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={loadingStates.refreshing}
-          onRefresh={onRefresh}
-          colors={['#8D6E63']}
-          tintColor="#8D6E63"
-        />
-      }
-    >
-      {/* Header Image */}
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: cafe.imageUrl }} style={styles.image} />
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={handleGoBack}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Info Container */}
-      <View style={styles.infoContainer}>
-        {/* Title and Save Button */}
-        <View style={styles.titleRow}>
-          <Text style={styles.name}>{cafe.name}</Text>
+    <View style={styles.container}>
+      <ScrollView 
+        style={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={loadingStates.refreshing}
+            onRefresh={onRefresh}
+            colors={['#8D6E63']}
+            tintColor="#8D6E63"
+          />
+        }
+      >
+        {/* Header Image */}
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: cafe.imageUrl }} style={styles.image} />
           <TouchableOpacity 
-            style={styles.saveButton} 
-            onPress={handleSave}
+            style={styles.backButton} 
+            onPress={handleGoBack}
             activeOpacity={0.7}
           >
-            <Text style={styles.saveButtonText}>
-              {isSaved ? 'Guardada' : 'Guardar'}
-            </Text>
-            <MaterialIcons 
-              name={isSaved ? "bookmark" : "bookmark-outline"} 
-              size={20} 
-              color="#FFFFFF" 
-            />
+            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
+        {/* Info Container */}
+        <View style={styles.infoContainer}>
+                     {/* Title and Save Button */}
+           <View style={styles.titleRow}>
+             <Text style={styles.name}>{cafe.name}</Text>
+             <View style={styles.buttonsContainer}>
+               <TouchableOpacity 
+                 style={styles.saveButton} 
+                 onPress={handleSave}
+                 activeOpacity={0.7}
+               >
+                                 <MaterialIcons 
+                  name={isSaved ? "bookmark" : "bookmark-outline"} 
+                  size={32} 
+                  color="#8D6E63" 
+                />
+               </TouchableOpacity>
+             </View>
+           </View>
 
-        {/* Tags */}
-        <View style={styles.tagsWrapper}>
-          {displayedTags.map((tag) => (
-            <View key={tag.id} style={styles.tagItem}>
-              <SafeIcon iconName={tag.icono} />
-              <Text style={styles.tagText} numberOfLines={1}>
-                {tag.nombre}
-              </Text>
+          {/* Tags */}
+          <View style={styles.tagsWrapper}>
+            {displayedTags.map((tag) => (
+              <View key={tag.id} style={styles.tagItem}>
+                <SafeIcon iconName={tag.icono} />
+                <Text style={styles.tagText} numberOfLines={1}>
+                  {tag.nombre}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+                                {/* Address */}
+           <View style={styles.infoRow}>
+             <View style={styles.iconBox}>
+               <DireccionIcon width={24} height={24} style={styles.iconSvg} />
+             </View>
+             <Text
+               style={styles.infoText}
+               numberOfLines={2}
+               ellipsizeMode="tail"
+             >
+               {cafe.address}
+             </Text>
+             <TouchableOpacity 
+               style={styles.irButton} 
+               onPress={onIrDireccionIconPress}
+               activeOpacity={0.7}
+             >
+                               <IrDireccionIcon width={32} height={32} style={styles.iconSvg} />
+             </TouchableOpacity>
+           </View>
+
+           {/* Opening Hours */}
+           <View style={styles.infoRow}>
+             <View style={styles.iconBox}>
+               <HorarioIcon width={24} height={24} style={styles.iconSvg} />
+             </View>
+             <Text style={styles.infoText}>{cafe.openingHours}</Text>
+           </View>
+
+          {/* Reviews Header */}
+          <View style={styles.reviewsHeader}>
+            <View style={styles.ratingContainer}>
+              <Text style={styles.reviewsTitle}>Reseñas</Text>
+              <View style={styles.ratingDisplay}>
+                <Ionicons name="star" size={20} color="#FFD700" />
+                <Text style={styles.ratingValue}>{cafe.rating.toFixed(1)}</Text>
+              </View>
             </View>
-          ))}
+            <TouchableOpacity 
+              style={styles.visitarButton} 
+              onPress={handleVisitar} 
+              activeOpacity={0.7}
+            >
+              <Text style={styles.visitarText}>Visitar</Text>
+              <MaterialIcons name="edit" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Address */}
-        <View style={styles.row}>
-          <View style={styles.iconBox}>
-            <DireccionIcon width={20} height={20} style={styles.iconSvg} />
-          </View>
-          <Text
-            style={[styles.infoText, { flex: 1 }]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
+        {/* Visit Cards */}
+        {visitas && visitas.map((visita) => (
+          <VisitCard
+            key={visita.id}
+            visit={visita}
+            onLikeChange={(liked) => handleLikeChange(visita.id, liked, visita.likesCount)}
+            onShare={() => handleShare(visita.id)}
+            onDetails={() => handleDetails(visita)}
+          />
+        ))}
+
+        {/* Load More Button */}
+        {pagination.hasMore && visitas && visitas.length > 0 && visitas.length < pagination.totalItems && !loadingStates.more && (
+          <TouchableOpacity
+            style={styles.loadMoreButton}
+            onPress={handleLoadMore}
+            disabled={loadingStates.more}
           >
-            {cafe.address}
-          </Text>
-          <TouchableOpacity 
-            style={styles.irButton} 
-            onPress={onIrDireccionIconPress}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.irButtonText}>Ir</Text>
-            <MaterialIcons name="directions" size={20} color="#FFFFFF" />
+            <Text style={styles.loadMoreText}>Ver más reseñas</Text>
           </TouchableOpacity>
-        </View>
+        )}
 
-        {/* Opening Hours */}
-        <View style={styles.row}>
-          <View style={styles.iconBox}>
-            <HorarioIcon width={20} height={20} style={styles.iconSvg} />
+        {/* Loading indicator when loading more */}
+        {loadingStates.more && (
+          <View style={styles.loadMoreButton}>
+            <ActivityIndicator size="small" color="#FFFFFF" />
           </View>
-          <Text style={styles.infoText}>{cafe.openingHours}</Text>
-        </View>
-
-        {/* Reviews Header */}
-        <View style={styles.reviewsHeader}>
-          <View style={styles.ratingContainer}>
-            <Text style={styles.reviewsTitle}>Reseñas</Text>
-            <View style={styles.ratingDisplay}>
-              <Text style={styles.ratingValue}>{cafe.rating.toFixed(1)}</Text>
-              <Ionicons name="star" size={20} color="#FFD700" />
-            </View>
-          </View>
-          <TouchableOpacity 
-            style={styles.visitarButton} 
-            onPress={handleVisitar} 
-            activeOpacity={0.7}
-          >
-            <Text style={styles.visitarText}>Visitar</Text>
-            <MaterialIcons name="edit" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Visit Cards */}
-      {visitas && visitas.map((visita) => (
-        <VisitCard
-          key={visita.id}
-          visit={visita}
-          onLikeChange={(liked) => handleLikeChange(visita.id, liked, visita.likesCount)}
-          onShare={() => handleShare(visita.id)}
-          onDetails={() => handleDetails(visita)}
-        />
-      ))}
-
-      {/* Load More Button */}
-      {pagination.hasMore && visitas && visitas.length > 0 && visitas.length < pagination.totalItems && !loadingStates.more && (
-        <TouchableOpacity
-          style={styles.loadMoreButton}
-          onPress={handleLoadMore}
-          disabled={loadingStates.more}
-        >
-          <Text style={styles.loadMoreText}>Ver más reseñas</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Loading indicator when loading more */}
-      {loadingStates.more && (
-        <View style={styles.loadMoreButton}>
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        </View>
-      )}
-    </ScrollView>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
+    flex: 1,
   },
   center: {
     flex: 1,
@@ -454,19 +455,19 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'relative',
-    marginBottom: 16,
+    height: 250,
   },
   image: {
     width: '100%',
-    height: 220,
+    height: '100%',
   },
   backButton: {
     position: 'absolute',
-    top: 40,
+    top: 50,
     left: 16,
-    backgroundColor: '#8D6E63',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     padding: 8,
-    borderRadius: 10,
+    borderRadius: 20,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: {
@@ -476,71 +477,88 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: '#FFF',
+  },
   infoContainer: {
     paddingHorizontal: 16,
+    paddingTop: 16,
   },
   name: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#8D6E63',
     flex: 1,
+    marginBottom: 8,
   },
   tagsWrapper: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    marginBottom: 20,
     gap: 8,
   },
   tagItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: '#E8D5B7',
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F5E9DC',
     marginBottom: 4,
   },
   tagIcon: {
     marginRight: 6,
   },
   tagText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B4423',
-    fontWeight: '600',
+    fontWeight: '500',
   },
-  row: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
   infoText: {
     fontSize: 16,
     color: '#34495E',
+    flex: 1,
+    marginLeft: 12,
+    lineHeight: 22,
   },
   iconSvg: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
   },
   iconBox: {
     backgroundColor: '#F5E9DC',
-    padding: 6,
-    borderRadius: 8,
-    marginRight: 8,
+    padding: 8,
+    borderRadius: 10,
   },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    marginBottom: 16,
     width: '100%',
+  },
+  buttonsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   reviewsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 24,
-    marginBottom: 12,
+    marginBottom: 16,
     width: '100%',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E8E8E8',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -548,14 +566,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   reviewsTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#8D6E63',
   },
   ratingValue: {
-    color: '#000000',
+    color: '#8D6E63',
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: 18,
   },
   ratingDisplay: {
     flexDirection: 'row',
@@ -591,31 +609,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#8D6E63',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    padding: 10,
     borderRadius: 20,
-    gap: 6,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    marginTop: -8,
   },
   irButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#8D6E63',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    padding: 10,
     borderRadius: 20,
-    gap: 6,
-  },
-  irButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    marginLeft: 8,
   },
 });

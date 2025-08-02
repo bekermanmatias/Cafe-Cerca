@@ -5,12 +5,28 @@ const getApiUrl = () => {
   if (__DEV__) {
     // En desarrollo, obtener la IP dinámica del manifest de Expo
     const hostUri = Constants.expoConfig?.hostUri;
+    console.log('🔍 Debug - hostUri:', hostUri);
+    
     if (hostUri) {
       // hostUri tiene el formato "192.168.x.x:19000"
       const devServerIp = hostUri.split(':')[0];
-      return `http://${devServerIp}:3000/api`;
+      const apiUrl = `http://${devServerIp}:3000/api`;
+      console.log('✅ API URL configurada:', apiUrl);
+      return apiUrl;
     }
-    console.warn('No se pudo obtener la IP del servidor de desarrollo. Usando localhost.');
+    
+    // Fallback: intentar obtener la IP del servidor de desarrollo
+    const debugHost = Constants.expoConfig?.hostUri?.split(':')[0];
+    console.log('🔍 Debug - debugHost:', debugHost);
+    
+    if (debugHost) {
+      const apiUrl = `http://${debugHost}:3000/api`;
+      console.log('✅ API URL configurada (debugHost):', apiUrl);
+      return apiUrl;
+    }
+    
+    // Fallback adicional: usar localhost para emuladores
+    console.warn('⚠️ No se pudo obtener la IP del servidor de desarrollo. Usando localhost.');
     return 'http://localhost:3000/api';
   }
   

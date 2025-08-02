@@ -117,7 +117,7 @@ export default function FriendsScreen() {
         style={styles.deleteButton}
         onPress={() => eliminarAmigo(item.id, item.name)}
       >
-        <Ionicons name="trash-outline" size={20} color="#dc3545" />
+        <Ionicons name="trash-outline" size={20} color="#666666" />
       </TouchableOpacity>
     </View>
   );
@@ -243,6 +243,6 @@ const styles = StyleSheet.create({
   deleteButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#FF4444',
+    backgroundColor: '#E8E8E8',
   },
 });
