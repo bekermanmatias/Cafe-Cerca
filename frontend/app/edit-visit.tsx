@@ -11,6 +11,11 @@ import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 
 const STANDARD_SIZE = 1080;
+interface Tag {
+  id: number;
+  nombre: string;
+  icono: string;
+}
 
 interface Cafe {
   id: number;
@@ -18,7 +23,7 @@ interface Cafe {
   address: string;
   rating: number;
   imageUrl: string | null;
-  tags: string[];
+  tags: Tag[];  // ahora es array de objetos Tag
   openingHours: string;
 }
 

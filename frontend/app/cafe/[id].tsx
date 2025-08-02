@@ -1,5 +1,5 @@
 // app/cafe/[id].tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,50 +17,35 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import TagChip from '../../components/TagChip';
 import DireccionIcon from '../../assets/icons/direccion.svg';
 import HorarioIcon from '../../assets/icons/horario.svg';
-import IrDireccionIcon from '../../assets/icons/irdireccion.svg';
-import Lapiz from '../../assets/icons/lapiz.svg';
 import { API_URL } from '../../constants/Config';
 import { VisitCard } from '../../components/VisitCard';
 import { useAuth } from '../../context/AuthContext';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
-type Cafe = {
+interface Tag {
+  id: number;
+  nombre: string;
+  icono: string;
+}
+
+interface Cafe {
   id: number;
   name: string;
   address: string;
-  imageUrl: string;
-  tags: string[];
   rating: number;
+  imageUrl: string;
+  etiquetas: Tag[];
   openingHours: string;
-  lat: number;
-  lng: number;
-};
-
-type Usuario = {
-  id: number;
-  name: string;
-  profileImage: string | null;
-};
-
-type Reseña = {
-  id: number;
-  usuarioId: number;
-  comentario: string;
-  calificacion: number;
-  fecha: string;
-  visitaImagenes: Array<{
-    imageUrl: string;
-    orden: number;
-  }>;
-  usuario: Usuario;
-  likesCount: number;
-};
+  lat?: number;
+  lng?: number;
+}
 
 type CafeResponse = {
   cafe: Cafe;
   visitas: {
-    items: any[]; // Usando any[] para compatibilidad con la estructura de VisitCard
+    items: any[];
     total: number;
     totalPages: number;
     currentPage: number;
@@ -68,92 +53,238 @@ type CafeResponse = {
   };
 };
 
+// Componente para iconos seguros
+const SafeIcon = React.memo(({ iconName }: { iconName: string }) => {
+  // Mapeo de iconos problemáticos a iconos válidos
+  const iconMap: { [key: string]: string } = {
+    'shield': 'shield-alt',
+    'volume-x': 'volume-mute',
+    'utensils': 'utensils',
+    'coffee': 'coffee',
+    'wifi': 'wifi',
+    // Agrega más mapeos según necesites
+  };
+
+  const validIconName = iconMap[iconName] || 'tag'; // 'tag' como fallback
+
+  try {
+    return (
+      <FontAwesome5 
+        name={validIconName} 
+        size={14} 
+        color="#8D6E63" 
+        style={styles.tagIcon} 
+      />
+    );
+  } catch (error) {
+    // Si el icono falla, mostramos un icono genérico
+    return (
+      <FontAwesome5 
+        name="tag" 
+        size={14} 
+        color="#8D6E63" 
+        style={styles.tagIcon} 
+      />
+    );
+  }
+});
+
 export default function CafeDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [cafe, setCafe] = useState<Cafe | null>(null);
-  const [visitas, setVisitas] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const { token } = useAuth();
 
-  const fetchCafe = async (page = 1) => {
+  // Estados agrupados por funcionalidad
+  const [cafeData, setCafeData] = useState<{
+    cafe: Cafe | null;
+    visitas: any[];
+    isSaved: boolean;
+  }>({
+    cafe: null,
+    visitas: [],
+    isSaved: false,
+  });
+
+  const [loadingStates, setLoadingStates] = useState({
+    initial: true,
+    more: false,
+    refreshing: false,
+  });
+
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    hasMore: false,
+    totalItems: 0,
+  });
+
+  // Memoización de valores computados
+  const displayedTags = useMemo(() => 
+    cafeData.cafe?.etiquetas || [], // Mostrar TODAS las etiquetas
+    [cafeData.cafe?.etiquetas]
+  );
+
+  const mapUrl = useMemo(() => {
+    if (!cafeData.cafe) return null;
+    
+    const { cafe } = cafeData;
+    if (cafe.lat && cafe.lng) {
+      const label = encodeURIComponent(cafe.name || 'Cafetería');
+      return Platform.select({
+        ios: `maps:0,0?q=${label}@${cafe.lat},${cafe.lng}`,
+        android: `geo:0,0?q=${cafe.lat},${cafe.lng}(${label})`,
+      });
+    }
+    
+    const address = encodeURIComponent(cafe.address);
+    return `https://www.google.com/maps/search/?api=1&query=${address}`;
+  }, [cafeData.cafe]);
+
+  // Función optimizada para fetch
+  const fetchCafe = useCallback(async (page = 1) => {
     try {
       const isFirstLoad = page === 1;
-      if (isFirstLoad) setLoading(true);
-      else setLoadingMore(true);
+      
+      setLoadingStates(prev => ({
+        ...prev,
+        initial: isFirstLoad,
+        more: !isFirstLoad,
+        refreshing: false,
+      }));
 
       const res = await fetch(`${API_URL}/cafes/${id}?page=${page}&limit=3`);
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
+      
       const data: CafeResponse = await res.json();
       
-      if (isFirstLoad) {
-        setCafe(data.cafe);
-        setVisitas(data.visitas.items);
-      } else {
-        setVisitas(prev => [...prev, ...data.visitas.items]);
-      }
+      setCafeData(prev => ({
+        ...prev,
+        cafe: data.cafe,
+        visitas: isFirstLoad ? data.visitas.items : [...prev.visitas, ...data.visitas.items],
+      }));
       
-      setHasMore(data.visitas.hasMore);
-      setCurrentPage(data.visitas.currentPage);
+      setPagination({
+        currentPage: data.visitas.currentPage,
+        hasMore: data.visitas.hasMore,
+        totalItems: data.visitas.total,
+      });
+      
+      // Debug logging
+      console.log('Cafe fetch response:', {
+        currentPage: data.visitas.currentPage,
+        hasMore: data.visitas.hasMore,
+        totalItems: data.visitas.total,
+        itemsReceived: data.visitas.items.length,
+        totalPages: data.visitas.totalPages
+      });
+      
     } catch (error) {
       console.error('Error fetching cafe:', error);
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
-      setRefreshing(false);
+      setLoadingStates({
+        initial: false,
+        more: false,
+        refreshing: false,
+      });
     }
-  };
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setCurrentPage(1);
-    fetchCafe(1);
-  }, []);
-
-  useEffect(() => {
-    fetchCafe();
   }, [id]);
 
-  useEffect(() => {
-    if (token && cafe?.id) {
-      checkSavedStatus();
-    }
-  }, [cafe?.id, token]);
-
-  const checkSavedStatus = async () => {
-    if (!token || !cafe?.id) return;
+  // Función para verificar estado guardado
+  const checkSavedStatus = useCallback(async () => {
+    if (!token || !cafeData.cafe?.id) return;
+    
     try {
-      const response = await apiService.getSavedStatus(cafe.id, token);
-      setIsSaved(response.saved);
+      const response = await apiService.getSavedStatus(cafeData.cafe.id, token);
+      setCafeData(prev => ({ ...prev, isSaved: response.saved }));
     } catch (error) {
       console.error('Error al obtener estado de guardado:', error);
     }
-  };
+  }, [token, cafeData.cafe?.id]);
 
-  const handleSave = async () => {
-    if (!token || !cafe?.id) return;
+  // Handlers optimizados
+  const handleSave = useCallback(async () => {
+    if (!token || !cafeData.cafe?.id) return;
+    
     try {
-      const response = await apiService.toggleSavedCafe(cafe.id, token);
-      setIsSaved(response.saved);
+      const response = await apiService.toggleSavedCafe(cafeData.cafe.id, token);
+      setCafeData(prev => ({ ...prev, isSaved: response.saved }));
     } catch (error) {
       console.error('Error al guardar cafetería:', error);
     }
-  };
+  }, [token, cafeData.cafe?.id]);
 
-  const handleLoadMore = () => {
-    if (!loadingMore && hasMore) {
-      fetchCafe(currentPage + 1);
+  const handleLoadMore = useCallback(() => {
+    if (!loadingStates.more && pagination.hasMore && visitas && visitas.length > 0) {
+      fetchCafe(pagination.currentPage + 1);
     }
-  };
+  }, [loadingStates.more, pagination.hasMore, pagination.currentPage, fetchCafe, visitas]);
 
-  if (loading) {
+  const onRefresh = useCallback(() => {
+    setLoadingStates(prev => ({ ...prev, refreshing: true }));
+    setPagination({ currentPage: 1, hasMore: false });
+    fetchCafe(1);
+  }, [fetchCafe]);
+
+  const onIrDireccionIconPress = useCallback(() => {
+    if (!mapUrl) return;
+    
+    Linking.openURL(mapUrl).catch(err =>
+      console.error('Error abriendo mapa:', err)
+    );
+  }, [mapUrl]);
+
+  const handleVisitar = useCallback(() => {
+    if (!cafeData.cafe) return;
+    
+    router.push({
+      pathname: '/add-visit',
+      params: {
+        preselectedCafeId: cafeData.cafe.id,
+        preselectedCafeName: cafeData.cafe.name
+      }
+    });
+  }, [router, cafeData.cafe]);
+
+  const handleLikeChange = useCallback((visitId: number, liked: boolean, likesCount: number) => {
+    setCafeData(prev => ({
+      ...prev,
+      visitas: prev.visitas.map(visita => 
+        visita.id === visitId 
+          ? { ...visita, isLiked: liked, likesCount }
+          : visita
+      )
+    }));
+  }, []);
+
+  const handleShare = useCallback((visitId: number) => {
+    // Implementar lógica de compartir
+  }, []);
+
+  const handleDetails = useCallback((visit: any) => {
+    router.push({
+      pathname: '/visit-details',
+      params: {
+        visitId: visit.id.toString()
+      }
+    });
+  }, [router]);
+
+  const handleGoBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  // Effects
+  useEffect(() => {
+    fetchCafe();
+  }, [fetchCafe]);
+
+  useEffect(() => {
+    checkSavedStatus();
+  }, [checkSavedStatus]);
+
+  // Renders condicionales
+  if (loadingStates.initial) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#7D3C98" />
@@ -162,7 +293,7 @@ export default function CafeDetail() {
     );
   }
 
-  if (!cafe) {
+  if (!cafeData.cafe) {
     return (
       <View style={styles.center}>
         <Text>No se encontró la cafetería 😢</Text>
@@ -170,128 +301,70 @@ export default function CafeDetail() {
     );
   }
 
-  const displayedTags = cafe.tags.slice(0, 4);
-
-  const onGuardarPress = () => {
-
-  };
-
-const onIrDireccionIconPress = () => {
-  if (!cafe) return;
-
-  const lat = (cafe as any).lat;  // temporal, idealmente tipar bien Café
-  const lng = (cafe as any).lng;
-
-  if (lat && lng) {
-    const label = encodeURIComponent(cafe.name || 'Cafetería');
-    const url = Platform.select({
-      ios: `maps:0,0?q=${label}@${lat},${lng}`,
-      android: `geo:0,0?q=${lat},${lng}(${label})`,
-    });
-
-    if (url) {
-      Linking.openURL(url).catch(err =>
-        console.error('Error abriendo Google Maps:', err)
-      );
-    }
-  } else {
-    // fallback: dirección textual
-    const address = encodeURIComponent(cafe.address);
-    const url = `https://www.google.com/maps/search/?api=1&query=${address}`;
-
-    Linking.openURL(url).catch(err =>
-      console.error('Error abriendo Google Maps con dirección:', err)
-    );
-  }
-};
-
-  const handleVisitar = () => {
-    router.push({
-      pathname: '/add-visit',
-      params: {
-        preselectedCafeId: cafe?.id,
-        preselectedCafeName: cafe?.name
-      }
-    });
-  };
-
-  const handleLike = () => {
-
-  };
-
-  const handleShare = (visitId: number) => {
-
-  };
-
-  const handleDetails = (visit: any) => {
-    router.push({
-      pathname: '/visit-details',
-      params: {
-        visitId: visit.id.toString()
-      }
-    });
-  };
-
-  const handleLikeChange = (visitId: number, liked: boolean, likesCount: number) => {
-    // Actualizar el estado local de las visitas cuando cambia un like
-    setVisitas(prevVisitas => 
-      prevVisitas.map(visita => 
-        visita.id === visitId 
-          ? { ...visita, isLiked: liked, likesCount }
-          : visita
-      )
-    );
-  };
+  const { cafe, visitas = [], isSaved } = cafeData;
 
   return (
     <ScrollView 
       style={styles.container}
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
+          refreshing={loadingStates.refreshing}
           onRefresh={onRefresh}
           colors={['#8D6E63']}
           tintColor="#8D6E63"
         />
       }
     >
+      {/* Header Image */}
       <View style={styles.imageContainer}>
         <Image source={{ uri: cafe.imageUrl }} style={styles.image} />
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={handleGoBack}
+          activeOpacity={0.7}
+        >
+          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
+      {/* Info Container */}
       <View style={styles.infoContainer}>
+        {/* Title and Save Button */}
         <View style={styles.titleRow}>
           <Text style={styles.name}>{cafe.name}</Text>
-
-          <View style={styles.iconsRight}>
-            <TouchableOpacity 
-              style={styles.saveButton} 
-              onPress={handleSave}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.saveButtonText}>
-                {isSaved ? 'Guardada' : 'Guardar'}
-              </Text>
-              <MaterialIcons 
-                name={isSaved ? "bookmark" : "bookmark-outline"} 
-                size={20} 
-                color="#FFFFFF" 
-              />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={styles.saveButton} 
+            onPress={handleSave}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.saveButtonText}>
+              {isSaved ? 'Guardada' : 'Guardar'}
+            </Text>
+            <MaterialIcons 
+              name={isSaved ? "bookmark" : "bookmark-outline"} 
+              size={20} 
+              color="#FFFFFF" 
+            />
+          </TouchableOpacity>
         </View>
 
+        {/* Tags */}
         <View style={styles.tagsWrapper}>
-          {displayedTags.map((tag, index) => (
-            <TagChip key={index} label={`${tag}`} />
+          {displayedTags.map((tag) => (
+            <View key={tag.id} style={styles.tagItem}>
+              <SafeIcon iconName={tag.icono} />
+              <Text style={styles.tagText} numberOfLines={1}>
+                {tag.nombre}
+              </Text>
+            </View>
           ))}
         </View>
 
+        {/* Address */}
         <View style={styles.row}>
           <View style={styles.iconBox}>
             <DireccionIcon width={20} height={20} style={styles.iconSvg} />
           </View>
-
           <Text
             style={[styles.infoText, { flex: 1 }]}
             numberOfLines={1}
@@ -299,7 +372,6 @@ const onIrDireccionIconPress = () => {
           >
             {cafe.address}
           </Text>
-
           <TouchableOpacity 
             style={styles.irButton} 
             onPress={onIrDireccionIconPress}
@@ -310,6 +382,7 @@ const onIrDireccionIconPress = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Opening Hours */}
         <View style={styles.row}>
           <View style={styles.iconBox}>
             <HorarioIcon width={20} height={20} style={styles.iconSvg} />
@@ -317,7 +390,7 @@ const onIrDireccionIconPress = () => {
           <Text style={styles.infoText}>{cafe.openingHours}</Text>
         </View>
 
-        {/* Reseñas header */}
+        {/* Reviews Header */}
         <View style={styles.reviewsHeader}>
           <View style={styles.ratingContainer}>
             <Text style={styles.reviewsTitle}>Reseñas</Text>
@@ -326,15 +399,19 @@ const onIrDireccionIconPress = () => {
               <Ionicons name="star" size={20} color="#FFD700" />
             </View>
           </View>
-          <TouchableOpacity style={styles.visitarButton} onPress={handleVisitar} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={styles.visitarButton} 
+            onPress={handleVisitar} 
+            activeOpacity={0.7}
+          >
             <Text style={styles.visitarText}>Visitar</Text>
             <MaterialIcons name="edit" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Lista de visitas - fuera del infoContainer para ancho completo */}
-      {visitas.map((visita) => (
+      {/* Visit Cards */}
+      {visitas && visitas.map((visita) => (
         <VisitCard
           key={visita.id}
           visit={visita}
@@ -344,19 +421,22 @@ const onIrDireccionIconPress = () => {
         />
       ))}
 
-      {/* Botón Ver más */}
-      {hasMore && (
+      {/* Load More Button */}
+      {pagination.hasMore && visitas && visitas.length > 0 && visitas.length < pagination.totalItems && !loadingStates.more && (
         <TouchableOpacity
           style={styles.loadMoreButton}
           onPress={handleLoadMore}
-          disabled={loadingMore}
+          disabled={loadingStates.more}
         >
-          {loadingMore ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.loadMoreText}>Ver más reseñas</Text>
-          )}
+          <Text style={styles.loadMoreText}>Ver más reseñas</Text>
         </TouchableOpacity>
+      )}
+
+      {/* Loading indicator when loading more */}
+      {loadingStates.more && (
+        <View style={styles.loadMoreButton}>
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        </View>
       )}
     </ScrollView>
   );
@@ -387,11 +467,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#8D6E63',
     padding: 8,
     borderRadius: 10,
-  },
-  backButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   infoContainer: {
     paddingHorizontal: 16,
@@ -400,12 +483,30 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#8D6E63',
+    flex: 1,
   },
   tagsWrapper: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 16,
     gap: 8,
+  },
+  tagItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: '#E8D5B7',
+    marginBottom: 4,
+  },
+  tagIcon: {
+    marginRight: 6,
+  },
+  tagText: {
+    fontSize: 14,
+    color: '#6B4423',
+    fontWeight: '600',
   },
   row: {
     flexDirection: 'row',
@@ -432,10 +533,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     width: '100%',
-  },
-  iconsRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   reviewsHeader: {
     flexDirection: 'row',
@@ -465,10 +562,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  starIcon: {
-    fontSize: 18,
-    marginLeft: 6,
-  },
   visitarButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -482,12 +575,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '600',
-  },
-
-  reviewsList: {
-    width: '100%',
-    marginTop: 16,
-    gap: 16,
   },
   loadMoreButton: {
     backgroundColor: '#8D6E63',
@@ -531,10 +618,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
-  starsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
-  }
 });

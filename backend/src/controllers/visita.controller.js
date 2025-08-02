@@ -1,4 +1,4 @@
-import { Visita, Cafe, User, VisitaImagen, Like, VisitaParticipante, Resena } from '../models/index.js';
+import { Visita, Cafe, User, VisitaImagen, Like, VisitaParticipante, Resena, Etiqueta } from '../models/index.js';
 import sequelize from '../config/database.js';
 import { Op } from 'sequelize';
 
@@ -13,8 +13,15 @@ const includeImagenes = {
 const includeCafeteria = {
   model: Cafe,
   as: 'cafeteria',
-  attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
-};
+  attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'openingHours'],
+  include: [{
+    model: Etiqueta,
+    as: 'etiquetas',
+    attributes: ['nombre', 'icono'],
+    through: { attributes: [] }
+  }]
+}
+
 
 // Función helper para incluir el creador de la visita
 const includeCreador = {
@@ -169,10 +176,18 @@ export const crearVisita = async (req, res) => {
       where: { id: nuevaVisita.id },
       include: [
         {
-          model: Cafe,
-          as: 'cafeteria',
-          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
-        },
+  model: Cafe,
+  as: 'cafeteria',
+  attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'openingHours'],
+  include: [
+    {
+      model: Etiqueta,
+      as: 'etiquetas',
+      attributes: ['id', 'nombre', 'icono'],
+      through: { attributes: [] } // para no traer datos de la tabla intermedia
+    }
+  ]
+},
         {
           model: User,
           as: 'usuario',
@@ -343,11 +358,19 @@ export const obtenerVisitas = async (req, res) => {
   try {
     const visitas = await Visita.findAll({
       include: [
+{
+      model: Cafe,
+      as: 'cafeteria',
+      attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'openingHours'],
+      include: [
         {
-          model: Cafe,
-          as: 'cafeteria',
-          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
-        },
+          model: Etiqueta,
+          as: 'etiquetas',
+          attributes: ['id', 'nombre', 'icono'],
+          through: { attributes: [] }  // para no traer datos del join table
+        }
+      ]
+    },
         {
           model: User,
           as: 'usuario',
@@ -484,10 +507,18 @@ export const obtenerVisitaPorId = async (req, res) => {
       where: { id },
       include: [
         {
-          model: Cafe,
-          as: 'cafeteria',
-          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
-        },
+  model: Cafe,
+  as: 'cafeteria',
+  attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'openingHours'],
+  include: [
+    {
+      model: Etiqueta,
+      as: 'etiquetas',
+      attributes: ['id', 'nombre', 'icono'],
+      through: { attributes: [] } // evita traer datos de la tabla intermedia
+    }
+  ]
+},
         {
           model: User,
           as: 'usuario',
@@ -1059,7 +1090,15 @@ export const obtenerDiarioUsuario = async (req, res) => {
             {
               model: Cafe,
               as: 'cafeteria',
-              attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+              attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'openingHours'],
+              include: [
+                {
+                  model: Etiqueta,
+                  as: 'etiquetas',
+                  attributes: ['id', 'nombre', 'icono'],
+                  through: { attributes: [] }
+                }
+              ]
             },
             {
               model: User,
@@ -1219,7 +1258,15 @@ export const getVisitasByUser = async (req, res) => {
             {
               model: Cafe,
               as: 'cafeteria',
-              attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
+              attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'openingHours'],
+              include: [
+                {
+                  model: Etiqueta,
+                  as: 'etiquetas',
+                  attributes: ['id', 'nombre', 'icono'],
+                  through: { attributes: [] }
+                }
+              ]
             },
             {
               model: VisitaImagen,
@@ -1266,10 +1313,18 @@ export const getVisitaById = async (req, res) => {
       where: { id },
       include: [
         {
-          model: Cafe,
-          as: 'cafeteria',
-          attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'tags', 'openingHours']
-        },
+              model: Cafe,
+              as: 'cafeteria',
+              attributes: ['id', 'name', 'address', 'imageUrl', 'rating', 'openingHours'],
+              include: [
+                {
+                  model: Etiqueta,
+                  as: 'etiquetas',
+                  attributes: ['id', 'nombre', 'icono'],
+                  through: { attributes: [] }
+                }
+              ]
+            },
         {
           model: User,
           as: 'usuario',

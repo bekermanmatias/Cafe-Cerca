@@ -11,6 +11,8 @@ import Comentario from './Comentario.js';
 import Like from './Like.js';
 import SavedCafe from './SavedCafe.js';
 import amigosModel from './amigos.js';
+import Etiqueta from './Etiqueta.js';
+import CafeEtiquetas from './CafeEtiquetas.js';
 
 // Inicializar modelos
 const User = userModel(sequelize, DataTypes);
@@ -176,7 +178,41 @@ Resena.belongsTo(VisitaParticipante, {
   targetKey: 'usuarioId',
   as: 'participante'
 });
+// Relación muchos-a-muchos entre Cafe y Etiqueta
+Cafe.belongsToMany(Etiqueta, {
+  through: CafeEtiquetas,
+  as: 'etiquetas',
+  foreignKey: 'cafeId',
+  otherKey: 'etiquetaId'
+});
 
+Etiqueta.belongsToMany(Cafe, {
+  through: CafeEtiquetas,
+  as: 'cafes',
+  foreignKey: 'etiquetaId',
+  otherKey: 'cafeId'
+});
+
+// Relaciones directas con la tabla intermedia (para casos avanzados)
+Cafe.hasMany(CafeEtiquetas, {
+  foreignKey: 'cafeId',
+  as: 'cafeEtiquetasRelacion'
+});
+
+Etiqueta.hasMany(CafeEtiquetas, {
+  foreignKey: 'etiquetaId',
+  as: 'cafeEtiquetasRelacion'
+});
+
+CafeEtiquetas.belongsTo(Cafe, {
+  foreignKey: 'cafeId',
+  as: 'cafe'
+});
+
+CafeEtiquetas.belongsTo(Etiqueta, {
+  foreignKey: 'etiquetaId',
+  as: 'etiqueta'
+});
 // Nota: La sincronización de tablas se maneja en initDatabase.js
 // para evitar conflictos con migraciones existentes
 
@@ -191,5 +227,7 @@ export {
   Comentario,
   Like,
   SavedCafe,
-  Amigos
+  Amigos,
+  Etiqueta,
+  CafeEtiquetas
 };

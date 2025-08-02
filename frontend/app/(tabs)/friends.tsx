@@ -199,6 +199,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    marginTop: -25,
   },
   sectionTitle: {
     fontSize: 18,
@@ -242,6 +243,6 @@ const styles = StyleSheet.create({
   deleteButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#ffebee',
+    backgroundColor: '#FF4444',
   },
 });

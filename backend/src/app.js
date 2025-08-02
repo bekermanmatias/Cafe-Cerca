@@ -13,7 +13,7 @@ import userRoutes from './routes/user.routes.js';
 import resenasRoutes from './routes/resenas.routes.js';
 import visitaParticipanteRoutes from './routes/visitaParticipante.routes.js';
 import { testConnection } from './config/database.js';
-
+import etiquetasRoutes from './routes/etiquetas.js';
 // Importar modelos y sus relaciones
 import './models/index.js';
 
@@ -43,7 +43,7 @@ app.use('/api/amigos', amigosRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/resenas', resenasRoutes);
 app.use('/api/visita-participantes', visitaParticipanteRoutes);
-
+app.use('/api/etiquetas', etiquetasRoutes);
 // Mostrar rutas disponibles por consola
 // Available routes logged
 

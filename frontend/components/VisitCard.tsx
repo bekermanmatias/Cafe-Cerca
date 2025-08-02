@@ -1,8 +1,10 @@
+import React from 'react';
 import { StyleSheet, View, Text, Image, TouchableOpacity, Dimensions, FlatList, ViewToken } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { formatRelativeDate } from '../utils/dateUtils';
 
 const windowWidth = Dimensions.get('window').width;
 
@@ -71,7 +73,7 @@ interface ViewableItemsChanged {
   changed: ViewToken[];
 }
 
-export const VisitCard = ({
+const VisitCardComponent = ({
   visit,
   onShare,
   onDetails,
@@ -94,7 +96,7 @@ export const VisitCard = ({
     setLocalLikesCount(visit.likesCount || 0);
   }, [visit.likesCount]);
 
-  const checkLikeStatus = async () => {
+  const checkLikeStatus = useCallback(async () => {
     if (!token) return;
     try {
       const response = await apiService.getLikeStatus(visit.id, token);
@@ -103,9 +105,9 @@ export const VisitCard = ({
     } catch (error) {
       console.error('Error al obtener estado del like:', error);
     }
-  };
+  }, [visit.id, token]);
 
-  const handleLike = async () => {
+  const handleLike = useCallback(async () => {
     if (!token) return;
     try {
       const response = await apiService.toggleLike(visit.id, token);
@@ -117,16 +119,16 @@ export const VisitCard = ({
     } catch (error) {
       console.error('Error al procesar el like:', error);
     }
-  };
+  }, [visit.id, token, onLikeChange]);
 
-  const renderImage = ({ item: imageUrl }: RenderImageProps) => (
+  const renderImage = useCallback(({ item: imageUrl }: RenderImageProps) => (
     <View style={styles.imageWrapper}>
       <Image
         source={{ uri: imageUrl.imageUrl }}
         style={styles.image}
       />
     </View>
-  );
+  ), []);
 
   const handleViewableItemsChanged = useRef(({ viewableItems }: ViewableItemsChanged) => {
     if (viewableItems.length > 0 && viewableItems[0].index !== null) {
@@ -138,44 +140,46 @@ export const VisitCard = ({
     itemVisiblePercentThreshold: 50
   }).current;
 
-  // Obtener datos del creador y participantes (nueva estructura vs antigua)
-  const creador = visit.creador || visit.usuario;
-  const participantes = visit.participantes || [];
-  
-  // Calcular promedio de calificaciones entre todos los integrantes
-  const calcularPromedioCalificaciones = () => {
-    const calificaciones = [];
+  // Memoizar cálculos costosos
+  const { creador, participantes, promedioCalificaciones, cafeteriaName } = useMemo(() => {
+    const creador = visit.creador || visit.usuario;
+    const participantes = visit.participantes || [];
     
-    // Agregar calificación del creador si existe
-    if (visit.creador?.resena?.calificacion) {
-      calificaciones.push(visit.creador.resena.calificacion);
-    } else if (visit.calificacion) {
-      calificaciones.push(visit.calificacion);
-    }
-    
-    // Agregar calificaciones de participantes aceptados
-    participantes.forEach(p => {
-      if (p.estado === 'aceptada' && p.resena?.calificacion) {
-        calificaciones.push(p.resena.calificacion);
+    // Calcular promedio de calificaciones entre todos los integrantes
+    const calcularPromedioCalificaciones = () => {
+      const calificaciones = [];
+      
+      // Agregar calificación del creador si existe
+      if (visit.creador?.resena?.calificacion) {
+        calificaciones.push(visit.creador.resena.calificacion);
+      } else if (visit.calificacion) {
+        calificaciones.push(visit.calificacion);
       }
-    });
+      
+      // Agregar calificaciones de participantes aceptados
+      participantes.forEach(p => {
+        if (p.estado === 'aceptada' && p.resena?.calificacion) {
+          calificaciones.push(p.resena.calificacion);
+        }
+      });
+      
+      if (calificaciones.length === 0) return null;
+      
+      const promedio = calificaciones.reduce((sum, cal) => sum + cal, 0) / calificaciones.length;
+      return Math.round(promedio * 10) / 10; // Redondear a 1 decimal
+    };
     
-    if (calificaciones.length === 0) return null;
+    const promedioCalificaciones = calcularPromedioCalificaciones();
+    const cafeteriaName = visit.cafeteria?.name || 'Cafetería no disponible';
     
-    const promedio = calificaciones.reduce((sum, cal) => sum + cal, 0) / calificaciones.length;
-    return Math.round(promedio * 10) / 10; // Redondear a 1 decimal
-  };
-  
-  const promedioCalificaciones = calcularPromedioCalificaciones();
-  
-  // Obtener el nombre de la cafetería de forma segura
-  const cafeteriaName = visit.cafeteria?.name || 'Cafetería no disponible';
-  
+    return { creador, participantes, promedioCalificaciones, cafeteriaName };
+  }, [visit]);
+
   // URL de la imagen de perfil por defecto
   const defaultProfileImage = 'https://res.cloudinary.com/cafe-cerca/image/upload/v1/defaults/default-profile.png';
 
-  // Función para renderizar fotos de participantes
-  const renderParticipants = () => {
+  // Memoizar la función para renderizar participantes
+  const renderParticipants = useCallback(() => {
     const allParticipants = [];
     
     // Agregar el creador
@@ -231,7 +235,19 @@ export const VisitCard = ({
         </View>
       </View>
     );
-  };
+  }, [creador, participantes]);
+
+  // Memoizar los puntos de paginación
+  const paginationDots = useMemo(() => 
+    visit.imagenes.map((_, index) => (
+      <View
+        key={index}
+        style={[
+          styles.dot,
+          { backgroundColor: index === currentImageIndex ? '#fff' : 'rgba(255, 255, 255, 0.5)' }
+        ]}
+      />
+    )), [visit.imagenes, currentImageIndex]);
 
   return (
     <View style={styles.card}>
@@ -239,12 +255,7 @@ export const VisitCard = ({
         <View style={styles.headerLeft}>
           <Text style={styles.place}>{cafeteriaName}</Text>
           <Text style={styles.date}>
-            {new Date(visit.fecha).toLocaleDateString('es-ES', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
+            {formatRelativeDate(visit.fecha)}
           </Text>
         </View>
         {/* Burbuja flotante con puntuación arriba a la derecha */}
@@ -271,15 +282,7 @@ export const VisitCard = ({
           style={styles.imageList}
         />
         <View style={styles.paginationDots}>
-          {visit.imagenes.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                { backgroundColor: index === currentImageIndex ? '#fff' : 'rgba(255, 255, 255, 0.5)' }
-              ]}
-            />
-          ))}
+          {paginationDots}
         </View>
       </View>
       <View style={styles.footer}>
@@ -316,6 +319,9 @@ export const VisitCard = ({
     </View>
   );
 };
+
+// Memoizar el componente para evitar re-renders innecesarios
+export const VisitCard = React.memo(VisitCardComponent);
 
 const styles = StyleSheet.create({
   card: {
@@ -372,7 +378,7 @@ const styles = StyleSheet.create({
   },
   ratingBubble: {
     position: 'absolute',
-    top: 16,
+    top: '50%',
     right: 16,
     backgroundColor: '#D7CCC8',
     borderRadius: 20,
@@ -382,6 +388,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    transform: [{ translateY: -3 }], // Mitad de la altura aproximada del contenedor
   },
   ratingBubbleText: {
     color: '#5D4037',
@@ -461,7 +468,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   moreParticipants: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#8D6E63',
     justifyContent: 'center',
     alignItems: 'center',
   },

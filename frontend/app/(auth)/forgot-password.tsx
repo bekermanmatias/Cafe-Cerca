@@ -21,7 +21,7 @@ export default function ForgotPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email address');
+      Alert.alert('Error', 'Por favor ingresa tu correo electrónico');
       return;
     }
 
@@ -30,14 +30,14 @@ export default function ForgotPasswordScreen() {
       // Simulación de backend
       setTimeout(() => {
         Alert.alert(
-          'Reset Link Sent',
-          'If an account with this email exists, we\'ve sent you a password reset link.',
+          'Enlace Enviado',
+          'Si existe una cuenta con este correo, te hemos enviado un enlace para restablecer tu contraseña.',
           [{ text: 'OK', onPress: () => router.back() }]
         );
         setLoading(false);
       }, 1500);
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong');
+      Alert.alert('Error', 'Algo salió mal');
       setLoading(false);
     }
   };
@@ -49,14 +49,17 @@ export default function ForgotPasswordScreen() {
           <MaterialIcons name="arrow-back" size={24} color="#8D6E63" />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Reset password</Text>
-        <Text style={styles.subtitle}>We'll email you a reset link</Text>
+        <View style={styles.contentContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Restablecer Contraseña</Text>
+            <Text style={styles.subtitle}>Te enviaremos un enlace por correo</Text>
+          </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
             <MaterialIcons name="email" size={20} color="#8D6E63" style={styles.icon} />
             <TextInput
-              placeholder="Email address"
+              placeholder="Correo electrónico"
               style={styles.input}
               value={email}
               onChangeText={setEmail}
@@ -66,23 +69,27 @@ export default function ForgotPasswordScreen() {
           </View>
 
           <TouchableOpacity
-            style={styles.button}
+            style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleResetPassword}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <MaterialIcons name="arrow-forward" size={24} color="white" />
+              <View style={styles.buttonContent}>
+                <Text style={styles.buttonText}>Enviar Enlace</Text>
+                <MaterialIcons name="arrow-forward" size={20} color="white" />
+              </View>
             )}
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Remembered your password?</Text>
+          <Text style={styles.footerText}>¿Recordaste tu contraseña?</Text>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.footerLink}> Go back</Text>
+            <Text style={styles.footerLink}> Volver</Text>
           </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
       
@@ -95,46 +102,82 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#fff', 
+    padding: 20,
+  },
   backButton: { marginBottom: 20 },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
   title: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#8D6E63',
-    marginBottom: 4,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 40,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   form: { gap: 16 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomColor: '#ccc',
-    borderBottomWidth: 1,
-    paddingBottom: 4,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   icon: { marginRight: 8 },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     color: '#333',
+    paddingVertical: 0,
   },
   button: {
     backgroundColor: '#8D6E63',
-    height: 48,
-    borderRadius: 8,
+    height: 52,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 30,
+    marginTop: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 40,
+    marginTop: 30,
   },
   footerText: { fontSize: 13, color: '#999' },
-      footerLink: { fontSize: 13, color: '#8D6E63', fontWeight: '500' },
+  footerLink: { fontSize: 13, color: '#8D6E63', fontWeight: '500' },
 });

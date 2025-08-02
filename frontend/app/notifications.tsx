@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { API_ENDPOINTS, API_URL } from '../constants/Config';
 import axios from 'axios';
+import { formatRelativeDate } from '../utils/dateUtils';
 import ReviewModal from '../components/ReviewModal';
 
 interface Solicitud {
@@ -131,7 +132,7 @@ export default function NotificationsScreen() {
       setIsRespondingSolicitud(true);
       if (!token) throw new Error('Token no disponible');
 
-      await axios.put(
+      await axios.patch(
         API_ENDPOINTS.AMIGOS.RESPONDER_SOLICITUD(solicitudId),
         { status },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -326,7 +327,7 @@ export default function NotificationsScreen() {
             {item.visita.usuario.name} te invitó a visitar
           </Text>
           <Text style={styles.invitacionDate}>
-            {new Date(item.visita.fecha).toLocaleDateString()}
+                            {formatRelativeDate(item.visita.fecha)}
           </Text>
         </View>
       </View>
@@ -559,7 +560,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#007bff', // Different color for invitations
+    borderLeftColor: '#8D6E63', // Brown color for invitations
   },
   invitacionHeader: {
     flexDirection: 'row',

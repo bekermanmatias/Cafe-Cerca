@@ -1,5 +1,19 @@
 import sequelize from './database.js';
-import { Visita, Cafe, VisitaImagen, User, Comentario, Like, SavedCafe, Amigos, VisitaParticipante, Resena } from '../models/index.js';
+import {
+  Visita,
+  Cafe,
+  VisitaImagen,
+  User,
+  Comentario,
+  Like,
+  SavedCafe,
+  Amigos,
+  VisitaParticipante,
+  Resena,
+  Etiqueta,
+  CafeEtiquetas,
+} from '../models/index.js';
+
 import bcrypt from 'bcrypt';
 import { Sequelize } from 'sequelize';
 import { exec } from 'child_process';
@@ -15,7 +29,6 @@ const runMigrations = async () => {
   try {
     console.log('Verificando migraciones pendientes...');
     
-    // Ejecutar las migraciones pendientes
     const { stdout, stderr } = await execPromise('npx sequelize-cli db:migrate', {
       cwd: path.join(__dirname, '../../') // Directorio raíz del backend
     });
@@ -25,23 +38,11 @@ const runMigrations = async () => {
 
     console.log('✅ Migraciones completadas exitosamente');
   } catch (error) {
-    // Si el error es porque las migraciones ya están actualizadas, no es un problema
     if (error.stdout && error.stdout.includes('No migrations were executed')) {
       console.log('✅ Base de datos ya está actualizada');
       return;
     }
-
     console.error('❌ Error ejecutando migraciones:', error);
-    throw error;
-  }
-};
-
-export const initializeDatabase = async () => {
-  try {
-    await runMigrations();
-    console.log('✅ Base de datos inicializada correctamente');
-  } catch (error) {
-    console.error('❌ Error inicializando base de datos:', error);
     throw error;
   }
 };
@@ -58,7 +59,6 @@ async function checkTable(model) {
   }
 }
 
-// Función para crear datos iniciales
 async function createInitialData() {
   try {
     // Crear usuario admin si no existe
@@ -142,92 +142,128 @@ async function createInitialData() {
       console.log('✅ Usuarios de muestra creados');
     }
 
-    // Crear algunos cafés iniciales si no existen
-    const cafeExists = await Cafe.findOne();
-    if (!cafeExists) {
-      await Cafe.bulkCreate([
-        {
-          name: 'Café Havanna C. 49 ',
-          address: 'Calle 49 621, La Plata',
-          lat: -34.919861,
-          lng: -57.952897,
-          openingHours: 'Lunes a Domingo 8:00 - 22:00',
-          rating: 4.3,
-          tags: ['tradicional', 'franquicia', 'alfajores'],
-          imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753829226/08947a70-3259-4584-b9c3-0568046cfc04.png'
-        },
-        {
-          name: 'Botanica Tienda & Café',
-          address: 'Calle 58 823, La Plata',
-          lat: -34.922095,
-          lng: -57.949466,
-          openingHours: 'Martes a Domingo 9:00 - 19:00',
-          rating: 4.7,
-          tags: ['café de especialidad', 'brunch', 'tienda', 'ambiente natural'],
-          imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753828939/9f6fa8fe-99d6-44ec-b83a-14e165f27c28.png'
-        },
-        {
-          name: 'Café Martínez La Plata',
-          address: 'Calle 8 esquina 50, La Plata',
-          lat: -34.919950,
-          lng: -57.954744,
-          openingHours: 'Lunes a Domingo 7:00 - 21:00',
-          rating: 4.2,
-          tags: ['franquicia', 'desayunos', 'meriendas'],
-          imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753657194/cafecerca/visitas/g3adzqzxbbcfxfrz4c4b.jpg'
-        },
-        {
-          name: 'Mumi\'s Patisserie',
-          address: 'Calle 46 780, La Plata',
-          lat: -34.921543,
-          lng: -57.952234,
-          openingHours: 'Martes a Domingo 9:00 - 20:00',
-          rating: 4.6,
-          tags: ['pastelería francesa', 'café', 'brunch', 'macarons'],
-          imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753828840/4488ea12-3610-4959-be7b-6e94022ef91d.png'
-        },
-        {
-          name: 'SinTaccTica',
-          address: 'Av. 7 206, La Plata',
-          lat: -34.911847,
-          lng: -57.947756,
-          openingHours: 'Martes a Domingo 9:00 - 20:00',
-          rating: 4.8,
-          tags: ['sin gluten', 'café', 'pastelería celíaca', 'brunch'],
-          imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753828572/138cdd2b-7161-4c2e-9522-fc166f65d53a.png'
-        },
-        {
-          name: 'Tostado Café Club',
-          address: 'Calle 51 535 entre 5 y 6, La Plata',
-          lat: -34.917603,
-          lng: -57.953595,
-          openingHours: 'Martes a Domingo 9:00 - 19:00',
-          rating: 4.5,
-          tags: ['café de especialidad', 'brunch', 'ambiente moderno', 'tostado propio'],
-          imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753828738/af1506df-ebda-408e-9b18-a71c850a0974.png'
-        },
-        {
-          name: 'Afán en la Cuadra',
-          address: 'Calle 57 632, La Plata',
-          lat: -34.920494,
-          lng: -57.947532,
-          openingHours: 'Martes a Domingo 9:00 - 20:00',
-          rating: 4.7,
-          tags: ['café de especialidad', 'brunch', 'ambiente moderno', 'pastelería artesanal'],
-          imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753658328/cafecerca/visitas/vfq5tkd8lworx85mdsvv.jpg'
-        },
-        {
-          name: 'Blu pan & café',
-          address: 'Calle 37 entre 3 y 4 N°425, La Plata',
-          lat: -34.915099,
-          lng: -57.947774,
-          openingHours: 'Lunes a Sábado 8:00 - 20:00',
-          rating: 4.6,
-          tags: ['café de especialidad', 'panadería artesanal', 'brunch', 'pastelería'],
-          imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753658065/cafecerca/visitas/tatev7ju82hg6cguygsp.jpg'
-        }
-      ]);
-      console.log('✅ Cafeterías iniciales de La Plata creadas');
+    // Crear etiquetas iniciales si no existen
+const etiquetasIniciales = [
+  { nombre: 'Café de especialidad', icono: 'coffee' },
+  { nombre: 'Brunch', icono: 'utensils' },
+  { nombre: 'Tienda', icono: 'home' }, // ← corregido "Home" a "home"
+  { nombre: 'Ambiente natural', icono: 'leaf' },
+  { nombre: 'Franquicia', icono: 'map-pin' }, // ← icono alternativo
+  { nombre: 'Tradicional', icono: 'star' }, // ← icono alternativo
+  { nombre: 'Alfajores', icono: 'gift' }, // ← icono alternativo
+  { nombre: 'Pastelería francesa', icono: 'camera' }, // ← icono alternativo
+  { nombre: 'Macarons', icono: 'gift' },
+  { nombre: 'Sin gluten', icono: 'shield' },
+  { nombre: 'Pastelería celíaca', icono: 'bookmark' },
+  { nombre: 'Ambiente moderno', icono: 'laptop' },
+  { nombre: 'Panadería artesanal', icono: 'bookmark' },
+  { nombre: 'Tostado propio', icono: 'zap' }
+];
+
+
+    for (const etiqueta of etiquetasIniciales) {
+      await Etiqueta.findOrCreate({ where: { nombre: etiqueta.nombre }, defaults: etiqueta });
+    }
+    console.log('✅ Etiquetas iniciales creadas o verificadas');
+
+    // Crear cafés iniciales y asociar etiquetas
+    const cafesIniciales = [
+      {
+        name: 'Café Havanna C. 49',
+        address: 'Calle 49 621, La Plata',
+        lat: -34.919861,
+        lng: -57.952897,
+        openingHours: 'Lunes a Domingo 8:00 - 22:00',
+        rating: 4.3,
+        etiquetas: ['Tradicional', 'Franquicia', 'Alfajores'],
+        imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753829226/08947a70-3259-4584-b9c3-0568046cfc04.png'
+      },
+      {
+        name: 'Botanica Tienda & Café',
+        address: 'Calle 58 823, La Plata',
+        lat: -34.922095,
+        lng: -57.949466,
+        openingHours: 'Martes a Domingo 9:00 - 19:00',
+        rating: 4.7,
+        etiquetas: ['Café de especialidad', 'Brunch', 'Tienda', 'Ambiente natural'],
+        imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753828939/9f6fa8fe-99d6-44ec-b83a-14e165f27c28.png'
+      },
+      {
+        name: 'Café Martínez La Plata',
+        address: 'Calle 8 esquina 50, La Plata',
+        lat: -34.919950,
+        lng: -57.954744,
+        openingHours: 'Lunes a Domingo 7:00 - 21:00',
+        rating: 4.2,
+        etiquetas: ['Franquicia', 'Desayunos', 'Meriendas'],
+        imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753657194/cafecerca/visitas/g3adzqzxbbcfxfrz4c4b.jpg'
+      },
+      {
+        name: "Mumi's Patisserie",
+        address: 'Calle 46 780, La Plata',
+        lat: -34.921543,
+        lng: -57.952234,
+        openingHours: 'Martes a Domingo 9:00 - 20:00',
+        rating: 4.6,
+        etiquetas: ['Pastelería francesa', 'Brunch', 'Macarons'],
+        imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753828840/4488ea12-3610-4959-be7b-6e94022ef91d.png'
+      },
+      {
+        name: 'SinTaccTica',
+        address: 'Av. 7 206, La Plata',
+        lat: -34.911847,
+        lng: -57.947756,
+        openingHours: 'Martes a Domingo 9:00 - 20:00',
+        rating: 4.8,
+        etiquetas: ['Sin gluten', 'Pastelería celíaca', 'Brunch'],
+        imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753828572/138cdd2b-7161-4c2e-9522-fc166f65d53a.png'
+      },
+      {
+        name: 'Tostado Café Club',
+        address: 'Calle 51 535 entre 5 y 6, La Plata',
+        lat: -34.917603,
+        lng: -57.953595,
+        openingHours: 'Martes a Domingo 9:00 - 19:00',
+        rating: 4.5,
+        etiquetas: ['Café de especialidad', 'Brunch', 'Ambiente moderno', 'Tostado propio'],
+        imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753828738/af1506df-ebda-408e-9b18-a71c850a0974.png'
+      },
+      {
+        name: 'Afán en la Cuadra',
+        address: 'Calle 57 632, La Plata',
+        lat: -34.920494,
+        lng: -57.947532,
+        openingHours: 'Martes a Domingo 9:00 - 20:00',
+        rating: 4.7,
+        etiquetas: ['Café de especialidad', 'Brunch', 'Ambiente moderno', 'Pastelería artesanal'],
+        imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753658328/cafecerca/visitas/vfq5tkd8lworx85mdsvv.jpg'
+      },
+      {
+        name: 'Blu pan & café',
+        address: 'Calle 37 entre 3 y 4 N°425, La Plata',
+        lat: -34.915099,
+        lng: -57.947774,
+        openingHours: 'Lunes a Sábado 8:00 - 20:00',
+        rating: 4.6,
+        etiquetas: ['Café de especialidad', 'Panadería artesanal', 'Brunch', 'Pastelería'],
+        imageUrl: 'https://res.cloudinary.com/dpzhs3vyi/image/upload/v1753658065/cafecerca/visitas/tatev7ju82hg6cguygsp.jpg'
+      }
+    ];
+
+    // Comprobar si ya hay cafés creados
+    const cafeExiste = await Cafe.findOne();
+    if (!cafeExiste) {
+      for (const cafeData of cafesIniciales) {
+        const { etiquetas, ...cafeFields } = cafeData;
+        const nuevoCafe = await Cafe.create(cafeFields);
+
+        const etiquetasDB = await Etiqueta.findAll({
+          where: { nombre: etiquetas }
+        });
+
+        await nuevoCafe.addEtiquetas(etiquetasDB);
+      }
+      console.log('✅ Cafés iniciales creados y asociados con etiquetas');
     }
 
   } catch (error) {
@@ -238,11 +274,9 @@ async function createInitialData() {
 // Función principal de inicialización
 export async function initDatabase() {
   try {
-    // Verificar la conexión a la base de datos
     await sequelize.authenticate();
     console.log('✅ Conexión a la base de datos exitosa');
 
-    // Verificar cada tabla
     console.log('\n📊 Verificando tablas existentes:');
     const tables = [
       { model: User, name: 'Users' },
@@ -259,10 +293,7 @@ export async function initDatabase() {
       await checkTable(table.model);
     }
 
-    // Verificar que las tablas existen (sin sincronizar)
     console.log('\n🔄 Verificando estructura de tablas...');
-    
-    // Solo verificar que las tablas existen, sin modificar estructura
     const tableChecks = [
       { model: User, name: 'Users' },
       { model: Cafe, name: 'cafes' },
@@ -282,7 +313,6 @@ export async function initDatabase() {
         console.log(`✅ Tabla ${table.name} verificada`);
       } catch (error) {
         console.error(`❌ Error verificando tabla ${table.name}:`, error.message);
-        // Si es un error de "too many keys", solo mostrar advertencia
         if (error.message.includes('Too many keys specified')) {
           console.log(`⚠️ Advertencia: Tabla ${table.name} tiene demasiados índices, pero el servidor continuará funcionando`);
         }
@@ -291,7 +321,6 @@ export async function initDatabase() {
     
     console.log('✅ Verificación de tablas completada');
 
-    // Crear datos iniciales
     console.log('\n📝 Verificando datos iniciales...');
     try {
       await createInitialData();
@@ -305,6 +334,6 @@ export async function initDatabase() {
   } catch (error) {
     console.error('❌ Error inicializando la base de datos:', error.message);
     console.log('⚠️ El servidor continuará funcionando con errores de base de datos\n');
-    return true; // Cambiar a true para que el servidor continúe
+    return true;
   }
-} 
+}

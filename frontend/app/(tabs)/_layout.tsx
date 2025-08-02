@@ -96,20 +96,6 @@ function HeaderRight() {
             </Text>
           </View>
         )}
-        {/* Puntito de notificación cuando hay solicitudes pendientes */}
-        {pendingInvitations > 0 && (
-          <View style={{
-            position: 'absolute',
-            top: 2,
-            right: 2,
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: '#FF4444',
-            borderWidth: 1,
-            borderColor: '#fff',
-          }} />
-        )}
       </TouchableOpacity>
       <TouchableOpacity 
         onPress={() => router.push('/profile')}

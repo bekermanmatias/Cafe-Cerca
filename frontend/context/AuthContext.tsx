@@ -1,5 +1,5 @@
 // context/AuthContext.tsx - Context para manejar autenticación
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { storage, StorageKeys } from '../utils/storage';
 
 interface User {
@@ -37,29 +37,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    checkAuthState();
-  }, []);
-
-  const checkAuthState = async () => {
+  const checkAuthState = useCallback(async () => {
     try {
       const storedToken = await storage.getItem(StorageKeys.TOKEN);
       const storedUser = await storage.getItem(StorageKeys.USER);
 
       if (storedToken && storedUser) {
-        const parsedUser = JSON.parse(storedUser);
         setToken(storedToken);
-        setUser(parsedUser);
+        setUser(JSON.parse(storedUser));
+      } else {
+        // Limpiar estado sin llamar a logout para evitar recursión
+        setToken(null);
+        setUser(null);
       }
     } catch (error) {
-      console.error('Error checking auth state:', error);
+      console.error('Error en checkAuthState', error);
+      // En caso de error, también limpiar el estado
+      setToken(null);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const login = async (newToken: string, newUser: User) => {
+  useEffect(() => {
+    checkAuthState();
+  }, [checkAuthState]);
+
+  const login = useCallback(async (newToken: string, newUser: User) => {
     try {
+      console.log('Saving user:', newUser);
       await storage.setItem(StorageKeys.TOKEN, newToken);
       await storage.setItem(StorageKeys.USER, JSON.stringify(newUser));
       setToken(newToken);
@@ -68,9 +75,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Error during login:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const updateUser = async (updatedUser: User) => {
+  const updateUser = useCallback(async (updatedUser: User) => {
     try {
       await storage.setItem(StorageKeys.USER, JSON.stringify(updatedUser));
       setUser(updatedUser);
@@ -78,18 +85,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Error updating user:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
+      console.log('Logging out user...');
       await storage.removeItem(StorageKeys.TOKEN);
       await storage.removeItem(StorageKeys.USER);
       setToken(null);
       setUser(null);
+      console.log('User logged out successfully');
     } catch (error) {
       console.error('Error during logout:', error);
+      // Asegurar que el estado se limpie incluso si hay error
+      setToken(null);
+      setUser(null);
     }
-  };
+  }, []);
 
   const value: AuthContextType = {
     user,

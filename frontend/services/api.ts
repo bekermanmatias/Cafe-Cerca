@@ -122,7 +122,6 @@ class ApiService {
       const response = await fetch(`${API_URL.replace('/api', '')}/health`);
       return response.ok;
     } catch (error) {
-      console.error('Servidor no disponible:', error);
       return false;
     }
   }
@@ -146,7 +145,6 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('Error en login:', error);
       throw error;
     }
   }
@@ -172,7 +170,6 @@ class ApiService {
       try {
         data = await response.json();
       } catch (jsonError) {
-        console.error('Error parseando JSON:', jsonError);
         throw new Error('Error en la respuesta del servidor');
       }
 
@@ -182,7 +179,6 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('Error en register:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté corriendo.');
       }
@@ -222,6 +218,7 @@ class ApiService {
   }
 
   async toggleLike(visitaId: number, token: string): Promise<LikeResponse> {
+    console.log('toggleLike - URL:', `${API_URL}/likes/toggle/${visitaId}`);
     return this.makeAuthenticatedRequest(
       `/likes/toggle/${visitaId}`,
       token,
@@ -230,6 +227,7 @@ class ApiService {
   }
 
   async getLikeStatus(visitaId: number, token: string): Promise<LikeStatusResponse> {
+    console.log('getLikeStatus - URL:', `${API_URL}/likes/status/${visitaId}`);
     return this.makeAuthenticatedRequest(
       `/likes/status/${visitaId}`,
       token,
@@ -274,7 +272,11 @@ class ApiService {
     token: string,
     options: RequestInit = {}
   ) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const url = `${API_URL}${endpoint}`;
+    console.log('makeAuthenticatedRequest - URL:', url);
+    console.log('makeAuthenticatedRequest - Method:', options.method || 'GET');
+    
+    const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -283,7 +285,10 @@ class ApiService {
       },
     });
 
+    console.log('makeAuthenticatedRequest - Response status:', response.status);
+    
     const data = await response.json();
+    console.log('makeAuthenticatedRequest - Response data:', data);
 
     if (!response.ok) {
       throw new Error(data.error || 'Error en la solicitud autenticada');
@@ -364,7 +369,6 @@ class ApiService {
       try {
         data = await response.json();
       } catch (jsonError) {
-        console.error('Error parseando JSON de respuesta:', jsonError);
         throw new Error('Error en la respuesta del servidor');
       }
 
@@ -374,7 +378,6 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('Error en crearVisitaCompartida:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté corriendo.');
       }

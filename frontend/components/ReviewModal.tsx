@@ -269,18 +269,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#6c757d',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#6c757d',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#8D6E63',
   },
   disabledButton: {
     backgroundColor: '#ccc',
   },
   cancelButtonText: {
-    color: '#666',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 16,
   },

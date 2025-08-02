@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  Modal,
   type MeasureOnSuccessCallback
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import ComentariosList from '../components/ComentariosList';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
+import { formatRelativeDate } from '../utils/dateUtils';
 
 const windowWidth = Dimensions.get('window').width;
 
@@ -29,13 +31,19 @@ interface Imagen {
   orden: number;
 }
 
+interface Tag {
+  id: number;
+  nombre: string;
+  icono: string;
+}
+
 interface Cafeteria {
   id: number;
   name: string;
   address: string;
-  imageUrl: string | null;
   rating: number;
-  tags: string[];
+  imageUrl: string | null;
+  tags: Tag[];  // ahora es array de objetos Tag
   openingHours: string;
 }
 
@@ -84,12 +92,15 @@ export default function VisitDetailsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [visitData, setVisitData] = useState<VisitaDetalle | null>(null);
   const [showOptions, setShowOptions] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [showParticipantOptions, setShowParticipantOptions] = useState<number | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [participantMenuPosition, setParticipantMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const optionsButtonRef = useRef<View>(null);
-  const { token } = useAuth();
+  const participantOptionsButtonRef = useRef<View>(null);
+  const { token, user } = useAuth();
 
   useEffect(() => {
     fetchVisitDetails();
@@ -143,7 +154,9 @@ export default function VisitDetailsScreen() {
   const checkLikeStatus = async () => {
     if (!token || !visitData?.id) return;
     try {
+      console.log('Verificando estado de like para visita:', visitData.id);
       const response = await apiService.getLikeStatus(visitData.id, token);
+      console.log('Estado de like recibido:', response);
       setIsLiked(response.liked);
       // Actualizar el contador de likes en el estado de la visita
       setVisitData(prevData => {
@@ -155,31 +168,30 @@ export default function VisitDetailsScreen() {
       });
     } catch (error) {
       console.error('Error al obtener estado del like:', error);
+      // No mostrar alerta aquí para evitar spam, solo log del error
     }
   };
 
   const handleLike = async () => {
-    if (!visitData?.id) return;
+    if (!visitData?.id || !token) return;
     
     try {
       setIsLiking(true);
-      const response = await fetch(`${API_URL}/visitas/${visitData.id}/like`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      console.log('Enviando like para visita:', visitData.id);
+      const response = await apiService.toggleLike(visitData.id, token);
+      console.log('Respuesta del servidor:', response);
 
-      if (response.ok) {
-        setIsLiked(!isLiked);
-        // Actualizar el contador de likes localmente
-        setVisitData(prev => prev ? {
-          ...prev,
-          likesCount: isLiked ? prev.likesCount - 1 : prev.likesCount + 1
-        } : null);
-      }
+      // Actualizar el estado local con la respuesta del servidor
+      setIsLiked(response.liked);
+      setVisitData(prev => prev ? {
+        ...prev,
+        likesCount: response.likesCount
+      } : null);
+      
+      console.log('Estado actualizado - liked:', response.liked, 'count:', response.likesCount);
     } catch (error) {
       console.error('Error al procesar el like:', error);
+      Alert.alert('Error', 'No se pudo procesar el like. Intenta de nuevo.');
     } finally {
       setIsLiking(false);
     }
@@ -192,6 +204,11 @@ export default function VisitDetailsScreen() {
   };
 
   const handleDelete = () => {
+    if (!visitData || !isCurrentUserCreator()) {
+      Alert.alert('Error', 'Solo el creador puede eliminar esta visita.');
+      return;
+    }
+    
     Alert.alert(
       "Eliminar visita",
       "¿Estás seguro que deseas eliminar esta visita?",
@@ -236,7 +253,10 @@ export default function VisitDetailsScreen() {
   };
 
   const handleEdit = () => {
-    // Implementar navegación a la pantalla de edición
+    if (!visitData || !isCurrentUserCreator()) {
+      Alert.alert('Error', 'Solo el creador puede editar esta visita.');
+      return;
+    }
     router.push({
       pathname: "/edit-visit" as any, // Temporal hasta que se cree la ruta
       params: { 
@@ -247,18 +267,33 @@ export default function VisitDetailsScreen() {
   };
 
   const handleShowOptions = () => {
-    if (!optionsButtonRef.current) return;
-
-    const measureCallback: MeasureOnSuccessCallback = (x, y, width, height, pageX, pageY) => {
-      const screenWidth = Dimensions.get('window').width;
-      // Ajustamos la posición para que esté más cerca del botón
-      const menuX = screenWidth - 170; // 140px del menú + 30px de margen
-      const menuY = pageY - 35; // Subimos el menú para que esté más cerca del botón
-      setMenuPosition({ x: menuX, y: menuY });
-      setShowOptions(!showOptions);
-    };
-
-    optionsButtonRef.current.measure(measureCallback);
+    if (optionsButtonRef.current) {
+      optionsButtonRef.current.measure((x, y, width, height, pageX, pageY) => {
+        const screenWidth = Dimensions.get('window').width;
+        const menuWidth = 140; // Ancho aproximado del menú
+        const menuHeight = 80; // Alto aproximado del menú
+        
+        // Posicionar el menú a la izquierda del botón
+        let menuX = pageX - menuWidth + width;
+        let menuY = pageY;
+        
+        // Asegurar que el menú no se salga de la pantalla
+        if (menuX < 0) {
+          menuX = pageX;
+        }
+        
+        // Si no hay espacio abajo, abrir hacia arriba
+        if (pageY + menuHeight > Dimensions.get('window').height) {
+          menuY = pageY - menuHeight + height;
+        }
+        
+        setMenuPosition({ x: menuX, y: menuY });
+        setShowOptions(true);
+      });
+    } else {
+      setShowOptions(true);
+      setMenuPosition(null);
+    }
   };
 
   // URL de la imagen de perfil por defecto
@@ -290,6 +325,58 @@ export default function VisitDetailsScreen() {
   
   const promedioCalificaciones = calcularPromedioCalificaciones();
 
+  const isCurrentUserCreator = () => {
+    if (!user || !visitData) return false;
+    return user.id === visitData.creador.id;
+  };
+
+  const handleEditParticipantReview = (participante: Participante) => {
+    if (!participante.resena) return;
+    
+    // Por ahora mostrar un mensaje, luego se implementará la pantalla de edición
+    Alert.alert('Próximamente', 'La edición de reseñas estará disponible pronto.');
+    // TODO: Implementar navegación a pantalla de edición de reseña
+    // router.push({
+    //   pathname: '/edit-review' as any,
+    //   params: {
+    //     visitaId: visitData?.id.toString(),
+    //     participanteId: participante.id.toString(),
+    //     calificacion: participante.resena?.calificacion.toString(),
+    //     comentario: participante.resena?.comentario || ''
+    //   }
+    // });
+  };
+
+  const handleShowParticipantOptions = (participanteId: number) => {
+    if (participantOptionsButtonRef.current) {
+      participantOptionsButtonRef.current.measure((x, y, width, height, pageX, pageY) => {
+        const screenWidth = Dimensions.get('window').width;
+        const menuWidth = 140; // Ancho aproximado del menú
+        const menuHeight = 80; // Alto aproximado del menú
+        
+        // Posicionar el menú a la izquierda del botón
+        let menuX = pageX - menuWidth + width;
+        let menuY = pageY;
+        
+        // Asegurar que el menú no se salga de la pantalla
+        if (menuX < 0) {
+          menuX = pageX;
+        }
+        
+        // Si no hay espacio abajo, abrir hacia arriba
+        if (pageY + menuHeight > Dimensions.get('window').height) {
+          menuY = pageY - menuHeight + height;
+        }
+        
+        setParticipantMenuPosition({ x: menuX, y: menuY });
+        setShowParticipantOptions(participanteId);
+      });
+    } else {
+      setShowParticipantOptions(participanteId);
+      setParticipantMenuPosition(null);
+    }
+  };
+
   const renderContent = () => {
     if (!visitData) return null;
 
@@ -300,12 +387,7 @@ export default function VisitDetailsScreen() {
           <View style={styles.visitInfoLeft}>
             <Text style={styles.cafeteriaName}>{visitData.cafeteria.name}</Text>
             <Text style={styles.visitDate}>
-              {new Date(visitData.fecha).toLocaleDateString('es-ES', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
+              {formatRelativeDate(visitData.fecha)}
             </Text>
           </View>
           {promedioCalificaciones && (
@@ -357,13 +439,15 @@ export default function VisitDetailsScreen() {
           </View>
           
           <View style={styles.rightActions}>
-            <TouchableOpacity 
-              ref={optionsButtonRef}
-              style={styles.actionButton}
-              onPress={handleShowOptions}
-            >
-              <Ionicons name="ellipsis-vertical" size={28} color="#000" />
-            </TouchableOpacity>
+            {isCurrentUserCreator() && (
+              <TouchableOpacity 
+                ref={optionsButtonRef}
+                style={styles.actionButton}
+                onPress={handleShowOptions}
+              >
+                <Ionicons name="ellipsis-vertical" size={28} color="#000" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -393,41 +477,51 @@ export default function VisitDetailsScreen() {
           <Text style={styles.reviewText}>{visitData.creador.resena.comentario}</Text>
         </View>
 
-        {/* Reseñas de participantes */}
-        {visitData.participantes.map((participante, index) => (
-          <View key={participante.id} style={styles.reviewContainer}>
-            <View style={styles.authorSection}>
-              <Image
-                source={{ 
-                  uri: participante.profileImage || defaultProfileImage
-                }}
-                style={styles.authorPhoto}
-              />
-              <View style={styles.authorInfo}>
-                <Text style={styles.authorName}>{participante.name}</Text>
-                {participante.resena ? (
-                  <View style={styles.starsContainer}>
-                    {[...Array(5)].map((_, i) => (
-                      <Ionicons
-                        key={i}
-                        name={i < participante.resena!.calificacion ? "star" : "star-outline"}
-                        size={20}
-                        color="#FFD700"
-                      />
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.pendingReview}>
-                    {participante.estado === 'pendiente' ? 'Invitación pendiente' : 'Sin reseña'}
-                  </Text>
+                 {/* Reseñas de participantes */}
+         {visitData.participantes.map((participante, index) => (
+           <View key={participante.id} style={styles.reviewContainer}>
+             <View style={styles.authorSection}>
+               <Image
+                 source={{ 
+                   uri: participante.profileImage || defaultProfileImage
+                 }}
+                 style={styles.authorPhoto}
+               />
+               <View style={styles.authorInfo}>
+                 <Text style={styles.authorName}>{participante.name}</Text>
+                 {participante.resena ? (
+                   <View style={styles.starsContainer}>
+                     {[...Array(5)].map((_, i) => (
+                       <Ionicons
+                         key={i}
+                         name={i < participante.resena!.calificacion ? "star" : "star-outline"}
+                         size={20}
+                         color="#FFD700"
+                       />
+                     ))}
+                   </View>
+                 ) : (
+                   <Text style={styles.pendingReview}>
+                     {participante.estado === 'pendiente' ? 'Invitación pendiente' : 'Sin reseña'}
+                   </Text>
+                 )}
+               </View>
+                               {/* Botón de editar para participantes (no creador) */}
+                {participante.id === user?.id && participante.rol === 'participante' && participante.resena && (
+                  <TouchableOpacity 
+                    ref={participantOptionsButtonRef}
+                    style={styles.editReviewButton}
+                    onPress={() => handleShowParticipantOptions(participante.id)}
+                  >
+                    <Ionicons name="ellipsis-vertical" size={20} color="#8D6E63" />
+                  </TouchableOpacity>
                 )}
-              </View>
-            </View>
-            {participante.resena && (
-              <Text style={styles.reviewText}>{participante.resena.comentario}</Text>
-            )}
-          </View>
-        ))}
+             </View>
+             {participante.resena && (
+               <Text style={styles.reviewText}>{participante.resena.comentario}</Text>
+             )}
+           </View>
+         ))}
       </>
     );
   };
@@ -481,47 +575,94 @@ export default function VisitDetailsScreen() {
           ListHeaderComponent={renderContent}
         />
 
-        {showOptions && (
-          <>
-            <TouchableOpacity 
-              style={styles.overlay} 
-              activeOpacity={0} 
-              onPress={() => setShowOptions(false)} 
-            />
-            <View style={[styles.optionsMenu, { top: menuPosition.y, left: menuPosition.x }]}>
-              <TouchableOpacity 
-                style={styles.optionItem}
-                onPress={() => {
-                  setShowOptions(false);
-                  handleEdit();
-                }}
-              >
-                <Ionicons name="create-outline" size={24} color="#000" />
-                <Text style={styles.optionText}>Modificar visita</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.optionItem, styles.deleteOption]}
-                onPress={() => {
-                  setShowOptions(false);
-                  handleDelete();
-                }}
-              >
-                <Ionicons name="trash-outline" size={24} color="#FF4444" />
-                <Text style={styles.deleteOptionText}>Eliminar visita</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+         {/* Menú de opciones para el creador */}
+         <Modal
+           visible={showOptions}
+           transparent
+           animationType="fade"
+           onRequestClose={() => setShowOptions(false)}
+         >
+           <TouchableOpacity 
+             style={styles.modalOverlay} 
+             activeOpacity={1} 
+             onPress={() => setShowOptions(false)} 
+           />
+           {menuPosition && (
+             <View style={[
+               styles.modalOptionsMenu,
+               {
+                 position: 'absolute',
+                 left: menuPosition.x,
+                 top: menuPosition.y,
+               }
+             ]}>
+                               <TouchableOpacity 
+                  style={styles.optionItem}
+                  onPress={() => {
+                    setShowOptions(false);
+                    handleEdit();
+                  }}
+                >
+                  <Ionicons name="create-outline" size={24} color="#000" />
+                  <Text style={styles.optionText}>Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.optionItem, styles.deleteOption]}
+                  onPress={() => {
+                    setShowOptions(false);
+                    handleDelete();
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={24} color="#FF4444" />
+                  <Text style={styles.deleteOptionText}>Eliminar</Text>
+                </TouchableOpacity>
+             </View>
+           )}
+         </Modal>
+
+         {/* Menú de opciones para participantes */}
+         <Modal
+           visible={showParticipantOptions !== null}
+           transparent
+           animationType="fade"
+           onRequestClose={() => setShowParticipantOptions(null)}
+         >
+           <TouchableOpacity 
+             style={styles.modalOverlay} 
+             activeOpacity={1} 
+             onPress={() => setShowParticipantOptions(null)} 
+           />
+           {participantMenuPosition && (
+             <View style={[
+               styles.modalOptionsMenu,
+               {
+                 position: 'absolute',
+                 left: participantMenuPosition.x,
+                 top: participantMenuPosition.y,
+               }
+             ]}>
+               <TouchableOpacity 
+                 style={styles.optionItem}
+                 onPress={() => {
+                   setShowParticipantOptions(null);
+                   const participante = visitData?.participantes.find(p => p.id === showParticipantOptions);
+                   if (participante) {
+                     handleEditParticipantReview(participante);
+                   }
+                 }}
+               >
+                 <Ionicons name="create-outline" size={24} color="#000" />
+                 <Text style={styles.optionText}>Editar</Text>
+               </TouchableOpacity>
+             </View>
+           )}
+         </Modal>
       </View>
       
-      <LoadingSpinner 
-        visible={isLiking || isDeleting} 
-        message={
-          isLiking ? "Procesando like..." :
-          isDeleting ? "Eliminando visita..." : ""
-        }
-      />
+             <LoadingSpinner 
+         visible={isDeleting} 
+         message="Eliminando visita..."
+       />
     </>
   );
 }
@@ -597,7 +738,7 @@ const styles = StyleSheet.create({
     borderColor: 'white',
   },
   moreParticipants: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#8D6E63',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: -10,
@@ -646,7 +787,7 @@ const styles = StyleSheet.create({
   },
   leftActions: {
     flexDirection: 'row',
-    gap: 16,
+    gap: -10,
   },
   rightActions: {
     flexDirection: 'row',
@@ -782,7 +923,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'transparent',
-    zIndex: 999,
+    zIndex: 9998,
   },
   comentariosContainer: {
     marginTop: 16,
@@ -866,5 +1007,37 @@ const styles = StyleSheet.create({
     color: '#5D4037',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  editReviewButton: {
+    padding: 8,
+    borderRadius: 20,
+    marginLeft: 8,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 9998,
+  },
+  modalOptionsMenu: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 140,
+    zIndex: 9999,
+    ...Platform.select({
+      android: {
+        elevation: 8,
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+    }),
   },
 }); 
