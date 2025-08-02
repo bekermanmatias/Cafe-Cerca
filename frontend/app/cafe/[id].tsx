@@ -114,6 +114,7 @@ export default function CafeDetail() {
   const [pagination, setPagination] = useState({
     currentPage: 1,
     hasMore: false,
+    totalItems: 0,
   });
 
   // Memoización de valores computados
@@ -166,6 +167,16 @@ export default function CafeDetail() {
       setPagination({
         currentPage: data.visitas.currentPage,
         hasMore: data.visitas.hasMore,
+        totalItems: data.visitas.total,
+      });
+      
+      // Debug logging
+      console.log('Cafe fetch response:', {
+        currentPage: data.visitas.currentPage,
+        hasMore: data.visitas.hasMore,
+        totalItems: data.visitas.total,
+        itemsReceived: data.visitas.items.length,
+        totalPages: data.visitas.totalPages
       });
       
     } catch (error) {
@@ -204,10 +215,10 @@ export default function CafeDetail() {
   }, [token, cafeData.cafe?.id]);
 
   const handleLoadMore = useCallback(() => {
-    if (!loadingStates.more && pagination.hasMore) {
+    if (!loadingStates.more && pagination.hasMore && visitas && visitas.length > 0) {
       fetchCafe(pagination.currentPage + 1);
     }
-  }, [loadingStates.more, pagination.hasMore, pagination.currentPage, fetchCafe]);
+  }, [loadingStates.more, pagination.hasMore, pagination.currentPage, fetchCafe, visitas]);
 
   const onRefresh = useCallback(() => {
     setLoadingStates(prev => ({ ...prev, refreshing: true }));
@@ -290,7 +301,7 @@ export default function CafeDetail() {
     );
   }
 
-  const { cafe, visitas, isSaved } = cafeData;
+  const { cafe, visitas = [], isSaved } = cafeData;
 
   return (
     <ScrollView 
@@ -400,7 +411,7 @@ export default function CafeDetail() {
       </View>
 
       {/* Visit Cards */}
-      {visitas.map((visita) => (
+      {visitas && visitas.map((visita) => (
         <VisitCard
           key={visita.id}
           visit={visita}
@@ -411,18 +422,21 @@ export default function CafeDetail() {
       ))}
 
       {/* Load More Button */}
-      {pagination.hasMore && (
+      {pagination.hasMore && visitas && visitas.length > 0 && visitas.length < pagination.totalItems && !loadingStates.more && (
         <TouchableOpacity
           style={styles.loadMoreButton}
           onPress={handleLoadMore}
           disabled={loadingStates.more}
         >
-          {loadingStates.more ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.loadMoreText}>Ver más reseñas</Text>
-          )}
+          <Text style={styles.loadMoreText}>Ver más reseñas</Text>
         </TouchableOpacity>
+      )}
+
+      {/* Loading indicator when loading more */}
+      {loadingStates.more && (
+        <View style={styles.loadMoreButton}>
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        </View>
       )}
     </ScrollView>
   );
