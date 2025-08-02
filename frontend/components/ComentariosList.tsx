@@ -50,8 +50,8 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [showOptions, setShowOptions] = useState<number | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [refreshing, setRefreshing] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const menuButtonsRefs = useRef<{ [key: number]: View | null }>({});
   const [userData, setUserData] = useState<any>(null);
@@ -196,68 +196,43 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
   };
 
   const handleShowOptions = (comentarioId: number) => {
-    const button = menuButtonsRefs.current[comentarioId];
-    if (!button) return;
-
-    button.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-      const screenWidth = Dimensions.get('window').width;
-      const menuX = screenWidth - 170;
-      const menuY = pageY - 35; // Subimos más el menú
-      setMenuPosition({ x: menuX, y: menuY });
-      setShowOptions(showOptions === comentarioId ? null : comentarioId);
-    });
+    const buttonRef = menuButtonsRefs.current[comentarioId];
+    if (buttonRef) {
+      buttonRef.measure((x, y, width, height, pageX, pageY) => {
+        const screenWidth = Dimensions.get('window').width;
+        const screenHeight = Dimensions.get('window').height;
+        const menuWidth = 140; // Ancho aproximado del menú
+        const menuHeight = 80; // Alto aproximado del menú
+        
+        // Posicionar el menú a la izquierda del botón
+        let menuX = pageX - menuWidth + width;
+        let menuY = pageY;
+        
+        // Asegurar que el menú no se salga de la pantalla por la izquierda
+        if (menuX < 0) {
+          menuX = pageX;
+        }
+        
+        // Calcular el espacio disponible abajo considerando el input de comentarios
+        const inputHeight = 80; // Altura aproximada del input de comentarios
+        const availableSpaceBelow = screenHeight - pageY - inputHeight;
+        
+        // Si no hay espacio suficiente abajo (incluyendo el input), abrir hacia arriba
+        if (pageY + menuHeight > screenHeight - inputHeight || availableSpaceBelow < menuHeight) {
+          menuY = pageY - menuHeight + height;
+        }
+        
+        setMenuPosition({ x: menuX, y: menuY });
+        setShowOptions(comentarioId);
+      });
+    } else {
+      setShowOptions(comentarioId);
+      setMenuPosition(null);
+    }
   };
 
   const setMenuButtonRef = (id: number) => (ref: View | null) => {
     menuButtonsRefs.current[id] = ref;
-  };
-
-  const renderOptionsMenu = (comentarioId: number, comentario: Comentario) => {
-    if (showOptions !== comentarioId) return null;
-
-    return (
-      <View style={[
-        styles.optionsMenu,
-        {
-          position: 'absolute',
-          top: menuPosition.y,
-          left: menuPosition.x,
-        }
-      ]}>
-        <TouchableOpacity 
-          style={styles.optionItem}
-          onPress={(e) => {
-            e.stopPropagation();
-            handleEditarComentario(comentario);
-          }}
-        >
-          <Ionicons name="create-outline" size={20} color="#666" />
-          <ThemedText style={styles.optionText}>Editar</ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.optionItem, styles.deleteOption]}
-          onPress={(e) => {
-            e.stopPropagation();
-            setShowOptions(null);
-            Alert.alert(
-              "Eliminar comentario",
-              "¿Estás seguro que deseas eliminar este comentario?",
-              [
-                { text: "Cancelar", style: "cancel" },
-                { 
-                  text: "Eliminar", 
-                  style: "destructive",
-                  onPress: () => eliminarComentario(comentarioId)
-                }
-              ]
-            );
-          }}
-        >
-          <Ionicons name="trash-outline" size={20} color="#FF4444" />
-          <ThemedText style={styles.deleteOptionText}>Eliminar</ThemedText>
-        </TouchableOpacity>
-      </View>
-    );
   };
 
   const renderComentario = ({ item }: { item: Comentario }) => (
@@ -373,18 +348,64 @@ export default function ComentariosList({ visitaId, ListHeaderComponent }: Comen
       />
       
       {showOptions !== null && (
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={handlePressOutside}
-        />
-      )}
-
-      {showOptions !== null && comentarios.find(c => c.id === showOptions) && (
-        renderOptionsMenu(
-          showOptions,
-          comentarios.find(c => c.id === showOptions)!
-        )
+        <Modal
+          visible={showOptions !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowOptions(null)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowOptions(null)}
+          />
+          {comentarios.find(c => c.id === showOptions) && menuPosition && (
+            <View style={[
+              styles.modalOptionsMenu,
+              {
+                position: 'absolute',
+                left: menuPosition.x,
+                top: menuPosition.y,
+              }
+            ]}>
+              <TouchableOpacity 
+                style={styles.optionItem}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  const comentario = comentarios.find(c => c.id === showOptions);
+                  if (comentario) {
+                    handleEditarComentario(comentario);
+                  }
+                }}
+              >
+                <Ionicons name="create-outline" size={20} color="#666" />
+                <ThemedText style={styles.optionText}>Editar</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.optionItem, styles.deleteOption]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setShowOptions(null);
+                  Alert.alert(
+                    "Eliminar comentario",
+                    "¿Estás seguro que deseas eliminar este comentario?",
+                    [
+                      { text: "Cancelar", style: "cancel" },
+                      { 
+                        text: "Eliminar", 
+                        style: "destructive",
+                        onPress: () => eliminarComentario(showOptions!)
+                      }
+                    ]
+                  );
+                }}
+              >
+                <Ionicons name="trash-outline" size={20} color="#FF4444" />
+                <ThemedText style={styles.deleteOptionText}>Eliminar</ThemedText>
+              </TouchableOpacity>
+            </View>
+          )}
+        </Modal>
       )}
 
       {/* Input de comentarios */}
@@ -671,11 +692,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
     backgroundColor: '#fff',
@@ -744,5 +766,23 @@ const styles = StyleSheet.create({
   optionsMenuContainer: {
     position: 'absolute',
     zIndex: 9999,
+  },
+  modalOptionsMenu: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 140,
+    zIndex: 9999,
+    ...Platform.select({
+      android: {
+        elevation: 8,
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+    }),
   },
 }); 

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  Modal,
   type MeasureOnSuccessCallback
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -91,11 +92,11 @@ export default function VisitDetailsScreen() {
   const [visitData, setVisitData] = useState<VisitaDetalle | null>(null);
   const [showOptions, setShowOptions] = useState(false);
   const [showParticipantOptions, setShowParticipantOptions] = useState<number | null>(null);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const [participantMenuPosition, setParticipantMenuPosition] = useState({ x: 0, y: 0 });
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [participantMenuPosition, setParticipantMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const optionsButtonRef = useRef<View>(null);
   const participantOptionsButtonRef = useRef<View>(null);
   const { token, user } = useAuth();
@@ -265,18 +266,33 @@ export default function VisitDetailsScreen() {
   };
 
   const handleShowOptions = () => {
-    if (!optionsButtonRef.current) return;
-
-    const measureCallback: MeasureOnSuccessCallback = (x, y, width, height, pageX, pageY) => {
-      const screenWidth = Dimensions.get('window').width;
-      // Ajustamos la posición para que esté más cerca del botón
-      const menuX = screenWidth - 170; // 140px del menú + 30px de margen
-      const menuY = pageY - 35; // Subimos el menú para que esté más cerca del botón
-      setMenuPosition({ x: menuX, y: menuY });
-      setShowOptions(!showOptions);
-    };
-
-    optionsButtonRef.current.measure(measureCallback);
+    if (optionsButtonRef.current) {
+      optionsButtonRef.current.measure((x, y, width, height, pageX, pageY) => {
+        const screenWidth = Dimensions.get('window').width;
+        const menuWidth = 140; // Ancho aproximado del menú
+        const menuHeight = 80; // Alto aproximado del menú
+        
+        // Posicionar el menú a la izquierda del botón
+        let menuX = pageX - menuWidth + width;
+        let menuY = pageY;
+        
+        // Asegurar que el menú no se salga de la pantalla
+        if (menuX < 0) {
+          menuX = pageX;
+        }
+        
+        // Si no hay espacio abajo, abrir hacia arriba
+        if (pageY + menuHeight > Dimensions.get('window').height) {
+          menuY = pageY - menuHeight + height;
+        }
+        
+        setMenuPosition({ x: menuX, y: menuY });
+        setShowOptions(true);
+      });
+    } else {
+      setShowOptions(true);
+      setMenuPosition(null);
+    }
   };
 
   // URL de la imagen de perfil por defecto
@@ -331,18 +347,33 @@ export default function VisitDetailsScreen() {
   };
 
   const handleShowParticipantOptions = (participanteId: number) => {
-    if (!participantOptionsButtonRef.current) return;
-
-    const measureCallback: MeasureOnSuccessCallback = (x, y, width, height, pageX, pageY) => {
-      const screenWidth = Dimensions.get('window').width;
-      // Ajustamos la posición para que esté más cerca del botón
-      const menuX = screenWidth - 170; // 140px del menú + 30px de margen
-      const menuY = pageY - 35; // Subimos el menú para que esté más cerca del botón
-      setParticipantMenuPosition({ x: menuX, y: menuY });
+    if (participantOptionsButtonRef.current) {
+      participantOptionsButtonRef.current.measure((x, y, width, height, pageX, pageY) => {
+        const screenWidth = Dimensions.get('window').width;
+        const menuWidth = 140; // Ancho aproximado del menú
+        const menuHeight = 80; // Alto aproximado del menú
+        
+        // Posicionar el menú a la izquierda del botón
+        let menuX = pageX - menuWidth + width;
+        let menuY = pageY;
+        
+        // Asegurar que el menú no se salga de la pantalla
+        if (menuX < 0) {
+          menuX = pageX;
+        }
+        
+        // Si no hay espacio abajo, abrir hacia arriba
+        if (pageY + menuHeight > Dimensions.get('window').height) {
+          menuY = pageY - menuHeight + height;
+        }
+        
+        setParticipantMenuPosition({ x: menuX, y: menuY });
+        setShowParticipantOptions(participanteId);
+      });
+    } else {
       setShowParticipantOptions(participanteId);
-    };
-
-    participantOptionsButtonRef.current.measure(measureCallback);
+      setParticipantMenuPosition(null);
+    }
   };
 
   const renderContent = () => {
@@ -548,48 +579,72 @@ export default function VisitDetailsScreen() {
           ListHeaderComponent={renderContent}
         />
 
-                 {showOptions && (
-           <>
-             <TouchableOpacity 
-               style={styles.overlay} 
-               activeOpacity={0} 
-               onPress={() => setShowOptions(false)} 
-             />
-             <View style={[styles.optionsMenu, { top: menuPosition.y, left: menuPosition.x }]}>
-               <TouchableOpacity 
-                 style={styles.optionItem}
-                 onPress={() => {
-                   setShowOptions(false);
-                   handleEdit();
-                 }}
-               >
-                 <Ionicons name="create-outline" size={24} color="#000" />
-                 <Text style={styles.optionText}>Modificar visita</Text>
-               </TouchableOpacity>
-               
-               <TouchableOpacity 
-                 style={[styles.optionItem, styles.deleteOption]}
-                 onPress={() => {
-                   setShowOptions(false);
-                   handleDelete();
-                 }}
-               >
-                 <Ionicons name="trash-outline" size={24} color="#FF4444" />
-                 <Text style={styles.deleteOptionText}>Eliminar visita</Text>
-               </TouchableOpacity>
+         {/* Menú de opciones para el creador */}
+         <Modal
+           visible={showOptions}
+           transparent
+           animationType="fade"
+           onRequestClose={() => setShowOptions(false)}
+         >
+           <TouchableOpacity 
+             style={styles.modalOverlay} 
+             activeOpacity={1} 
+             onPress={() => setShowOptions(false)} 
+           />
+           {menuPosition && (
+             <View style={[
+               styles.modalOptionsMenu,
+               {
+                 position: 'absolute',
+                 left: menuPosition.x,
+                 top: menuPosition.y,
+               }
+             ]}>
+                               <TouchableOpacity 
+                  style={styles.optionItem}
+                  onPress={() => {
+                    setShowOptions(false);
+                    handleEdit();
+                  }}
+                >
+                  <Ionicons name="create-outline" size={24} color="#000" />
+                  <Text style={styles.optionText}>Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.optionItem, styles.deleteOption]}
+                  onPress={() => {
+                    setShowOptions(false);
+                    handleDelete();
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={24} color="#FF4444" />
+                  <Text style={styles.deleteOptionText}>Eliminar</Text>
+                </TouchableOpacity>
              </View>
-           </>
-         )}
+           )}
+         </Modal>
 
          {/* Menú de opciones para participantes */}
-         {showParticipantOptions && (
-           <>
-             <TouchableOpacity 
-               style={styles.overlay} 
-               activeOpacity={0} 
-               onPress={() => setShowParticipantOptions(null)} 
-             />
-             <View style={[styles.optionsMenu, { top: participantMenuPosition.y, left: participantMenuPosition.x }]}>
+         <Modal
+           visible={showParticipantOptions !== null}
+           transparent
+           animationType="fade"
+           onRequestClose={() => setShowParticipantOptions(null)}
+         >
+           <TouchableOpacity 
+             style={styles.modalOverlay} 
+             activeOpacity={1} 
+             onPress={() => setShowParticipantOptions(null)} 
+           />
+           {participantMenuPosition && (
+             <View style={[
+               styles.modalOptionsMenu,
+               {
+                 position: 'absolute',
+                 left: participantMenuPosition.x,
+                 top: participantMenuPosition.y,
+               }
+             ]}>
                <TouchableOpacity 
                  style={styles.optionItem}
                  onPress={() => {
@@ -601,11 +656,11 @@ export default function VisitDetailsScreen() {
                  }}
                >
                  <Ionicons name="create-outline" size={24} color="#000" />
-                 <Text style={styles.optionText}>Editar reseña</Text>
+                 <Text style={styles.optionText}>Editar</Text>
                </TouchableOpacity>
              </View>
-           </>
-         )}
+           )}
+         </Modal>
       </View>
       
              <LoadingSpinner 
@@ -872,7 +927,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'transparent',
-    zIndex: 999,
+    zIndex: 9998,
   },
   comentariosContainer: {
     marginTop: 16,
@@ -961,5 +1016,32 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     marginLeft: 8,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 9998,
+  },
+  modalOptionsMenu: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 140,
+    zIndex: 9999,
+    ...Platform.select({
+      android: {
+        elevation: 8,
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+    }),
   },
 }); 
