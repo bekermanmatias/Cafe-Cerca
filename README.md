@@ -328,4 +328,39 @@ npm run migrate
 
 ---
 
+## Mejoras Futuras
+
+### Funcionalidades Pendientes
+
+#### Gestión de Imágenes
+- **Múltiples formatos de imagen**: Actualmente solo se aceptan imágenes 1:1 (cuadradas). Se podría implementar soporte para diferentes proporciones (16:9, 4:3, etc.)
+- **Compresión inteligente**: Optimizar automáticamente las imágenes antes de subirlas para mejorar el rendimiento
+- Múltiples imágenes por cafetería
+- **Filtros y edición**: Agregar herramientas básicas de edición de fotos
+
+#### Sistema de Comentarios
+- **Respuestas anidadas**: Implementar sistema de respuestas a comentarios (threading)
+- **Notificaciones de comentarios**: Alertas cuando alguien comenta en tus visitas
+- **Moderación de comentarios**: Sistema de reportes y moderación automática
+- **Reacciones**: Emojis y reacciones a comentarios
+
+#### Experiencia de Usuario
+- **Modo offline**: Funcionalidad básica sin conexión a internet
+- **Temas personalizables**: Múltiples temas de color (oscuro, claro, automático)
+- **Animaciones mejoradas**: Transiciones más fluidas y micro-interacciones
+
+#### Funcionalidades Técnicas
+- **Push notifications**: Notificaciones push para invitarte a cafeterias o si estas sobre una, invitarte a subir tu Visita
+- **Filtos**: Filtrado avanzado de cafeterias, para encontrar la ideal
+
+#### Seguridad
+- **Verificación de dos factores**: Autenticación adicional
+- **Privacidad granular**: Control detallado sobre qué información compartir
+- **Backup automático**: Respaldo automático de datos importantes
+
+#### Integraciones Externas
+- **Redes sociales**: Compartir visitas en Instagram, Facebook, etc.
+
+---
+
 ### Muchas Gracias!
