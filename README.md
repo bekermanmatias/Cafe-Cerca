@@ -1,9 +1,11 @@
-# Cafe Cerca
+# Café Cerca
 **Trabajo Final - Aplicaciones Móviles UTN FRLP**
 
 Una aplicación móvil para descubrir y explorar las mejores cafeterías cercanas. Desarrollada con React Native, Node.js y MySQL.
 
-##  Integrantes del Proyecto
+Ejemplo de Café Cerca funcionado https://youtu.be/Lvv-yJC69rc 
+
+##  Integrantes del Proyecto 
 
 - Borda Lucio
 - Borda Patricio
